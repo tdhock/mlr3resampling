@@ -1,0 +1,35 @@
+Package: mlr3resampling
+Type: Package
+Title: Resampling algorithms for 'mlr3' framework
+Version: 2023.12.8
+Authors@R: c(
+    person("Toby", "Hocking",
+     email="toby.hocking@r-project.org",
+     role=c("aut", "cre")))
+Description: A supervised learning algorithm inputs a train set,
+ and outputs a prediction function, which can be used on a test set.
+ If each data point belongs to a group (such as geographic region,
+ year, etc), then how do we know if it is possible to train on
+ one group, and predict accurately on another group?
+ Cross-validation can be used to determine the extent to which
+ this is possible, by first assigning fold IDs from 1 to K to all
+ data (possibly using stratification, usually by group and label).
+ Then we loop over test sets (image/fold combinations),
+ train sets (same group, other groups, all groups),
+ and compute test/prediction accuracy for each combination.
+ Comparing test/prediction accuracy between same and other,
+ we can determine the extent to which it is possible
+ (perfect if same/other have similar test accuracy for each group,
+ other is usually somewhat less accurate than same,
+ worst case is that other is just as bad as featureless baseline).
+License: GPL-3
+URL: https://github.com/tdhock/mlr3resampling
+BugReports: https://github.com/tdhock/mlr3resampling/issues
+Imports: data.table, R6, checkmate, paradox, mlr3, mlr3misc
+Suggests: 
+    mlr3learners,
+    ggplot2,
+    testthat,
+    knitr,
+    markdown
+VignetteBuilder: knitr
