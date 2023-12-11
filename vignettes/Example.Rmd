@@ -1,0 +1,17 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Resampling examples}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r}
+mlr3resampling::ResamplingSameOtherCV
+```
+
+

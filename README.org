@@ -1,20 +1,34 @@
-mlr3resamplings provides new cross-validation algorithms for the mlr3
+mlr3resampling provides new cross-validation algorithms for the mlr3
 framework in R
+
+| [[file:tests/testthat][tests]]    | [[https://github.com/tdhock/mlr3resampling/actions][https://github.com/tdhock/mlr3resampling/workflows/R-CMD-check/badge.svg]] |
+| [[https://github.com/jimhester/covr][coverage]] | [[https://app.codecov.io/gh/tdhock/mlr3resampling?branch=main][https://codecov.io/gh/tdhock/mlr3resampling/branch/main/graph/badge.svg]]  |
 
 ** Description
 
 A supervised learning algorithm inputs a train set, and outputs a
-prediction function, which can be used on a test set.  If each data
+prediction function, which can be used on a test set. If each data
 point belongs to a group (such as geographic region, year, etc), then
 how do we know if it is possible to train on one group, and predict
-accurately on another group?  Cross-validation can be used to
-determine the extent to which this is possible, by first assigning
-fold IDs from 1 to K to all data (possibly using stratification,
-usually by group and label).  Then we loop over test sets (image/fold
-combinations), train sets (same group, other groups, all groups), and
-compute test/prediction accuracy for each combination.  Comparing
+accurately on another group? Cross-validation can be used to determine
+the extent to which this is possible, by first assigning fold IDs from
+1 to K to all data (possibly using stratification, usually by group
+and label). Then we loop over test sets (group/fold combinations),
+train sets (same group, other groups, all groups), and compute
+test/prediction accuracy for each combination.  Comparing
 test/prediction accuracy between same and other, we can determine the
 extent to which it is possible (perfect if same/other have similar
-test accuracy for each group, other is usually somewhat less accurate
-than same, worst case is that other is just as bad as featureless
-baseline).
+test accuracy for each group; other is usually somewhat less accurate
+than same; other can be just as bad as featureless baseline when the
+groups have different patterns).
+
+** Installation
+
+#+begin_src R
+  install.packages("remotes")
+  remotes::install_github("tdhock/mlr3resampling")
+#+end_src
+
+** Usage
+
+See https://tdhock.github.io/blog/2023/R-gen-new-subsets/

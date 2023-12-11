@@ -1,3 +1,7 @@
+Changes in version 2023.12.11
+
+- minimal docs, tests, etc.
+
 Changes in version 2023.12.8
 
-- first version forked from https://tdhock.github.io/blog/2023/R-gen-new-subsets/
+- first version, R code forked from https://tdhock.github.io/blog/2023/R-gen-new-subsets/
