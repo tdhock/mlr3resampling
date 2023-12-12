@@ -87,7 +87,7 @@ ResamplingSameOther = R6::R6Class(
 
 ResamplingSameOtherCV = R6::R6Class(
   "ResamplingSameOtherCV",
-  inherit = ResamplingSameOtherCV,
+  inherit = ResamplingSameOther,
   public = list(
     initialize = function() {
       ps = paradox::ps(
