@@ -31,5 +31,6 @@ Suggests:
     ggplot2,
     testthat,
     knitr,
-    markdown
+    markdown,
+    nc
 VignetteBuilder: knitr

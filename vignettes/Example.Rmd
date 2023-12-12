@@ -20,7 +20,8 @@ do this in
 
 ### Simulated data
 
-Assume there is a data set with 1000 rows, 
+Assume there is a data set with some rows from one person, some rows
+from another,
 
 ```{r}
 N <- 1000
@@ -28,7 +29,7 @@ library(data.table)
 (full.dt <- data.table(
   label=factor(rep(c("spam","not spam"), l=N)),
   person=rep(1:2, each=0.5*N)
-)[, signal := ifelse(label=="not spam", 0, 1)*person][])
+)[, signal := ifelse(label=="not spam", 0, 2)][])
 ```
 
 Above each row has an person ID between 1 and 2. 
@@ -41,40 +42,78 @@ To do that we will need some features, which we generate/simulate below:
 set.seed(1)
 n.people <- length(unique(full.dt$person))
 for(person.i in 1:n.people){
-  set(full.dt, j=paste0("feature_easy_noise",person.i), value=rnorm(N))
-  full.dt[, paste0("feature_impossible",person.i) := ifelse(
-    person==person.i, signal, 0)+rnorm(N)]
+  use.signal.vec <- list(
+    easy=rep(if(person.i==1)TRUE else FALSE, N),
+    impossible=full.dt$person==person.i)
+  for(feature.type in names(use.signal.vec)){
+    use.signal <- use.signal.vec[[feature.type]]
+    full.dt[
+    , paste0("x",person.i,"_",feature.type) := ifelse(
+      use.signal, signal, 0
+    )+rnorm(N)][]
+  }
 }
-set(full.dt, j="feature_easy_signal", value=rnorm(N)+full.dt$signal)
-str(full.dt)
+full.dt
 ```
-
-TODO remove image below.
 
 There are two sets of two features:
 
-* For easy features, four are random noise (`feature_easy_noise1`
-  etc), and one is correlated with the label (`feature_easy_signal`),
-  so the algorithm just needs to learn to ignore the noise features,
-  and concentrate on the signal feature. That should be possible given
-  data from any image (same signal in each image).
+* For easy features, one is correlated with the label (`x1_easy`), and
+  one is random noise (`x2_easy`), so the algorithm just needs to
+  learn to ignore the noise feature, and concentrate on the signal
+  feature. That should be possible given data from either person (same
+  signal in each person).
 * Each impossible feature is correlated with the label (when feature
-  number same as image number), or is just noise (when image number
+  number same as person number), or is just noise (when person number
   different from feature number). So if the algorithm has access to
-  the correct image (same as test, say image 2), then it needs to
-  learn to use the corresponding feature `feature_impossible2`. But if
-  the algorithm does not have access to that image, then the best it
+  the correct person (same as test, say person 2), then it needs to
+  learn to use the corresponding feature `x2_impossible`. But if
+  the algorithm does not have access to that person, then the best it
   can do is same as featureless (predict most frequent class label in
   train data).
   
-The signal is stronger for larger image numbers (image number 4 is
-easier to learn from than image number 1).
+### Visualization
 
+Below we reshape the data to a table which is more suitable for visualization:
+
+```{r}
+(scatter.dt <- nc::capture_melt_multiple(
+  full.dt,
+  column="x[12]",
+  "_",
+  feature.type="easy|impossible"))
+```
+
+Below we visualize the pattern for each person and feature type:
+
+```{r}
+library(ggplot2)
+ggplot()+
+  geom_point(aes(
+    x1, x2, color=label),
+    shape=1,
+    data=scatter.dt)+
+  facet_grid(
+    person ~ feature.type,
+    labeller=label_both)
+```
+
+In the plot above, it is apparent that 
+
+* for easy features (left), the two label classes differ in x1 values
+  for both people. So it should be possible/easy to train on person 1, and
+  predict accurately on person 2.
+* for impossible features (right), the two people have different label
+  patterns. For person 1, the two label classes differ in x1 values,
+  whereas for person 2, the two label classes differ in x2 values. So
+  it should be impossible to train on person 1, and predict accurately
+  on person 2.
+
+### Benchmark
 
 ```{r}
 same_other <- mlr3resampling::ResamplingSameOtherCV$new()
 same_other$param_set$values$folds <- 3
-
 ```
 
 
