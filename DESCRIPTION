@@ -5,7 +5,34 @@ Version: 2023.12.12
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
-     role=c("aut", "cre")))
+     role=c("aut", "cre"),
+     comment = c(ORCID="0000-0002-3146-0865", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Michel", "Lang", , "michellang@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0001-9754-0393", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Bernd", "Bischl", , "bernd_bischl@gmx.net", role = "ctb",
+           comment = c(ORCID = "0000-0001-6002-6980", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Jakob", "Richter", , "jakob1richter@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0003-4481-5554", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Patrick", "Schratz", , "patrick.schratz@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0003-0748-6624", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Giuseppe", "Casalicchio", , "giuseppe.casalicchio@stat.uni-muenchen.de", role = "ctb",
+           comment = c(ORCID = "0000-0001-5324-5966", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Stefan", "Coors", , "mail@stefancoors.de", role = "ctb",
+           comment = c(ORCID = "0000-0002-7465-2146", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Quay", "Au", , "quayau@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0002-5252-8902", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Martin", "Binder", , "mlr.developer@mb706.com", role = "ctb"),
+    person("Florian", "Pfisterer", , "pfistererf@googlemail.com", role = "ctb",
+           comment = c(ORCID = "0000-0001-8867-762X", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Raphael", "Sonabend", , "raphaelsonabend@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0001-9225-4654", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Lennart", "Schneider", , "lennart.sch@web.de", role = "ctb",
+           comment = c(ORCID = "0000-0003-4152-5308", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Marc", "Becker", , "marcbecker@posteo.de", role = "ctb",
+           comment = c(ORCID = "0000-0002-8115-0400", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+    person("Sebastian", "Fischer", , "sebf.fischer@gmail.com", role = "ctb",
+           comment = c(ORCID = "0000-0002-9609-3197", "Author of mlr3 when Resampling/ResamplingCV was copied/modified"))
+  )
 Description: A supervised learning algorithm inputs a train set,
  and outputs a prediction function, which can be used on a test set.
  If each data point belongs to a group
