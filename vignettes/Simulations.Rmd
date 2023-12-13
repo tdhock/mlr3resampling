@@ -1,6 +1,6 @@
 <!--
 %\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Resampling examples}
+%\VignetteIndexEntry{Simulations}
 -->
 
 ```{r setup, include = FALSE}
@@ -17,8 +17,9 @@ America). The ideas are similar to my previous blog posts about how to
 do this in
 [python](https://tdhock.github.io/blog/2022/generalization-to-new-subsets/) and
 [R](https://tdhock.github.io/blog/2023/R-gen-new-subsets/).
+Below we use data for simulated regression and classification problems.
 
-### Simulated regression problems
+## Simulated regression problems
 
 Assume there is a data set with some rows from one person, some rows
 from another,
@@ -48,6 +49,8 @@ reg.dt
 
 The table above shows some simulated data for a regression problem.
 
+### Visualization
+
 ```{r}
 (reg.tall <- nc::capture_melt_single(
   reg.dt,
@@ -58,18 +61,19 @@ The table above shows some simulated data for a regression problem.
 The table above is a more convenient form for visualization.
 
 ```{r}
-library(ggplot2)
-ggplot()+
-  geom_point(aes(
-    x, y),
-    data=reg.tall)+
-  facet_grid(
-    pattern ~ person,
-    labeller=label_both,
-    space="free",
-    scales="free")+
-  scale_y_continuous(
-    breaks=seq(-100, 100, by=2))
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      x, y),
+      data=reg.tall)+
+    facet_grid(
+      pattern ~ person,
+      labeller=label_both,
+      space="free",
+      scales="free")+
+    scale_y_continuous(
+      breaks=seq(-100, 100, by=2))
+}
 ```
 
 In the simulated data above, we can see that 
@@ -79,33 +83,37 @@ In the simulated data above, we can see that
 * for the impossible pattern, it is different for each person, so it
   should not be possible to train on one person, and accurately
   predict on another.
+  
+### Benchmark
 
 ```{r}
-same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-same_other$param_set$values$folds <- 3
+reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new()
+reg_same_other$param_set$values$folds <- 5
 reg.learner.list <- list(
   mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new())
-(bench.grid <- mlr3::benchmark_grid(
+(reg.bench.grid <- mlr3::benchmark_grid(
   reg.task.list,
   reg.learner.list,
-  same_other))
-bench.result <- mlr3::benchmark(bench.grid)
-bench.score <- mlr3resampling::score(bench.result)
+  reg_same_other))
+if(require(future))plan("multisession")
+reg.bench.result <- mlr3::benchmark(reg.bench.grid)
+reg.bench.score <- mlr3resampling::score(reg.bench.result)
 
-ggplot()+
-  geom_point(aes(
-    regr.mse, train.groups, color=algorithm),
-    shape=1,
-    data=bench.score)+
-  facet_grid(
-    person ~ task_id,
-    labeller=label_both,
-    scales="free")
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      regr.mse, train.groups, color=algorithm),
+      shape=1,
+      data=reg.bench.score)+
+    facet_grid(
+      person ~ task_id,
+      labeller=label_both,
+      scales="free")
+}
 ```
 
-
-### Simulated classification problems
+## Simulated classification problems
 
 Assume there is a data set with some rows from one person, some rows
 from another,
@@ -174,15 +182,16 @@ Below we reshape the data to a table which is more suitable for visualization:
 Below we visualize the pattern for each person and feature type:
 
 ```{r}
-library(ggplot2)
-ggplot()+
-  geom_point(aes(
-    x1, x2, color=label),
-    shape=1,
-    data=scatter.dt)+
-  facet_grid(
-    person ~ feature.type,
-    labeller=label_both)
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      x1, x2, color=label),
+      shape=1,
+      data=scatter.dt)+
+    facet_grid(
+      person ~ feature.type,
+      labeller=label_both)
+}
 ```
 
 In the plot above, it is apparent that 
@@ -198,9 +207,94 @@ In the plot above, it is apparent that
 
 ### Benchmark
 
+We use the code below to create a list of classification tasks, for
+use in the mlr3 framework.
+
 ```{r}
-same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-same_other$param_set$values$folds <- 3
+class.task.list <- list()
+for(feature.type in c("easy","impossible")){
+  feature.names <- grep(feature.type, names(full.dt), value=TRUE)
+  task.col.names <- c(feature.names, "label", "person")
+  task.dt <- full.dt[, task.col.names, with=FALSE]
+  class.task.list[[feature.type]] <- mlr3::TaskClassif$new(
+    feature.type, task.dt, target="label"
+  )$set_col_roles(
+    "person",c("group","stratum")
+  )$set_col_roles(
+    "label",c("target","stratum"))
+}
+class.task.list
 ```
 
+Note in the code above that person is assigned roles group and
+stratum, whereas label is assigned roles target and stratum.
 
+The code below is used to define a 3-fold cross-validation experiment,
+
+```{r}
+class_same_other <- mlr3resampling::ResamplingSameOtherCV$new()
+class_same_other$param_set$values$folds <- 3
+class_same_other
+```
+
+The code belowis used to define the learning algorithms to test,
+
+```{r}
+(class.learner.list <- list(
+  mlr3::LearnerClassifRpart$new(),
+  mlr3::LearnerClassifFeatureless$new()))
+```
+
+The code below defines the grid of tasks, learners, and resamplings.
+
+```{r}
+(class.bench.grid <- mlr3::benchmark_grid(
+  class.task.list,
+  class.learner.list,
+  class_same_other))
+```
+
+The code below runs the benchmark experiment grid. Note that each
+iteration can be parallelized by declaring a future plan.
+
+```{r}
+if(require(future))plan("multisession")
+(class.bench.result <- mlr3::benchmark(class.bench.grid))
+```
+
+Below we compute scores (test error) for each resampling iteration,
+and show the first row of the result.
+
+```{r}
+class.bench.score <- mlr3resampling::score(class.bench.result)
+class.bench.score[1]
+```
+
+Finally we plot the test error values below.
+
+```{r}
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      classif.ce, train.groups, color=algorithm),
+      shape=1,
+      data=class.bench.score)+
+    facet_grid(
+      person ~ task_id,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+It is clear from the plot above that 
+* for the easy task, training on same is just as good as all or other
+  groups.
+* for the impossible task, we must train on same group for minimal
+  test error; training on all is almost as good, because the pattern
+  in person 1 is orthogonal to person 2; training on other is just as
+  bad as featureless, because patterns are different.
+
+## Conclusion
+
+In this vignette we have shown how to use mlr3resampling for comparing
+test error of models trained on same/all/other groups.

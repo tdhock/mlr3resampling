@@ -31,9 +31,15 @@ ResamplingSameOther = R6::R6Class(
     },
     instantiate = function(task) {
       task = mlr3::assert_task(mlr3::as_task(task))
-      folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
       group.name.vec <- task$col_roles$group
+      if(length(group.name.vec)==0){
+        stop('task has no group, but at least one group variable is required; use task$set_col_roles(group_col, c("group","stratum"))')
+      }
       orig.group.dt <- task$data(cols=group.name.vec)
+      if(is.null(task$strata)){
+        stop('task has no strata, but at least one stratum variable is required; at least assign the group variable to a stratum, task$set_col_roles(group_col, c("group","stratum"))')
+      }
+      folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
       id.fold.groups <- data.table(
         folds[task$groups, on="row_id"],
         orig.group.dt)
@@ -98,12 +104,12 @@ ResamplingSameOtherCV = R6::R6Class(
       ps = paradox::ps(
         folds = paradox::p_int(2L, tags = "required")
       )
-      ps$values = list(folds = 10L)
+      ps$values = list(folds = 3L)
       super$initialize(
         id = "same_other_cv",
         param_set = ps,
         label = "Cross-Validation",
-        man = "TODO")
+        man = "ResamplingSameOtherCV")
     }
   ),
   active = list(
@@ -142,6 +148,8 @@ as_resampling.ResamplingSameOther <- function (x, clone = FALSE, ...) {
 }
 
 score <- function(bench.result, ...){
+  algorithm <- learner_id <- NULL
+  ## Above to avoid CRAN NOTE.
   bench.score <- bench.result$score(...)
   out.dt.list <- list()
   for(score.i in 1:nrow(bench.score)){

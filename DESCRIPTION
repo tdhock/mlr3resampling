@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2023.12.11
+Version: 2023.12.12
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
@@ -25,10 +25,16 @@ Description: A supervised learning algorithm inputs a train set,
 License: GPL-3
 URL: https://github.com/tdhock/mlr3resampling
 BugReports: https://github.com/tdhock/mlr3resampling/issues
-Imports: data.table, R6, checkmate, paradox, mlr3, mlr3misc
+Imports:
+    data.table,
+    R6,
+    checkmate,
+    paradox,
+    mlr3,
+    mlr3misc
 Suggests: 
-    mlr3learners,
     ggplot2,
+    future,
     testthat,
     knitr,
     markdown,
