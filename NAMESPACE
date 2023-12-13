@@ -1,2 +1,3 @@
 import(R6, checkmate, data.table, mlr3, mlr3misc, paradox)
-export(ResamplingSameOtherCV)
+export(ResamplingSameOtherCV, score)
+S3method("as_resampling", "ResamplingSameOther")

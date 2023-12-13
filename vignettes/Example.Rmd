@@ -18,7 +18,94 @@ do this in
 [python](https://tdhock.github.io/blog/2022/generalization-to-new-subsets/) and
 [R](https://tdhock.github.io/blog/2023/R-gen-new-subsets/).
 
-### Simulated data
+### Simulated regression problems
+
+Assume there is a data set with some rows from one person, some rows
+from another,
+
+```{r}
+N <- 1000
+library(data.table)
+set.seed(1)
+reg.dt <- data.table(
+  x=runif(N, -2, 2),
+  person=rep(1:2, each=0.5*N))
+reg.pattern.list <- list(
+  easy=function(x, person)x^2,
+  impossible=function(x, person)(x^2+person*3)*(-1)^person)
+reg.task.list <- list()
+for(pattern in names(reg.pattern.list)){
+  f <- reg.pattern.list[[pattern]]
+  yname <- paste0("y_",pattern)
+  reg.dt[, (yname) := f(x,person)+rnorm(N)][]
+  task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
+  reg.task.list[[pattern]] <- mlr3::TaskRegr$new(
+    pattern, task.dt, target=yname
+  )$set_col_roles("person",c("group","stratum"))
+}
+reg.dt
+```
+
+The table above shows some simulated data for a regression problem.
+
+```{r}
+(reg.tall <- nc::capture_melt_single(
+  reg.dt,
+  pattern="easy|impossible",
+  value.name="y"))
+```
+
+The table above is a more convenient form for visualization.
+
+```{r}
+library(ggplot2)
+ggplot()+
+  geom_point(aes(
+    x, y),
+    data=reg.tall)+
+  facet_grid(
+    pattern ~ person,
+    labeller=label_both,
+    space="free",
+    scales="free")+
+  scale_y_continuous(
+    breaks=seq(-100, 100, by=2))
+```
+
+In the simulated data above, we can see that 
+* for the easy pattern, it is the same for both people, so it should
+  be possible/easy to train on one person, and accurately predict on
+  another.
+* for the impossible pattern, it is different for each person, so it
+  should not be possible to train on one person, and accurately
+  predict on another.
+
+```{r}
+same_other <- mlr3resampling::ResamplingSameOtherCV$new()
+same_other$param_set$values$folds <- 3
+reg.learner.list <- list(
+  mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new())
+(bench.grid <- mlr3::benchmark_grid(
+  reg.task.list,
+  reg.learner.list,
+  same_other))
+bench.result <- mlr3::benchmark(bench.grid)
+bench.score <- mlr3resampling::score(bench.result)
+
+ggplot()+
+  geom_point(aes(
+    regr.mse, train.groups, color=algorithm),
+    shape=1,
+    data=bench.score)+
+  facet_grid(
+    person ~ task_id,
+    labeller=label_both,
+    scales="free")
+```
+
+
+### Simulated classification problems
 
 Assume there is a data set with some rows from one person, some rows
 from another,

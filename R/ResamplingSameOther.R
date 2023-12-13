@@ -1,5 +1,5 @@
 ResamplingSameOther = R6::R6Class(
-  "ResamplingSameOther",
+  "Resampling",
   public = list(
     id = NULL,
     label = NULL,
@@ -32,9 +32,14 @@ ResamplingSameOther = R6::R6Class(
     instantiate = function(task) {
       task = mlr3::assert_task(mlr3::as_task(task))
       folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
-      id.fold.groups <- folds[task$groups, on="row_id"]
-      uniq.fold.groups <- setkey(unique(id.fold.groups[, .(
-        test.fold=fold, test.group=group)]))
+      group.name.vec <- task$col_roles$group
+      orig.group.dt <- task$data(cols=group.name.vec)
+      id.fold.groups <- data.table(
+        folds[task$groups, on="row_id"],
+        orig.group.dt)
+      uniq.fold.groups <- setkey(unique(data.table(
+        id.fold.groups[, .(test.fold=fold, test.group=group)],
+        id.fold.groups[, group.name.vec, with=FALSE])))
       self$instance <- list(
         iteration.dt=data.table(train.groups=c("all","same","other"))[
         , data.table(uniq.fold.groups), by=train.groups][, iteration := .I],
@@ -129,3 +134,22 @@ ResamplingSameOtherCV = R6::R6Class(
     }
   )
 )
+
+as_resampling.ResamplingSameOther <- function (x, clone = FALSE, ...) {
+  if (isTRUE(clone)) 
+    x$clone()
+  else x
+}
+
+score <- function(bench.result, ...){
+  bench.score <- bench.result$score(...)
+  out.dt.list <- list()
+  for(score.i in 1:nrow(bench.score)){
+    bench.row <- bench.score[score.i]
+    it.dt <- bench.row$resampling[[1]]$instance$iteration.dt
+    out.dt.list[[score.i]] <- it.dt[
+      bench.row, on="iteration"
+    ][, algorithm := sub(".*[.]", "", learner_id)]
+  }
+  rbindlist(out.dt.list)
+}
