@@ -141,12 +141,6 @@ ResamplingSameOtherCV = R6::R6Class(
   )
 )
 
-as_resampling.ResamplingSameOther <- function (x, clone = FALSE, ...) {
-  if (isTRUE(clone)) 
-    x$clone()
-  else x
-}
-
 score <- function(bench.result, ...){
   algorithm <- learner_id <- NULL
   ## Above to avoid CRAN NOTE.
