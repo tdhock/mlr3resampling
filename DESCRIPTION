@@ -38,5 +38,6 @@ Suggests:
     testthat,
     knitr,
     markdown,
-    nc
+    nc,
+    rpart
 VignetteBuilder: knitr

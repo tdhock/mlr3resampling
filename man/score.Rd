@@ -49,7 +49,7 @@ for(pattern in names(reg.pattern.list)){
 same_other <- mlr3resampling::ResamplingSameOtherCV$new()
 same_other$param_set$values$folds <- 3
 reg.learner.list <- list(
-  mlr3::LearnerRegrRpart$new(),
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new())
 (bench.grid <- mlr3::benchmark_grid(
   reg.task.list,

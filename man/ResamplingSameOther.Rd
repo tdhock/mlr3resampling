@@ -64,7 +64,8 @@ The splits are stored in
 }
 
 \examples{
-mlr3resampling::ResamplingSameOtherCV#$new("same_other", param_set=paradox::ps(folds=3))
+same_other <- mlr3resampling::ResamplingSameOtherCV$new()
+same_other$param_set$values$folds <- 5
 }
 \seealso{
   \itemize{
@@ -73,6 +74,7 @@ mlr3resampling::ResamplingSameOtherCV#$new("same_other", param_set=paradox::ps(f
     \item Package \CRANpkg{mlr3} for standard
     \code{\link[mlr3:Resampling]{Resampling}}, which does not support comparing
     train on same or other groups.
+    \item \code{\link{score}} and Simulations vignette for more detailed examples.
   }
 }
 \concept{Resampling}

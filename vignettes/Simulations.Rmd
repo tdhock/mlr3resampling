@@ -47,9 +47,13 @@ for(pattern in names(reg.pattern.list)){
 reg.dt
 ```
 
-The table above shows some simulated data for a regression problem.
+The table above shows some simulated data for two regression problems:
+* easy problem has the same pattern for each person, so it is possible/easy to train on one person, and accurately predict on another.
+* impossible problem has a different pattern for each person, so it is impossible to train on one person, and accurately predict on another.
 
 ### Visualization
+
+First we reshape the data using the code below,
 
 ```{r}
 (reg.tall <- nc::capture_melt_single(
@@ -58,7 +62,7 @@ The table above shows some simulated data for a regression problem.
   value.name="y"))
 ```
 
-The table above is a more convenient form for visualization.
+The table above is a more convenient form for the visualization which we create using the code below,
 
 ```{r}
 if(require(ggplot2)){
@@ -86,22 +90,52 @@ In the simulated data above, we can see that
   
 ### Benchmark
 
+In the code below, we define a 5-fold cross-validation experiment.
+
 ```{r}
-reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-reg_same_other$param_set$values$folds <- 5
-reg.learner.list <- list(
-  mlr3::LearnerRegrRpart$new(),
-  mlr3::LearnerRegrFeatureless$new())
+(reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
+```
+
+In the code below, we define two learners to compare,
+
+```{r}
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+```
+
+In the code below, we define the benchmark grid, which is all
+combinations of tasks (easy and impossible), learners (rpart and
+featureless), and the one resampling method.
+
+```{r}
 (reg.bench.grid <- mlr3::benchmark_grid(
   reg.task.list,
   reg.learner.list,
   reg_same_other))
-if(require(future))plan("multisession")
-reg.bench.result <- mlr3::benchmark(reg.bench.grid)
-reg.bench.score <- mlr3resampling::score(reg.bench.result)
+```
 
+In the code below, we execute the benchmark experiment (in parallel
+using the multisession future plan).
+
+```{r}
+if(require(future))plan("multisession")
+(reg.bench.result <- mlr3::benchmark(reg.bench.grid))
+```
+
+The code below computes the test error for each split,
+
+```{r}
+reg.bench.score <- mlr3resampling::score(reg.bench.result)
+reg.bench.score[1]
+```
+
+The code below visualizes the resulting test accuracy numbers.
+
+```{r}
 if(require(ggplot2)){
   ggplot()+
+    scale_x_log10()+
     geom_point(aes(
       regr.mse, train.groups, color=algorithm),
       shape=1,
@@ -112,6 +146,12 @@ if(require(ggplot2)){
       scales="free")
 }
 ```
+
+It is clear from the plot above that 
+* for the easy task, training on same is just as good as all or other
+  groups. rpart has much lower test error than featureless, in all
+  three train groups.
+* for the impossible task, the least test error is using rpart with same train groups; featureless with same train groups is next best; training on all is substantially worse (for both featureless and rpart); training on other is even worse (patterns in the two people are completely different).
 
 ## Simulated classification problems
 
@@ -232,16 +272,14 @@ stratum, whereas label is assigned roles target and stratum.
 The code below is used to define a 3-fold cross-validation experiment,
 
 ```{r}
-class_same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-class_same_other$param_set$values$folds <- 3
-class_same_other
+(class_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
 ```
 
-The code belowis used to define the learning algorithms to test,
+The code below is used to define the learning algorithms to test,
 
 ```{r}
 (class.learner.list <- list(
-  mlr3::LearnerClassifRpart$new(),
+  if(requireNamespace("rpart"))mlr3::LearnerClassifRpart$new(),
   mlr3::LearnerClassifFeatureless$new()))
 ```
 
