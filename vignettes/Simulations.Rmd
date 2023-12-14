@@ -25,11 +25,12 @@ Assume there is a data set with some rows from one person, some rows
 from another,
 
 ```{r}
-N <- 1000
+N <- 300
 library(data.table)
 set.seed(1)
+abs.x <- 2
 reg.dt <- data.table(
-  x=runif(N, -2, 2),
+  x=runif(N, -abs.x, abs.x),
   person=rep(1:2, each=0.5*N))
 reg.pattern.list <- list(
   easy=function(x, person)x^2,
@@ -65,7 +66,7 @@ First we reshape the data using the code below,
 The table above is a more convenient form for the visualization which we create using the code below,
 
 ```{r}
-if(require(ggplot2)){
+if(require(animint2)){
   ggplot()+
     geom_point(aes(
       x, y),
@@ -120,7 +121,8 @@ using the multisession future plan).
 
 ```{r}
 if(require(future))plan("multisession")
-(reg.bench.result <- mlr3::benchmark(reg.bench.grid))
+(reg.bench.result <- mlr3::benchmark(
+  reg.bench.grid, store_models = TRUE))
 ```
 
 The code below computes the test error for each split,
@@ -133,7 +135,7 @@ reg.bench.score[1]
 The code below visualizes the resulting test accuracy numbers.
 
 ```{r}
-if(require(ggplot2)){
+if(require(animint2)){
   ggplot()+
     scale_x_log10()+
     geom_point(aes(
@@ -152,6 +154,125 @@ It is clear from the plot above that
   groups. rpart has much lower test error than featureless, in all
   three train groups.
 * for the impossible task, the least test error is using rpart with same train groups; featureless with same train groups is next best; training on all is substantially worse (for both featureless and rpart); training on other is even worse (patterns in the two people are completely different).
+
+### linked viz
+
+```{r}
+inst <- reg.bench.score$resampling[[1]]$instance
+rect.expand <- 0.2
+grid.dt <- data.table(x=seq(-abs.x, abs.x, l=101), y=0)
+grid.task <- mlr3::TaskRegr$new("grid", grid.dt, target="y")
+pred.dt.list <- list()
+point.dt.list <- list()
+for(score.i in 1:nrow(reg.bench.score)){
+  reg.bench.row <- reg.bench.score[score.i]
+  task.dt <- data.table(
+    reg.bench.row$task[[1]]$data(),
+    reg.bench.row$resampling[[1]]$instance$id.dt)
+  names(task.dt)[1] <- "y"
+  set.ids <- data.table(
+    set=c("test","train")
+  )[, data.table(row_id=reg.bench.row[[set]][[1]]), by=set]
+  i.points <- set.ids[task.dt, on="row_id"][is.na(set), set := "unused"]
+  point.dt.list[[score.i]] <- data.table(
+    reg.bench.row[, .(pattern=task_id, iteration)],
+    i.points)
+  i.learner <- reg.bench.row$learner[[1]]
+  pred.dt.list[[score.i]] <- data.table(
+    reg.bench.row[, .(
+      pattern=task_id, iteration, algorithm
+    )],
+    as.data.table(
+      i.learner$predict(grid.task)
+    )[, .(x=grid.dt$x, y=response)]
+  )
+}
+(pred.dt <- rbindlist(pred.dt.list))
+(point.dt <- rbindlist(point.dt.list))
+
+set.colors <- c(
+  train="#1B9E77",
+  test="#D95F02",
+  unused="grey50")
+algo.colors <- c(
+  featureless="blue",
+  rpart="red")
+animint(
+  title="Train/predict on subsets, regression",
+  pred=ggplot()+
+    ggtitle("Predictions for selected train/test split")+
+    theme_animint(height=400)+
+    scale_fill_manual(values=set.colors)+
+    geom_point(aes(
+      x, y, fill=set),
+      showSelected="iteration",
+      data=point.dt)+
+    scale_color_manual(values=algo.colors)+
+    geom_line(aes(
+      x, y, color=algorithm, group=algorithm),
+      showSelected="iteration",
+      data=pred.dt)+
+    facet_grid(
+      pattern ~ person,
+      labeller=label_both,
+      space="free",
+      scales="free")+
+    scale_y_continuous(
+      breaks=seq(-100, 100, by=2)),
+  diagram=ggplot()+
+    ggtitle("Select train/test split")+
+    theme_bw()+
+    facet_grid(
+      . ~ train.groups,
+      scales="free",
+      space="free")+
+    scale_size_manual(values=c(group=3, fold=1))+
+    scale_color_manual(values=c(group="orange", fold="grey50"))+
+    geom_rect(aes(
+      xmin=-Inf, xmax=Inf,
+      color=rows,
+      size=rows,
+      ymin=display_row, ymax=display_end),
+      fill=NA,
+      data=inst$viz.rect.dt)+
+    scale_fill_manual(values=set.colors)+
+    geom_rect(aes(
+      xmin=iteration-rect.expand, ymin=display_row,
+      xmax=iteration+rect.expand, ymax=display_end,
+      fill=set.name),
+      clickSelects="iteration",
+      data=inst$viz.set.dt)+
+    geom_text(aes(
+      ifelse(rows=="group", Inf, -Inf),
+      (display_row+display_end)/2,
+      hjust=ifelse(rows=="group", 1, 0),
+      label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
+      data=data.table(train.name="same", inst$viz.rect.dt))+
+    scale_x_continuous(
+      "Split number / cross-validation iteration")+
+    scale_y_continuous(
+      "Row number (data sorted by group, fold)"),
+  err=ggplot()+
+    theme(legend.position="none")+
+    theme_animint(height=400)+
+    scale_y_log10(
+      "Mean squared error on test set")+
+    scale_fill_manual(values=algo.colors)+
+    geom_point(aes(
+      train.groups, regr.mse, fill=algorithm),
+      shape=1,
+      size=5,
+      stroke=2,
+      color="black",
+      color_off=NA,
+      clickSelects="iteration",
+      data=reg.bench.score)+
+    facet_grid(
+      task_id ~ person,
+      labeller=label_both,
+      scales="free"))
+
+```
 
 ## Simulated classification problems
 
