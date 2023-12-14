@@ -36,13 +36,13 @@ reg.pattern.list <- list(
   easy=function(x, person)x^2,
   impossible=function(x, person)(x^2+person*3)*(-1)^person)
 reg.task.list <- list()
-for(pattern in names(reg.pattern.list)){
-  f <- reg.pattern.list[[pattern]]
-  yname <- paste0("y_",pattern)
+for(task_id in names(reg.pattern.list)){
+  f <- reg.pattern.list[[task_id]]
+  yname <- paste0("y_",task_id)
   reg.dt[, (yname) := f(x,person)+rnorm(N)][]
   task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
-  reg.task.list[[pattern]] <- mlr3::TaskRegr$new(
-    pattern, task.dt, target=yname
+  reg.task.list[[task_id]] <- mlr3::TaskRegr$new(
+    task_id, task.dt, target=yname
   )$set_col_roles("person",c("group","stratum"))
 }
 reg.dt
@@ -59,7 +59,7 @@ First we reshape the data using the code below,
 ```{r}
 (reg.tall <- nc::capture_melt_single(
   reg.dt,
-  pattern="easy|impossible",
+  task_id="easy|impossible",
   value.name="y"))
 ```
 
@@ -72,7 +72,7 @@ if(require(animint2)){
       x, y),
       data=reg.tall)+
     facet_grid(
-      pattern ~ person,
+      task_id ~ person,
       labeller=label_both,
       space="free",
       scales="free")+
@@ -91,7 +91,7 @@ In the simulated data above, we can see that
   
 ### Benchmark
 
-In the code below, we define a 5-fold cross-validation experiment.
+In the code below, we define a K-fold cross-validation experiment.
 
 ```{r}
 (reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
@@ -171,16 +171,22 @@ for(score.i in 1:nrow(reg.bench.score)){
     reg.bench.row$resampling[[1]]$instance$id.dt)
   names(task.dt)[1] <- "y"
   set.ids <- data.table(
-    set=c("test","train")
-  )[, data.table(row_id=reg.bench.row[[set]][[1]]), by=set]
-  i.points <- set.ids[task.dt, on="row_id"][is.na(set), set := "unused"]
+    set.name=c("test","train")
+  )[
+  , data.table(row_id=reg.bench.row[[set.name]][[1]])
+  , by=set.name]
+  i.points <- set.ids[
+    task.dt, on="row_id"
+  ][
+    is.na(set.name), set.name := "unused"
+  ]
   point.dt.list[[score.i]] <- data.table(
-    reg.bench.row[, .(pattern=task_id, iteration)],
+    reg.bench.row[, .(task_id, iteration)],
     i.points)
   i.learner <- reg.bench.row$learner[[1]]
   pred.dt.list[[score.i]] <- data.table(
     reg.bench.row[, .(
-      pattern=task_id, iteration, algorithm
+      task_id, iteration, algorithm
     )],
     as.data.table(
       i.learner$predict(grid.task)
@@ -189,11 +195,10 @@ for(score.i in 1:nrow(reg.bench.score)){
 }
 (pred.dt <- rbindlist(pred.dt.list))
 (point.dt <- rbindlist(point.dt.list))
-
 set.colors <- c(
   train="#1B9E77",
   test="#D95F02",
-  unused="grey50")
+  unused="white")
 algo.colors <- c(
   featureless="blue",
   rpart="red")
@@ -204,16 +209,18 @@ viz <- animint(
     theme_animint(height=400)+
     scale_fill_manual(values=set.colors)+
     geom_point(aes(
-      x, y, fill=set),
+      x, y, fill=set.name),
       showSelected="iteration",
+      size=3,
+      shape=21,
       data=point.dt)+
     scale_color_manual(values=algo.colors)+
     geom_line(aes(
-      x, y, color=algorithm, group=algorithm),
+      x, y, color=algorithm, group=paste(algorithm, iteration)),
       showSelected="iteration",
       data=pred.dt)+
     facet_grid(
-      pattern ~ person,
+      task_id ~ person,
       labeller=label_both,
       space="free",
       scales="free")+
@@ -272,6 +279,7 @@ viz <- animint(
       labeller=label_both,
       scales="free"),
   source="https://github.com/tdhock/mlr3resampling/blob/8fb4174152bbf4ea2dfa5fbce8a4983c155baac9/vignettes/Simulations.Rmd")
+viz
 if(FALSE){
   animint2pages(viz, "2023-12-13-train-predict-subsets-regression")
 }
