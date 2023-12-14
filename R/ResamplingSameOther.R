@@ -42,16 +42,24 @@ ResamplingSameOther = R6::R6Class(
       folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
       id.fold.groups <- data.table(
         folds[task$groups, on="row_id"],
-        orig.group.dt)
+        orig.group.dt
+      )[
+        order(group, fold)
+      ][
+      , display_row := .I
+      ][]
       uniq.fold.groups <- setkey(unique(data.table(
         id.fold.groups[, .(test.fold=fold, test.group=group)],
         id.fold.groups[, group.name.vec, with=FALSE])))
-      self$instance <- list(
-        iteration.dt=data.table(train.groups=c("all","same","other"))[
-        , data.table(uniq.fold.groups), by=train.groups][, iteration := .I],
-        id.dt=id.fold.groups)
-      for(iteration.i in 1:nrow(self$instance$iteration.dt)){
-        split.info <- self$instance$iteration.dt[iteration.i]
+      iteration.dt <- data.table(
+        train.groups=c("all","same","other")
+      )[
+      , data.table(uniq.fold.groups)
+      , by=train.groups
+      ][, iteration := .I]
+      disp.dt.list <- list()
+      for(iteration.i in 1:nrow(iteration.dt)){
+        split.info <- iteration.dt[iteration.i]
         is.set.group <- list(
           test=id.fold.groups[["group"]] == split.info[["test.group"]])
         is.set.group[["train"]] <- switch(
@@ -65,13 +73,44 @@ ResamplingSameOther = R6::R6Class(
         for(set.name in names(is.set.fold)){
           is.group <- is.set.group[[set.name]]
           is.fold <- is.set.fold[[set.name]]
+          is.set.dt <- id.fold.groups[is.group & is.fold]
+          mid.end.i <- is.set.dt[, which(c(diff(display_row),NA)!=1)]
+          start.i <- c(1,mid.end.i+1)
+          disp.dt.list[[paste(
+            iteration.i, set.name
+          )]] <- data.table(
+            split.info[, .(
+              iteration, train.groups
+            )],
+            is.set.dt[, .(
+              set.name,
+              is.set.dt[start.i],
+              display_end=display_row[c(mid.end.i,.N)]
+            )]
+          )
           set(
-            self$instance$iteration.dt,
+            iteration.dt,
             i=iteration.i,
             j=set.name,
-            value=list(id.fold.groups[is.group & is.fold, row_id]))
+            value=list(is.set.dt[["row_id"]]))
         }
       }
+      viz.rect.dt <- rbind(
+        id.fold.groups[, .(
+          rows="group",
+          display_row=min(display_row),
+          display_end=max(display_row)
+        ), by=group][, fold := NA],
+        id.fold.groups[, .(
+          rows="fold",
+          display_row=min(display_row),
+          display_end=max(display_row)
+        ), by=.(group, fold)])        
+      self$instance <- list(
+        iteration.dt=iteration.dt,
+        id.dt=id.fold.groups[order(row_id)],
+        viz.set.dt=rbindlist(disp.dt.list),
+        viz.rect.dt=viz.rect.dt)
       self$task_hash = task$hash
       self$task_nrow = task$nrow
       invisible(self)

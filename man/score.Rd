@@ -66,7 +66,45 @@ if(require("ggplot2")){
     facet_grid(
       person ~ task_id,
       labeller=label_both,
-      scales="free")
+      scales="free")+
+    scale_x_log10()
+}
+
+if(require("ggplot2")){
+  inst <- bench.score$resampling[[1]]$instance
+  rect.expand <- 0.2
+ggplot()+
+  ggtitle("All train/test splits to compute")+
+  theme_bw()+
+  facet_grid(
+    . ~ train.groups,
+    labeller=label_both,
+    scales="free",
+    space="free")+
+  scale_size_manual(values=c(group=3, fold=1))+
+  scale_color_manual(values=c(group="orange", fold="grey50"))+
+  geom_rect(aes(
+    xmin=-Inf, xmax=Inf,
+    color=rows,
+    size=rows,
+    ymin=display_row, ymax=display_end),
+    fill=NA,
+    data=inst$viz.rect.dt)+
+  geom_rect(aes(
+    xmin=iteration-rect.expand, ymin=display_row,
+    xmax=iteration+rect.expand, ymax=display_end,
+    fill=set.name),
+    data=inst$viz.set.dt)+
+  geom_text(aes(
+    ifelse(rows=="group", Inf, -Inf),
+    (display_row+display_end)/2,
+    hjust=ifelse(rows=="group", 1, 0),
+    label=sprintf("%s=%d", rows, ifelse(rows=="group", group, fold))),
+    data=data.table(train.name="same", inst$viz.rect.dt))+
+  scale_x_continuous(
+    "Split number")+
+  scale_y_continuous(
+    "Row number (data sorted by group, fold)")
 }
 
 }
