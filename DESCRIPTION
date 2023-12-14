@@ -60,7 +60,7 @@ Imports:
     mlr3,
     mlr3misc
 Suggests: 
-    ggplot2,
+    animint2,
     future,
     testthat,
     knitr,

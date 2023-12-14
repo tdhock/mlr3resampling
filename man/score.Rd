@@ -57,7 +57,7 @@ reg.learner.list <- list(
   same_other))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result)
-if(require("ggplot2")){
+if(require(animint2)){
   ggplot()+
     geom_point(aes(
       regr.mse, train.groups, color=algorithm),
@@ -70,7 +70,7 @@ if(require("ggplot2")){
     scale_x_log10()
 }
 
-if(require("ggplot2")){
+if(require(animint2)){
   inst <- bench.score$resampling[[1]]$instance
   rect.expand <- 0.2
   ggplot()+

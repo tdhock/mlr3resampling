@@ -143,7 +143,7 @@ if(require(animint2)){
       shape=1,
       data=reg.bench.score)+
     facet_grid(
-      person ~ task_id,
+      task_id ~ person,
       labeller=label_both,
       scales="free")
 }
@@ -319,6 +319,325 @@ for(person.i in 1:n.people){
   use.signal.vec <- list(
     easy=rep(if(person.i==1)TRUE else FALSE, N),
     impossible=full.dt$person==person.i)
+  for(task_id in names(use.signal.vec)){
+    use.signal <- use.signal.vec[[task_id]]
+    full.dt[
+    , paste0("x",person.i,"_",task_id) := ifelse(
+      use.signal, signal, 0
+    )+rnorm(N)][]
+  }
+}
+full.dt
+```
+
+There are two sets of two features:
+
+* For easy features, one is correlated with the label (`x1_easy`), and
+  one is random noise (`x2_easy`), so the algorithm just needs to
+  learn to ignore the noise feature, and concentrate on the signal
+  feature. That should be possible given data from either person (same
+  signal in each person).
+* Each impossible feature is correlated with the label (when feature
+  number same as person number), or is just noise (when person number
+  different from feature number). So if the algorithm has access to
+  the correct person (same as test, say person 2), then it needs to
+  learn to use the corresponding feature `x2_impossible`. But if
+  the algorithm does not have access to that person, then the best it
+  can do is same as featureless (predict most frequent class label in
+  train data).
+  
+### Visualization
+
+Below we reshape the data to a table which is more suitable for visualization:
+
+```{r}
+(scatter.dt <- nc::capture_melt_multiple(
+  full.dt,
+  column="x[12]",
+  "_",
+  task_id="easy|impossible"))
+```
+
+Below we visualize the pattern for each person and feature type:
+
+```{r}
+if(require(animint2)){
+  ggplot()+
+    geom_point(aes(
+      x1, x2, color=label),
+      shape=1,
+      data=scatter.dt)+
+    facet_grid(
+      task_id ~ person,
+      labeller=label_both)
+}
+```
+
+In the plot above, it is apparent that 
+
+* for easy features (left), the two label classes differ in x1 values
+  for both people. So it should be possible/easy to train on person 1, and
+  predict accurately on person 2.
+* for impossible features (right), the two people have different label
+  patterns. For person 1, the two label classes differ in x1 values,
+  whereas for person 2, the two label classes differ in x2 values. So
+  it should be impossible to train on person 1, and predict accurately
+  on person 2.
+
+### Benchmark
+
+We use the code below to create a list of classification tasks, for
+use in the mlr3 framework.
+
+```{r}
+class.task.list <- list()
+for(task_id in c("easy","impossible")){
+  feature.names <- grep(task_id, names(full.dt), value=TRUE)
+  task.col.names <- c(feature.names, "label", "person")
+  task.dt <- full.dt[, task.col.names, with=FALSE]
+  class.task.list[[task_id]] <- mlr3::TaskClassif$new(
+    task_id, task.dt, target="label"
+  )$set_col_roles(
+    "person",c("group","stratum")
+  )$set_col_roles(
+    "label",c("target","stratum"))
+}
+class.task.list
+```
+
+Note in the code above that person is assigned roles group and
+stratum, whereas label is assigned roles target and stratum.
+
+The code below is used to define a K-fold cross-validation experiment,
+
+```{r}
+(class_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
+```
+
+The code below is used to define the learning algorithms to test,
+
+```{r}
+(class.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerClassifRpart$new(),
+  mlr3::LearnerClassifFeatureless$new()))
+```
+
+The code below defines the grid of tasks, learners, and resamplings.
+
+```{r}
+(class.bench.grid <- mlr3::benchmark_grid(
+  class.task.list,
+  class.learner.list,
+  class_same_other))
+```
+
+The code below runs the benchmark experiment grid. Note that each
+iteration can be parallelized by declaring a future plan.
+
+```{r}
+if(require(future))plan("multisession")
+(class.bench.result <- mlr3::benchmark(class.bench.grid))
+```
+
+Below we compute scores (test error) for each resampling iteration,
+and show the first row of the result.
+
+```{r}
+class.bench.score <- mlr3resampling::score(class.bench.result)
+class.bench.score[1]
+```
+
+Finally we plot the test error values below.
+
+```{r}
+if(require(animint2)){
+  ggplot()+
+    geom_point(aes(
+      classif.ce, train.groups, color=algorithm),
+      shape=1,
+      data=class.bench.score)+
+    facet_grid(
+      person ~ task_id,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+It is clear from the plot above that 
+* for the easy task, training on same is just as good as all or other
+  groups.
+* for the impossible task, we must train on same group for minimal
+  test error; training on all is almost as good, because the pattern
+  in person 1 is orthogonal to person 2; training on other is just as
+  bad as featureless, because patterns are different.
+  
+### linked viz
+
+```{r}
+inst <- class.bench.score$resampling[[1]]$instance
+rect.expand <- 0.2
+grid.value.dt <- scatter.dt[
+, lapply(.SD, function(x)do.call(seq, c(as.list(range(x)), l=21)))
+, .SDcols=c("x1","x2")]
+grid.class.dt <- do.call(CJ, grid.value.dt)[, y := full.dt$label[1] ]
+grid.class.task <- mlr3::TaskClassif$new("grid", grid.class.dt, target="y")
+class.pred.dt.list <- list()
+class.point.dt.list <- list()
+for(score.i in 1:nrow(class.bench.score)){
+  class.bench.row <- class.bench.score[score.i]
+  task.dt <- data.table(
+    class.bench.row$task[[1]]$data(),
+    class.bench.row$resampling[[1]]$instance$id.dt)
+  names(task.dt)[2:3] <- c("x1","x2")
+  set.ids <- data.table(
+    set.name=c("test","train")
+  )[
+  , data.table(row_id=class.bench.row[[set.name]][[1]])
+  , by=set.name]
+  i.points <- set.ids[
+    task.dt, on="row_id"
+  ][
+    is.na(set.name), set.name := "unused"
+  ][]
+  class.point.dt.list[[score.i]] <- data.table(
+    class.bench.row[, .(task_id, iteration)],
+    i.points)
+  i.learner <- reg.bench.row$learner[[1]]
+  class.pred.dt.list[[score.i]] <- data.table(
+    reg.bench.row[, .(
+      task_id, iteration, algorithm
+    )],
+    as.data.table(
+      i.learner$predict(grid.task)
+    )[, .(x=grid.dt$x, y=response)]
+  )
+}
+(class.pred.dt <- rbindlist(class.pred.dt.list))
+(class.point.dt <- rbindlist(class.point.dt.list))
+set.colors <- c(
+  train="#1B9E77",
+  test="#D95F02",
+  unused="white")
+algo.colors <- c(
+  featureless="blue",
+  rpart="red")
+make_person_group <- function(DT){
+  DT[, "person/group" := person]
+}
+make_person_group(point.dt)
+make_person_group(reg.bench.score)
+viz <- animint(
+  title="Train/predict on subsets, regression",
+  pred=ggplot()+
+    ggtitle("Predictions for selected train/test split")+
+    theme_animint(height=400)+
+    scale_fill_manual(values=set.colors)+
+    geom_point(aes(
+      x, y, fill=set.name),
+      showSelected="iteration",
+      size=3,
+      shape=21,
+      data=point.dt)+
+    scale_color_manual(values=algo.colors)+
+    geom_line(aes(
+      x, y, color=algorithm, group=paste(algorithm, iteration)),
+      showSelected="iteration",
+      data=pred.dt)+
+    facet_grid(
+      task_id ~ `person/group`,
+      labeller=label_both,
+      space="free",
+      scales="free")+
+    scale_y_continuous(
+      breaks=seq(-100, 100, by=2)),
+  diagram=ggplot()+
+    ggtitle("Select train/test split")+
+    theme_bw()+
+    facet_grid(
+      . ~ train.groups,
+      scales="free",
+      space="free")+
+    scale_size_manual(values=c(group=3, fold=1))+
+    scale_color_manual(values=c(group="orange", fold="grey50"))+
+    geom_rect(aes(
+      xmin=-Inf, xmax=Inf,
+      color=rows,
+      size=rows,
+      ymin=display_row, ymax=display_end),
+      fill=NA,
+      data=inst$viz.rect.dt)+
+    scale_fill_manual(values=set.colors)+
+    geom_rect(aes(
+      xmin=iteration-rect.expand, ymin=display_row,
+      xmax=iteration+rect.expand, ymax=display_end,
+      fill=set.name),
+      clickSelects="iteration",
+      data=inst$viz.set.dt)+
+    geom_text(aes(
+      ifelse(rows=="group", Inf, -Inf),
+      (display_row+display_end)/2,
+      hjust=ifelse(rows=="group", 1, 0),
+      label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
+      data=data.table(train.name="same", inst$viz.rect.dt))+
+    scale_x_continuous(
+      "Split number / cross-validation iteration")+
+    scale_y_continuous(
+      "Row number (data sorted by group, fold)"),
+  err=ggplot()+
+    theme_animint(height=400)+
+    scale_y_log10(
+      "Mean squared error on test set")+
+    scale_fill_manual(values=algo.colors)+
+    scale_x_discrete(
+      "People/groups in train set")+
+    geom_point(aes(
+      train.groups, regr.mse, fill=algorithm),
+      shape=1,
+      size=5,
+      stroke=2,
+      color="black",
+      color_off=NA,
+      clickSelects="iteration",
+      data=reg.bench.score)+
+    facet_grid(
+      task_id ~ `person/group`,
+      labeller=label_both,
+      scales="free"),
+  source="https://github.com/tdhock/mlr3resampling/blob/d7cbe06fdb562ff8c1c8b4ad0bc055b65bd7b2c6/vignettes/Simulations.Rmd")
+viz
+if(FALSE){
+  animint2pages(viz, "2023-12-13-train-predict-subsets-regression")
+}
+
+```
+
+## Simulated classification problems
+
+Assume there is a data set with some rows from one person, some rows
+from another,
+
+```{r}
+N <- 1000
+library(data.table)
+(full.dt <- data.table(
+  label=factor(rep(c("spam","not spam"), l=N)),
+  person=rep(1:2, each=0.5*N)
+)[, signal := ifelse(label=="not spam", 0, 2)][])
+```
+
+Above each row has an person ID between 1 and 2. 
+We can imagine a spam filtering system, that has training data for multiple people (here just two).
+Each row in the table above represents a message which has been labeled as spam or not, by one of the two people.
+Can we train on one person, and accurately predict on the other person?
+To do that we will need some features, which we generate/simulate below:
+
+```{r}
+set.seed(1)
+n.people <- length(unique(full.dt$person))
+for(person.i in 1:n.people){
+  use.signal.vec <- list(
+    easy=rep(if(person.i==1)TRUE else FALSE, N),
+    impossible=full.dt$person==person.i)
   for(feature.type in names(use.signal.vec)){
     use.signal <- use.signal.vec[[feature.type]]
     full.dt[
@@ -361,7 +680,7 @@ Below we reshape the data to a table which is more suitable for visualization:
 Below we visualize the pattern for each person and feature type:
 
 ```{r}
-if(require(ggplot2)){
+if(require(animint2)){
   ggplot()+
     geom_point(aes(
       x1, x2, color=label),
@@ -408,7 +727,7 @@ class.task.list
 Note in the code above that person is assigned roles group and
 stratum, whereas label is assigned roles target and stratum.
 
-The code below is used to define a 3-fold cross-validation experiment,
+The code below is used to define a K-fold cross-validation experiment,
 
 ```{r}
 (class_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
@@ -450,7 +769,7 @@ class.bench.score[1]
 Finally we plot the test error values below.
 
 ```{r}
-if(require(ggplot2)){
+if(require(animint2)){
   ggplot()+
     geom_point(aes(
       classif.ce, train.groups, color=algorithm),
@@ -462,14 +781,6 @@ if(require(ggplot2)){
       scales="free")
 }
 ```
-
-It is clear from the plot above that 
-* for the easy task, training on same is just as good as all or other
-  groups.
-* for the impossible task, we must train on same group for minimal
-  test error; training on all is almost as good, because the pattern
-  in person 1 is orthogonal to person 2; training on other is just as
-  bad as featureless, because patterns are different.
 
 ## Conclusion
 
