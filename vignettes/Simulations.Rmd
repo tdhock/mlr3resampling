@@ -197,7 +197,7 @@ set.colors <- c(
 algo.colors <- c(
   featureless="blue",
   rpart="red")
-animint(
+viz <- animint(
   title="Train/predict on subsets, regression",
   pred=ggplot()+
     ggtitle("Predictions for selected train/test split")+
@@ -270,7 +270,11 @@ animint(
     facet_grid(
       task_id ~ person,
       labeller=label_both,
-      scales="free"))
+      scales="free"),
+  source="https://github.com/tdhock/mlr3resampling/blob/8fb4174152bbf4ea2dfa5fbce8a4983c155baac9/vignettes/Simulations.Rmd")
+if(FALSE){
+  animint2pages(viz, "2023-12-13-train-predict-subsets-regression")
+}
 
 ```
 
