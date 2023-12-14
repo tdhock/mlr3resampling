@@ -1,3 +1,8 @@
+Changes in version 2023.12.13
+
+- Error for conflicting group names.
+- instance has new elements: data tables for visualization.
+
 Changes in version 2023.12.12
 
 - Examples vignette, first tests, score().

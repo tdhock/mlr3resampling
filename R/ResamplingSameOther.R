@@ -35,6 +35,17 @@ ResamplingSameOther = R6::R6Class(
       if(length(group.name.vec)==0){
         stop('task has no group, but at least one group variable is required; use task$set_col_roles(group_col, c("group","stratum"))')
       }
+      reserved.names <- c(
+        "row_id", "fold", "group", "display_row",
+        "train.groups", "test.fold", "test.group", "iteration", 
+        "test", "train", "algorithm", "uhash", "nr", "task", "task_id",
+        "learner", "learner_id", "resampling", "resampling_id",
+        "prediction")
+      bad.names <- group.name.vec[group.name.vec %in% reserved.names]
+      if(length(bad.names)){
+        first.bad <- bad.names[1]
+        stop(sprintf("col with role group must not be named %s; please fix by renaming %s col", first.bad, first.bad))
+      }
       orig.group.dt <- task$data(cols=group.name.vec)
       if(is.null(task$strata)){
         stop('task has no strata, but at least one stratum variable is required; at least assign the group variable to a stratum, task$set_col_roles(group_col, c("group","stratum"))')
