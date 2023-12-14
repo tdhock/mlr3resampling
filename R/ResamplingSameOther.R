@@ -63,7 +63,7 @@ ResamplingSameOther = R6::R6Class(
         id.fold.groups[, .(test.fold=fold, test.group=group)],
         id.fold.groups[, group.name.vec, with=FALSE])))
       iteration.dt <- data.table(
-        train.groups=c("all","same","other")
+        train.groups=c("all","other","same")
       )[
       , data.table(uniq.fold.groups)
       , by=train.groups
