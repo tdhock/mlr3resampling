@@ -3,7 +3,15 @@
 %\VignetteIndexEntry{Simulations}
 -->
 
+<style type="text/css">
+.main-container {
+  max-width: 1200px !important;
+  margin: auto;
+}
+</style>
+
 ```{r setup, include = FALSE}
+## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -52,7 +60,7 @@ The table above shows some simulated data for two regression problems:
 * easy problem has the same pattern for each person, so it is possible/easy to train on one person, and accurately predict on another.
 * impossible problem has a different pattern for each person, so it is impossible to train on one person, and accurately predict on another.
 
-### Visualization
+### Static visualization of simulated data
 
 First we reshape the data using the code below,
 
@@ -89,7 +97,7 @@ In the simulated data above, we can see that
   should not be possible to train on one person, and accurately
   predict on another.
   
-### Benchmark
+### Benchmark: computing test error
 
 In the code below, we define a K-fold cross-validation experiment.
 
@@ -155,9 +163,9 @@ It is clear from the plot above that
   three train groups.
 * for the impossible task, the least test error is using rpart with same train groups; featureless with same train groups is next best; training on all is substantially worse (for both featureless and rpart); training on other is even worse (patterns in the two people are completely different).
 
-### linked viz
+### Interactive visualization of data, test error, and splits
 
-```{r}
+```{r SimulationsAnimintRegression}
 inst <- reg.bench.score$resampling[[1]]$instance
 rect.expand <- 0.2
 grid.dt <- data.table(x=seq(-abs.x, abs.x, l=101), y=0)
@@ -207,85 +215,90 @@ make_person_group <- function(DT){
 }
 make_person_group(point.dt)
 make_person_group(reg.bench.score)
-viz <- animint(
-  title="Train/predict on subsets, regression",
-  pred=ggplot()+
-    ggtitle("Predictions for selected train/test split")+
-    theme_animint(height=400)+
-    scale_fill_manual(values=set.colors)+
-    geom_point(aes(
-      x, y, fill=set.name),
-      showSelected="iteration",
-      size=3,
-      shape=21,
-      data=point.dt)+
-    scale_color_manual(values=algo.colors)+
-    geom_line(aes(
-      x, y, color=algorithm, group=paste(algorithm, iteration)),
-      showSelected="iteration",
-      data=pred.dt)+
-    facet_grid(
-      task_id ~ `person/group`,
-      labeller=label_both,
-      space="free",
-      scales="free")+
-    scale_y_continuous(
-      breaks=seq(-100, 100, by=2)),
-  diagram=ggplot()+
-    ggtitle("Select train/test split")+
-    theme_bw()+
-    facet_grid(
-      . ~ train.groups,
-      scales="free",
-      space="free")+
-    scale_size_manual(values=c(group=3, fold=1))+
-    scale_color_manual(values=c(group="orange", fold="grey50"))+
-    geom_rect(aes(
-      xmin=-Inf, xmax=Inf,
-      color=rows,
-      size=rows,
-      ymin=display_row, ymax=display_end),
-      fill=NA,
-      data=inst$viz.rect.dt)+
-    scale_fill_manual(values=set.colors)+
-    geom_rect(aes(
-      xmin=iteration-rect.expand, ymin=display_row,
-      xmax=iteration+rect.expand, ymax=display_end,
-      fill=set.name),
-      clickSelects="iteration",
-      data=inst$viz.set.dt)+
-    geom_text(aes(
-      ifelse(rows=="group", Inf, -Inf),
-      (display_row+display_end)/2,
-      hjust=ifelse(rows=="group", 1, 0),
-      label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
-      data=data.table(train.name="same", inst$viz.rect.dt))+
-    scale_x_continuous(
-      "Split number / cross-validation iteration")+
-    scale_y_continuous(
-      "Row number (data sorted by group, fold)"),
-  err=ggplot()+
-    theme_animint(height=400)+
-    scale_y_log10(
-      "Mean squared error on test set")+
-    scale_fill_manual(values=algo.colors)+
-    scale_x_discrete(
-      "People/groups in train set")+
-    geom_point(aes(
-      train.groups, regr.mse, fill=algorithm),
-      shape=1,
-      size=5,
-      stroke=2,
-      color="black",
-      color_off=NA,
-      clickSelects="iteration",
-      data=reg.bench.score)+
-    facet_grid(
-      task_id ~ `person/group`,
-      labeller=label_both,
-      scales="free"),
-  source="https://github.com/tdhock/mlr3resampling/blob/d7cbe06fdb562ff8c1c8b4ad0bc055b65bd7b2c6/vignettes/Simulations.Rmd")
-viz
+
+if(requireNamespace("animint2")){
+  viz <- animint(
+    title="Train/predict on subsets, regression",
+    pred=ggplot()+
+      ggtitle("Predictions for selected train/test split")+
+      theme_animint(height=400)+
+      scale_fill_manual(values=set.colors)+
+      geom_point(aes(
+        x, y, fill=set.name),
+        showSelected="iteration",
+        size=3,
+        shape=21,
+        data=point.dt)+
+      scale_color_manual(values=algo.colors)+
+      geom_line(aes(
+        x, y, color=algorithm, group=paste(algorithm, iteration)),
+        showSelected="iteration",
+        data=pred.dt)+
+      facet_grid(
+        task_id ~ `person/group`,
+        labeller=label_both,
+        space="free",
+        scales="free")+
+      scale_y_continuous(
+        breaks=seq(-100, 100, by=2)),
+    err=ggplot()+
+      ggtitle("Test error for each split")+
+      theme_animint(height=400)+
+      scale_y_log10(
+        "Mean squared error on test set")+
+      scale_fill_manual(values=algo.colors)+
+      scale_x_discrete(
+        "People/groups in train set")+
+      geom_point(aes(
+        train.groups, regr.mse, fill=algorithm),
+        shape=1,
+        size=5,
+        stroke=2,
+        color="black",
+        color_off=NA,
+        clickSelects="iteration",
+        data=reg.bench.score)+
+      facet_grid(
+        task_id ~ `person/group`,
+        labeller=label_both,
+        scales="free"),
+    diagram=ggplot()+
+      ggtitle("Select train/test split")+
+      theme_bw()+
+      theme_animint(height=300)+
+      facet_grid(
+        . ~ train.groups,
+        scales="free",
+        space="free")+
+      scale_size_manual(values=c(group=3, fold=1))+
+      scale_color_manual(values=c(group="orange", fold="grey50"))+
+      geom_rect(aes(
+        xmin=-Inf, xmax=Inf,
+        color=rows,
+        size=rows,
+        ymin=display_row, ymax=display_end),
+        fill=NA,
+        data=inst$viz.rect.dt)+
+      scale_fill_manual(values=set.colors)+
+      geom_rect(aes(
+        xmin=iteration-rect.expand, ymin=display_row,
+        xmax=iteration+rect.expand, ymax=display_end,
+        fill=set.name),
+        clickSelects="iteration",
+        data=inst$viz.set.dt)+
+      geom_text(aes(
+        ifelse(rows=="group", Inf, -Inf),
+        (display_row+display_end)/2,
+        hjust=ifelse(rows=="group", 1, 0),
+        label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
+        data=data.table(train.name="same", inst$viz.rect.dt))+
+      scale_x_continuous(
+        "Split number / cross-validation iteration")+
+      scale_y_continuous(
+        "Row number"),
+    source="https://github.com/tdhock/mlr3resampling/blob/d7cbe06fdb562ff8c1c8b4ad0bc055b65bd7b2c6/vignettes/Simulations.Rmd")
+  viz
+}
 if(FALSE){
   animint2pages(viz, "2023-12-13-train-predict-subsets-regression")
 }
@@ -345,7 +358,7 @@ There are two sets of two features:
   can do is same as featureless (predict most frequent class label in
   train data).
   
-### Visualization
+### Static visualization of simulated data
 
 Below we reshape the data to a table which is more suitable for visualization:
 
@@ -383,7 +396,7 @@ In the plot above, it is apparent that
   it should be impossible to train on person 1, and predict accurately
   on person 2.
 
-### Benchmark
+### Benchmark: computing test error
 
 We use the code below to create a list of classification tasks, for
 use in the mlr3 framework.
@@ -471,9 +484,13 @@ It is clear from the plot above that
   in person 1 is orthogonal to person 2; training on other is just as
   bad as featureless, because patterns are different.
   
-### linked viz
+### Interactive visualization of data, test error, and splits
 
-```{r}
+In this section we create an interactive data visualization which
+allows exploring how different functions are learned during different
+splits.
+
+```{r SimulationsAnimintClassification}
 inst <- class.bench.score$resampling[[1]]$instance
 rect.expand <- 0.2
 grid.value.dt <- scatter.dt[
@@ -545,93 +562,97 @@ make_person_group <- function(DT){
 }
 make_person_group(class.point.dt)
 make_person_group(class.bench.score)
-viz <- animint(
-  title="Train/predict on subsets, classification",
-  pred=ggplot()+
-    ggtitle("Predictions for selected train/test split")+
-    theme_animint(height=400)+
-    scale_fill_manual(values=set.colors)+
-    scale_color_manual(values=c(spam="black","not spam"="white"))+
-    geom_point(aes(
-      x1, x2, color=label, fill=set.name),
-      showSelected="iteration",
-      size=3,
-      stroke=2,
-      shape=21,
-      data=class.point.dt)+
-    geom_path(aes(
-      x1, x2, 
-      group=paste(algorithm, iteration, contour.i)),
-      showSelected=c("iteration","algorithm"),
-      color=algo.colors[["rpart"]],
-      data=class.pred.dt)+
-    facet_grid(
-      task_id ~ `person/group`,
-      labeller=label_both,
-      space="free",
-      scales="free")+
-    scale_y_continuous(
-      breaks=seq(-100, 100, by=2)),
-  diagram=ggplot()+
-    ggtitle("Select train/test split")+
-    theme_bw()+
-    facet_grid(
-      . ~ train.groups,
-      scales="free",
-      space="free")+
-    scale_size_manual(values=c(group=3, fold=1))+
-    scale_color_manual(values=c(group="orange", fold="grey50"))+
-    geom_rect(aes(
-      xmin=-Inf, xmax=Inf,
-      color=rows,
-      size=rows,
-      ymin=display_row, ymax=display_end),
-      fill=NA,
-      data=inst$viz.rect.dt)+
-    scale_fill_manual(values=set.colors)+
-    geom_rect(aes(
-      xmin=iteration-rect.expand, ymin=display_row,
-      xmax=iteration+rect.expand, ymax=display_end,
-      fill=set.name),
-      clickSelects="iteration",
-      data=inst$viz.set.dt)+
-    geom_text(aes(
-      ifelse(rows=="group", Inf, -Inf),
-      (display_row+display_end)/2,
-      hjust=ifelse(rows=="group", 1, 0),
-      label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
-      data=data.table(train.name="same", inst$viz.rect.dt))+
-    scale_x_continuous(
-      "Split number / cross-validation iteration")+
-    scale_y_continuous(
-      "Row number (data sorted by group, fold)"),
-  err=ggplot()+
-    theme_animint(height=400)+
-    theme(panel.margin=grid::unit(1, "lines"))+
-    scale_y_continuous(
-      "Classification error on test set",
-      breaks=seq(0, 1, by=0.25))+
-    scale_fill_manual(values=algo.colors)+
-    scale_x_discrete(
-      "People/groups in train set")+
-    geom_hline(aes(
-      yintercept=yint),
-      data=data.table(yint=0.5),
-      color="grey50")+
-    geom_point(aes(
-      train.groups, classif.ce, fill=algorithm),
-      shape=1,
-      size=5,
-      stroke=2,
-      color="black",
-      color_off=NA,
-      clickSelects="iteration",
-      data=class.bench.score)+
-    facet_grid(
-      task_id ~ `person/group`,
-      labeller=label_both),
-  source="https://github.com/tdhock/mlr3resampling/blob/d7cbe06fdb562ff8c1c8b4ad0bc055b65bd7b2c6/vignettes/Simulations.Rmd")
-viz
+if(requireNamespace("animint2")){
+  viz <- animint(
+    title="Train/predict on subsets, classification",
+    pred=ggplot()+
+      ggtitle("Predictions for selected train/test split")+
+      theme_animint(height=400)+
+      scale_fill_manual(values=set.colors)+
+      scale_color_manual(values=c(spam="black","not spam"="white"))+
+      geom_point(aes(
+        x1, x2, color=label, fill=set.name),
+        showSelected="iteration",
+        size=3,
+        stroke=2,
+        shape=21,
+        data=class.point.dt)+
+      geom_path(aes(
+        x1, x2, 
+        group=paste(algorithm, iteration, contour.i)),
+        showSelected=c("iteration","algorithm"),
+        color=algo.colors[["rpart"]],
+        data=class.pred.dt)+
+      facet_grid(
+        task_id ~ `person/group`,
+        labeller=label_both,
+        space="free",
+        scales="free")+
+      scale_y_continuous(
+        breaks=seq(-100, 100, by=2)),
+    err=ggplot()+
+      ggtitle("Test error for each split")+
+      theme_animint(height=400)+
+      theme(panel.margin=grid::unit(1, "lines"))+
+      scale_y_continuous(
+        "Classification error on test set",
+        breaks=seq(0, 1, by=0.25))+
+      scale_fill_manual(values=algo.colors)+
+      scale_x_discrete(
+        "People/groups in train set")+
+      geom_hline(aes(
+        yintercept=yint),
+        data=data.table(yint=0.5),
+        color="grey50")+
+      geom_point(aes(
+        train.groups, classif.ce, fill=algorithm),
+        shape=1,
+        size=5,
+        stroke=2,
+        color="black",
+        color_off=NA,
+        clickSelects="iteration",
+        data=class.bench.score)+
+      facet_grid(
+        task_id ~ `person/group`,
+        labeller=label_both),
+    diagram=ggplot()+
+      ggtitle("Select train/test split")+
+      theme_bw()+
+      theme_animint(height=300)+
+      facet_grid(
+        . ~ train.groups,
+        scales="free",
+        space="free")+
+      scale_size_manual(values=c(group=3, fold=1))+
+      scale_color_manual(values=c(group="orange", fold="grey50"))+
+      geom_rect(aes(
+        xmin=-Inf, xmax=Inf,
+        color=rows,
+        size=rows,
+        ymin=display_row, ymax=display_end),
+        fill=NA,
+        data=inst$viz.rect.dt)+
+      scale_fill_manual(values=set.colors)+
+      geom_rect(aes(
+        xmin=iteration-rect.expand, ymin=display_row,
+        xmax=iteration+rect.expand, ymax=display_end,
+        fill=set.name),
+        clickSelects="iteration",
+        data=inst$viz.set.dt)+
+      geom_text(aes(
+        ifelse(rows=="group", Inf, -Inf),
+        (display_row+display_end)/2,
+        hjust=ifelse(rows=="group", 1, 0),
+        label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
+        data=data.table(train.name="same", inst$viz.rect.dt))+
+      scale_x_continuous(
+        "Split number / cross-validation iteration")+
+      scale_y_continuous(
+        "Row number"),
+    source="https://github.com/tdhock/mlr3resampling/blob/942048163960cfeb90483224f52aa8315b3f50f5/vignettes/Simulations.Rmd")
+  viz
+}
 if(FALSE){
   animint2pages(viz, "2023-12-13-train-predict-subsets-classification")
 }
