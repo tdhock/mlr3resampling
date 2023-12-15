@@ -81,12 +81,12 @@ if(require(animint2)){
       labeller=label_both,
       scales="free",
       space="free")+
-    scale_linewidth_manual(values=c(group=3, fold=1))+
+    scale_size_manual(values=c(group=3, fold=1))+
     scale_color_manual(values=c(group="orange", fold="grey50"))+
     geom_rect(aes(
       xmin=-Inf, xmax=Inf,
       color=rows,
-      linewidth=rows,
+      size=rows,
       ymin=display_row, ymax=display_end),
       fill=NA,
       data=inst$viz.rect.dt)+
