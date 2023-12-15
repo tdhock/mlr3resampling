@@ -27,16 +27,30 @@ knitr::opts_chunk$set(
 ```
 
 The goal of this vignette is to explain how to quantify the extent to
-which it is possible to train on one data subset (say a geographic
-region such as Europe), and predict on another data subset (say North
-America). The ideas are similar to my previous blog posts about how to
-do this in
-[python](https://tdhock.github.io/blog/2022/generalization-to-new-subsets/) and
-[R](https://tdhock.github.io/blog/2023/R-gen-new-subsets/).
-Below we use data for simulated regression and classification problems.
+which it is possible to train on one data subset, and predict on
+another data subset. This kind of problem occurs frequently in many
+different problem domains:
+
+* geography: can we train on one region (say Europe) and accurately
+  predict on another? (North America)
+* time series: can we train on one time period (2000) and accurately
+  predict on another? (2001)
+* personalization: can we train on one person (Alice) and accurately
+  predict on another? (Bob)
+
+The ideas are similar to my previous blog posts about how to do this
+in
+[python](https://tdhock.github.io/blog/2022/generalization-to-new-subsets/)
+and [R](https://tdhock.github.io/blog/2023/R-gen-new-subsets/). Below
+we explain how to use `mlr3resampling` for this purpose, in simulated
+regression and classification problems. To use this method in
+real data, the important sections to read below are named "Benchmark:
+computing test error," which show how to create these cross-validation
+experiments using mlr3 code.
 
 ## Simulated regression problems
 
+We begin by generating some data which can be used with regression algorithms.
 Assume there is a data set with some rows from one person, some rows
 from another,
 
@@ -68,6 +82,9 @@ The table above shows some simulated data for two regression problems:
 
 * easy problem has the same pattern for each person, so it is possible/easy to train on one person, and accurately predict on another.
 * impossible problem has a different pattern for each person, so it is impossible to train on one person, and accurately predict on another.
+* when adapting the code above to real data, the important part is the
+  `mlr3::TaskRegr` line which tells mlr3 what data set to use, what is
+  the target column, and what is the group/stratum column.
 
 ### Static visualization of simulated data
 
@@ -173,8 +190,13 @@ It is clear from the plot above that
   groups. rpart has much lower test error than featureless, in all
   three train groups.
 * for the impossible task, the least test error is using rpart with same train groups; featureless with same train groups is next best; training on all is substantially worse (for both featureless and rpart); training on other is even worse (patterns in the two people are completely different).
+* in a real data task, training on other will most likely not be quite as bad as in the impossible task above, but also not as good as in the easy task.
 
 ### Interactive visualization of data, test error, and splits
+
+The code below can be used to create an interactive data visualization
+which allows exploring how different functions are learned during
+different splits.
 
 ```{r SimulationsAnimintRegression}
 inst <- reg.bench.score$resampling[[1]]$instance
@@ -322,6 +344,7 @@ but you can view it on:
 
 ## Simulated classification problems
 
+The previous section investigated a simulated regression problem, whereas in this section we simulate a binary classification problem.
 Assume there is a data set with some rows from one person, some rows
 from another,
 
@@ -358,7 +381,7 @@ for(person.i in 1:n.people){
 full.dt
 ```
 
-There are two sets of two features:
+In the table above, there are two sets of two features:
 
 * For easy features, one is correlated with the label (`x1_easy`), and
   one is random noise (`x2_easy`), so the algorithm just needs to
@@ -434,7 +457,10 @@ class.task.list
 ```
 
 Note in the code above that person is assigned roles group and
-stratum, whereas label is assigned roles target and stratum.
+stratum, whereas label is assigned roles target and stratum.  When
+adapting the code above to real data, the important part is the
+`mlr3::TaskClassif` line which tells mlr3 what data set to use, and
+what columns should be used for target/group/stratum.
 
 The code below is used to define a K-fold cross-validation experiment,
 
@@ -500,12 +526,13 @@ It is clear from the plot above that
   test error; training on all is almost as good, because the pattern
   in person 1 is orthogonal to person 2; training on other is just as
   bad as featureless, because patterns are different.
+* in a real data task, training on other will most likely not be quite as bad as in the impossible task above, but also not as good as in the easy task.
   
 ### Interactive visualization of data, test error, and splits
 
-In this section we create an interactive data visualization which
-allows exploring how different functions are learned during different
-splits.
+The code below can be used to create an interactive data visualization
+which allows exploring how different functions are learned during
+different splits.
 
 ```{r SimulationsAnimintClassification}
 inst <- class.bench.score$resampling[[1]]$instance
