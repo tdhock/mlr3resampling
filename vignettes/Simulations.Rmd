@@ -155,7 +155,9 @@ In the code below, we execute the benchmark experiment (in parallel
 using the multisession future plan).
 
 ```{r}
-if(require(future))plan("multisession")
+if(FALSE){
+  if(require(future))plan("multisession")
+}
 (reg.bench.result <- mlr3::benchmark(
   reg.bench.grid, store_models = TRUE))
 ```
@@ -489,7 +491,9 @@ The code below runs the benchmark experiment grid. Note that each
 iteration can be parallelized by declaring a future plan.
 
 ```{r}
-if(require(future))plan("multisession")
+if(FALSE){
+  if(require(future))plan("multisession")
+}
 (class.bench.result <- mlr3::benchmark(
   class.bench.grid, store_models = TRUE))
 ```
@@ -711,3 +715,9 @@ but you can view it on:
 
 In this vignette we have shown how to use mlr3resampling for comparing
 test error of models trained on same/all/other groups.
+
+## Session info 
+
+```{r}
+sessionInfo()
+```
