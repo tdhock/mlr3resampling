@@ -6,7 +6,7 @@ Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
      role=c("aut", "cre"),
-     comment = c(ORCID="0000-0002-3146-0865", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
+     comment = c(ORCID="0000-0002-3146-0865")),
     person("Michel", "Lang", , "michellang@gmail.com", role = "ctb",
            comment = c(ORCID = "0000-0001-9754-0393", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
     person("Bernd", "Bischl", , "bernd_bischl@gmx.net", role = "ctb",
