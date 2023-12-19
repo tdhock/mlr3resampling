@@ -1,3 +1,7 @@
+Changes in version 2023.12.19
+
+- use setDTthreads(1) in vignette to avoid CRAN NOTE (Re-building vignettes had CPU time 3.2 times elapsed time)
+
 Changes in version 2023.12.18
 
 - do not future::plan multisession, to avoid CRAN NOTE (checking for detritus in the temp directory).
