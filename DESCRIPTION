@@ -49,6 +49,9 @@ Description: A supervised learning algorithm inputs a train set,
  test accuracy for each group; other is usually somewhat less accurate
  than same; other can be just as bad as featureless baseline when the
  groups have different patterns).
+ For more information, 
+ <https://tdhock.github.io/blog/2023/R-gen-new-subsets/>
+ describes the method in depth.
 License: GPL-3
 URL: https://github.com/tdhock/mlr3resampling
 BugReports: https://github.com/tdhock/mlr3resampling/issues
