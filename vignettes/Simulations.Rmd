@@ -575,7 +575,8 @@ for(score.i in 1:nrow(class.bench.score)){
   if(class.bench.row$algorithm!="featureless"){
     i.learner <- class.bench.row$learner[[1]]
     i.learner$predict_type <- "prob"
-    setnames(grid.class.dt, names(i.learner$state$data_prototype))
+    i.task <- class.bench.row$task[[1]]
+    setnames(grid.class.dt, names(i.task$data()))
     grid.class.task <- mlr3::TaskClassif$new(
       "grid", grid.class.dt, target="label")
     pred.grid <- as.data.table(

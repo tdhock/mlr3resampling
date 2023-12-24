@@ -1,3 +1,7 @@
+Changes in version 2023.12.23
+
+- To get data set names in Simulations vignette, use task data names instead of learner$state$data_prototype.
+
 Changes in version 2023.12.20
 
 - First CRAN release.
