@@ -20,7 +20,11 @@ ResamplingBase = R6::R6Class(
       sprintf("<%s>", class(self)[1L])
     },
     print = function(...) {
-      cat(format(self), if (is.null(self$label) || is.na(self$label)) "" else paste0(": ", self$label))
+      cat(
+        format(self),
+        if (is.null(self$label) || is.na(self$label))
+          "" else paste0(": ", self$label)
+      )
       cat("\n* Iterations:", self$iters)
       cat("\n* Instantiated:", self$is_instantiated)
       cat("\n* Parameters:\n")
@@ -37,6 +41,9 @@ ResamplingBase = R6::R6Class(
     }
   ),
   active = list(
+    iters = function(rhs) {
+      nrow(self$instance$iteration.dt)
+    },
     is_instantiated = function(rhs) {
       !is.null(self$instance)
     },
@@ -44,7 +51,33 @@ ResamplingBase = R6::R6Class(
       if (!self$is_instantiated) {
         return(NA_character_)
       }
-      mlr3misc::calculate_hash(list(class(self), self$id, self$param_set$values, self$instance))
+      mlr3misc::calculate_hash(list(
+        class(self),
+        self$id,
+        self$param_set$values,
+        self$instance))
+    }
+  ),
+  private = list(
+    .sample = function(ids, ...) {
+      data.table(
+        row_id = ids,
+        fold = sample(
+          seq(0, length(ids)-1) %%
+            as.integer(self$param_set$values$folds) + 1L
+        ),
+        key = "fold"
+      )
+    },
+    .combine = function(instances) {
+      rbindlist(instances, use.names = TRUE)
+    },
+    deep_clone = function(name, value) {
+      switch(name,
+        "instance" = copy(value),
+        "param_set" = value$clone(deep = TRUE),
+        value
+        )
     }
   )
 )

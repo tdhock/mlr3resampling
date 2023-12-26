@@ -1,7 +1,18 @@
-ResamplingSameOther = R6::R6Class(
-  "ResamplingSameOther",
+ResamplingSameOtherCV = R6::R6Class(
+  "ResamplingSameOtherCV",
   inherit=ResamplingBase,
   public = list(
+    initialize = function() {
+      ps = paradox::ps(
+        folds = paradox::p_int(2L, tags = "required")
+      )
+      ps$values = list(folds = 3L)
+      super$initialize(
+        id = "same_other_cv",
+        param_set = ps,
+        label = "Same versus Other Cross-Validation",
+        man = "ResamplingSameOtherCV")
+    },
     instantiate = function(task) {
       task = mlr3::assert_task(mlr3::as_task(task))
       group.name.vec <- task$col_roles$group
@@ -98,51 +109,6 @@ ResamplingSameOther = R6::R6Class(
       self$task_hash = task$hash
       self$task_nrow = task$nrow
       invisible(self)
-    }
-  )
-)
-
-ResamplingSameOtherCV = R6::R6Class(
-  "ResamplingSameOtherCV",
-  inherit = ResamplingSameOther,
-  public = list(
-    initialize = function() {
-      ps = paradox::ps(
-        folds = paradox::p_int(2L, tags = "required")
-      )
-      ps$values = list(folds = 3L)
-      super$initialize(
-        id = "same_other_cv",
-        param_set = ps,
-        label = "Cross-Validation",
-        man = "ResamplingSameOtherCV")
-    }
-  ),
-  active = list(
-    iters = function(rhs) {
-      nrow(self$instance$iteration.dt)
-    }
-  ),
-  private = list(
-    .sample = function(ids, ...) {
-      data.table(
-        row_id = ids,
-        fold = sample(
-          seq(0, length(ids)-1) %%
-            as.integer(self$param_set$values$folds) + 1L
-        ),
-        key = "fold"
-      )
-    },
-    .combine = function(instances) {
-      rbindlist(instances, use.names = TRUE)
-    },
-    deep_clone = function(name, value) {
-      switch(name,
-        "instance" = copy(value),
-        "param_set" = value$clone(deep = TRUE),
-        value
-        )
     }
   )
 )

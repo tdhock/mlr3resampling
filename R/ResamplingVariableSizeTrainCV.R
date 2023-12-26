@@ -1,7 +1,24 @@
-ResamplingVariableSizeTrain = R6::R6Class(
-  "ResamplingVariableSizeTrain",
+ResamplingVariableSizeTrainCV = R6::R6Class(
+  "ResamplingVariableSizeTrainCV",
   inherit=ResamplingBase,
   public = list(
+    initialize = function() {
+      ps = paradox::ps(
+        folds = paradox::p_int(2L, tags = "required"),
+        min_train_data=paradox::p_int(1L, tags = "required"),
+        random_seeds=paradox::p_int(1L, tags = "required"),
+        train_sizes = paradox::p_int(2L, tags = "required"))
+      ps$values = list(
+        folds = 3L,
+        min_train_data=10L,
+        random_seeds=3L,
+        train_sizes=5L)
+      super$initialize(
+        id = "variable_size_train_cv",
+        param_set = ps,
+        label = "Cross-Validation with variable size train sets",
+        man = "ResamplingVariableSizeTrainCV")
+    },
     instantiate = function(task) {
       task = mlr3::assert_task(mlr3::as_task(task))
       reserved.names <- c(
@@ -53,57 +70,6 @@ ResamplingVariableSizeTrain = R6::R6Class(
       self$task_hash = task$hash
       self$task_nrow = task$nrow
       invisible(self)
-    }
-  )
-)
-
-ResamplingVariableSizeTrainCV = R6::R6Class(
-  "ResamplingVariableSizeTrainCV",
-  inherit = ResamplingVariableSizeTrain,
-  public = list(
-    initialize = function() {
-      ps = paradox::ps(
-        folds = paradox::p_int(2L, tags = "required"),
-        min_train_data=paradox::p_int(1L, tags = "required"),
-        random_seeds=paradox::p_int(1L, tags = "required"),
-        train_sizes = paradox::p_int(2L, tags = "required"))
-      ps$values = list(
-        folds = 3L,
-        min_train_data=10L,
-        random_seeds=3L,
-        train_sizes=5L)
-      super$initialize(
-        id = "variable_size_train_cv",
-        param_set = ps,
-        label = "Cross-Validation with variable size train sets",
-        man = "ResamplingVariableSizeTrainCV")
-    }
-  ),
-  active = list(
-    iters = function(rhs) {
-      nrow(self$instance$iteration.dt)
-    }
-  ),
-  private = list(
-    .sample = function(ids, ...) {
-      data.table(
-        row_id = ids,
-        fold = sample(
-          seq(0, length(ids)-1) %%
-            as.integer(self$param_set$values$folds) + 1L
-        ),
-        key = "fold"
-      )
-    },
-    .combine = function(instances) {
-      rbindlist(instances, use.names = TRUE)
-    },
-    deep_clone = function(name, value) {
-      switch(name,
-        "instance" = copy(value),
-        "param_set" = value$clone(deep = TRUE),
-        value
-        )
     }
   )
 )
