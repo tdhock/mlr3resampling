@@ -80,3 +80,31 @@ test_that("error for group named test", {
     same_other$instantiate(itask)
   }, "col with role group must not be named test; please fix by renaming test col")
 })
+
+test_that("error for 10 data", {
+  size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
+  i10.dt <- data.table(iris)[1:10]
+  i10.task <- mlr3::TaskClassif$new("i10", i10.dt, target="Species")
+  expect_error({
+    size_cv$instantiate(i10.task)
+  },
+  "task$nrow=10 but should be larger than min_train_data=10",
+  fixed=TRUE)
+})
+
+test_that("train set max size 67 for 100 data", {
+  size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
+  i100.dt <- data.table(iris)[1:100]
+  i100.task <- mlr3::TaskClassif$new("i10", i100.dt, target="Species")
+  size_cv$instantiate(i100.task)
+  inst <- size_cv$instance
+  computed.counts <- inst$id.dt[, .(rows=.N), keyby=fold]
+  expected.counts <- data.table(
+    fold=1:3,
+    rows=as.integer(c(34,33,33)),
+    key="fold")
+  expect_equal(computed.counts, expected.counts)
+  l.train <- sapply(inst$iteration.dt$train, length)
+  expect_equal(l.train, inst$iteration.dt$train_size)
+  expect_equal(max(l.train), 67)
+})

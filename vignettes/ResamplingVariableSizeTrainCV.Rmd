@@ -68,13 +68,25 @@ if(require(animint2)){
 }
 ```
 
-### Benchmark: computing test error
+### Visualizing splits
 
 In the code below, we define a K-fold cross-validation experiment.
 
 ```{r}
 (reg_size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
 ```
+
+
+
+```{r}
+reg_size_cv$instantiate(reg.task.list[["sin"]])
+reg_size_cv$instance
+table(reg_size_cv$instance$id.dt$fold)
+sapply(reg_size_cv$instance$iteration.dt$train, length)
+sapply(reg_size_cv$instance$iteration.dt$test, length)
+```
+
+### Benchmark: computing test error
 
 In the code below, we define two learners to compare,
 

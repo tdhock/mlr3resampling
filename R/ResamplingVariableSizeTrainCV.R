@@ -41,6 +41,11 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         lapply(strata$row_id, private$.sample, task = task)
       )[order(row_id)]
       min_train_data <- self$param_set$values[["min_train_data"]]
+      if(task$nrow <= min_train_data){
+        stop(sprintf(
+          "task$nrow=%d but should be larger than min_train_data=%d",
+          task$nrow, min_train_data))
+      }
       uniq.folds <- unique(folds$fold)
       iteration.dt.list <- list()
       for(test.fold in uniq.folds){
@@ -52,7 +57,7 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         log.range.data <- log(c(min_train_data, max_train_data))
         seq.args <- c(as.list(log.range.data), list(l=self$param_set$values[["train_sizes"]]))
         log.train.sizes <- do.call(seq, seq.args)
-        train.size.vec <- unique(as.integer(exp(log.train.sizes)))
+        train.size.vec <- unique(as.integer(round(exp(log.train.sizes))))
         for(seed in 1:self$param_set$values[["random_seeds"]]){
           set.seed(seed)
           ord.i.vec <- sample(i.set.list$train)
