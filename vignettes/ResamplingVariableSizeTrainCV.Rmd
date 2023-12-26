@@ -32,11 +32,141 @@ The goal of this vignette is to explain how to
 many train data are necessary to provide accurate predictions on a
 given test set. 
 
+## Simulated regression problems
+
+```{r}
+N <- 1000
+library(data.table)
+set.seed(1)
+abs.x <- 20
+x.vec <- runif(N, -abs.x, abs.x)
+reg.pattern.list <- list(
+  sin=sin,
+  constant=function(x)0)
+reg.task.list <- list()
+reg.data.list <- list()
+for(task_id in names(reg.pattern.list)){
+  f <- reg.pattern.list[[task_id]]
+  task.dt <- data.table(
+    x=x.vec,
+    y = f(x.vec)+rnorm(N))
+  reg.data.list[[task_id]] <- data.table(task_id, task.dt)
+  reg.task.list[[task_id]] <- mlr3::TaskRegr$new(
+    task_id, task.dt, target="y"
+  )
+}
+(reg.data <- rbindlist(reg.data.list))
+```
+
+```{r}
+if(require(animint2)){
+  ggplot()+
+    geom_point(aes(
+      x, y),
+      data=reg.data)+
+    facet_grid(task_id ~ .)
+}
+```
+
+### Benchmark: computing test error
+
+In the code below, we define a K-fold cross-validation experiment.
+
+```{r}
+(reg_size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
+```
+
+In the code below, we define two learners to compare,
+
+```{r}
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+```
+
+In the code below, we define the benchmark grid, which is all
+combinations of tasks (easy and impossible), learners (rpart and
+featureless), and the one resampling method.
+
+```{r}
+(reg.bench.grid <- mlr3::benchmark_grid(
+  reg.task.list,
+  reg.learner.list,
+  reg_size_cv))
+```
+
+In the code below, we execute the benchmark experiment (in parallel
+using the multisession future plan).
+
+```{r}
+if(FALSE){
+  if(require(future))plan("multisession")
+}
+(reg.bench.result <- mlr3::benchmark(
+  reg.bench.grid, store_models = TRUE))
+```
+
+The code below computes the test error for each split,
+
+```{r}
+reg.bench.score <- mlr3resampling::score(reg.bench.result)
+reg.bench.score[1]
+```
+
+The code below visualizes the resulting test accuracy numbers.
+
+```{r}
+if(require(animint2)){
+  ggplot()+
+    scale_x_log10()+
+    scale_y_log10()+
+    geom_point(aes(
+      train_size, regr.mse, color=algorithm),
+      shape=1,
+      data=reg.bench.score)+
+    facet_grid(
+      test.fold~task_id,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+```{r}
+reg.mean.dt <- dcast(
+  reg.bench.score,
+  task_id + train_size + test.fold + algorithm ~ .,
+  list(mean, sd),
+  value.var="regr.mse")
+if(require(animint2)){
+  ggplot()+
+    scale_x_log10()+
+    scale_y_log10()+
+    geom_ribbon(aes(
+      train_size,
+      ymin=regr.mse_mean-regr.mse_sd,
+      ymax=regr.mse_mean+regr.mse_sd,
+      fill=algorithm),
+      alpha=0.5,
+      data=reg.mean.dt)+
+    geom_line(aes(
+      train_size, regr.mse_mean, color=algorithm),
+      shape=1,
+      data=reg.mean.dt)+
+    facet_grid(
+      test.fold~task_id,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+It is clear from the plot above that 
+
+* TODO
+* at least 100 samples are required for reasonable prediction error rates in sin task.
+
 ## Simulated classification problems
 
 In this section we simulate a binary classification problem.
-Assume there is a data set with some rows from one person, some rows
-from another,
 
 ```{r}
 N <- 200
@@ -73,7 +203,9 @@ for(task_id in c("easy","impossible")){
     "label",c("target","stratum"))
 }
 class.task.list
-devtools::load_all()
+(class.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerClassifRpart$new(),
+  mlr3::LearnerClassifFeatureless$new()))
 (size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
 size_cv$instantiate(class.task.list$easy)
 size_cv$instance$iteration.dt

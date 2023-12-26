@@ -16,12 +16,12 @@ ResamplingVariableSizeTrain = R6::R6Class(
       ##   stop(sprintf("col with role group must not be named %s; please fix by renaming %s col", first.bad, first.bad))
       ## }
       ## orig.group.dt <- task$data(cols=group.name.vec)
-      if(is.null(task$strata)){
+      strata <- if(is.null(task$strata)){
         data.dt <- task$data()
-        task$strata <- data.table(N=nrow(data.dt), row_id=list(1:nrow(data.dt)))
-      }
+        data.table(N=nrow(data.dt), row_id=list(1:nrow(data.dt)))
+      }else task$strata
       folds = private$.combine(
-        lapply(task$strata$row_id, private$.sample, task = task)
+        lapply(strata$row_id, private$.sample, task = task)
       )[order(row_id)]
       min_train_data <- self$param_set$values[["min_train_data"]]
       uniq.folds <- unique(folds$fold)
