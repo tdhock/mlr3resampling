@@ -1,0 +1,132 @@
+---
+title: "Cross-validation with a variable size train set"
+author: "Toby Dylan Hocking"
+vignette: >
+  %\VignetteIndexEntry{Simulations}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1200px !important;
+  margin: auto;
+}
+</style>
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  fig.width=6,
+  fig.height=6)
+data.table::setDTthreads(1)
+## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
+## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The goal of this vignette is to explain how to
+`ResamplingVariableSizeTrainCV`, which can be used to determine how
+many train data are necessary to provide accurate predictions on a
+given test set. 
+
+## Simulated classification problems
+
+In this section we simulate a binary classification problem.
+Assume there is a data set with some rows from one person, some rows
+from another,
+
+```{r}
+N <- 200
+library(data.table)
+(full.dt <- data.table(
+  label=factor(rep(c("spam","not spam"), l=N)),
+  person=rep(1:2, each=0.5*N)
+)[, signal := ifelse(label=="not spam", 0, 3)][])
+set.seed(1)
+n.people <- length(unique(full.dt$person))
+for(person.i in 1:n.people){
+  use.signal.vec <- list(
+    easy=rep(if(person.i==1)TRUE else FALSE, N),
+    impossible=full.dt$person==person.i)
+  for(task_id in names(use.signal.vec)){
+    use.signal <- use.signal.vec[[task_id]]
+    full.dt[
+    , paste0("x",person.i,"_",task_id) := ifelse(
+      use.signal, signal, 0
+    )+rnorm(N)][]
+  }
+}
+full.dt
+class.task.list <- list()
+for(task_id in c("easy","impossible")){
+  feature.names <- grep(task_id, names(full.dt), value=TRUE)
+  task.col.names <- c(feature.names, "label", "person")
+  task.dt <- full.dt[, task.col.names, with=FALSE]
+  class.task.list[[task_id]] <- mlr3::TaskClassif$new(
+    task_id, task.dt, target="label"
+  )$set_col_roles(
+    "person",c("group","stratum")
+  )$set_col_roles(
+    "label",c("target","stratum"))
+}
+class.task.list
+devtools::load_all()
+(size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
+size_cv$instantiate(class.task.list$easy)
+size_cv$instance$iteration.dt
+size_cv$iters
+size_cv$train_set(1)
+size_cv$test_set(1)
+(class.bench.grid <- mlr3::benchmark_grid(
+  class.task.list,
+  class.learner.list,
+  size_cv))
+if(FALSE){
+  if(require(future))plan("multisession")
+}
+(class.bench.result <- mlr3::benchmark(
+  class.bench.grid, store_models = TRUE))
+```
+
+Below we compute scores (test error) for each resampling iteration,
+and show the first row of the result.
+
+```{r}
+class.bench.score <- mlr3resampling::score(class.bench.result)
+class.bench.score[1]
+```
+
+Finally we plot the test error values below.
+
+```{r}
+if(require(animint2)){
+  ggplot()+
+    geom_point(aes(
+      train_size, classif.ce, color=algorithm),
+      shape=1,
+      data=class.bench.score)+
+    facet_grid(
+      task_id ~ test.fold,
+      labeller=label_both,
+      scales="free")+
+    scale_x_log10()
+}
+```
+
+It is clear from the plot above that 
+
+* TODO
+  
+## Conclusion
+
+In this vignette we have shown how to use mlr3resampling for comparing
+test error of models trained on different sized train sets.
+
+## Session info 
+
+```{r}
+sessionInfo()
+```
