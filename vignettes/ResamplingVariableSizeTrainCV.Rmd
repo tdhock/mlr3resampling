@@ -1,8 +1,8 @@
 ---
-title: "Cross-validation with a variable size train set"
+title: "Comparing train set sizes"
 author: "Toby Dylan Hocking"
 vignette: >
-  %\VignetteIndexEntry{Simulations}
+  %\VignetteIndexEntry{Comparing train set sizes}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -1,8 +1,8 @@
 ---
-title: "Simulations"
+title: "Comparing training on same or other groups"
 author: "Toby Dylan Hocking"
 vignette: >
-  %\VignetteIndexEntry{Simulations}
+  %\VignetteIndexEntry{Comparing training on same or other groups}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
