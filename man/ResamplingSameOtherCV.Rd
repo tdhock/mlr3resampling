@@ -1,22 +1,20 @@
-\name{ResamplingSameOther}
-\alias{ResamplingSameOther}
+\name{ResamplingSameOtherCV}
 \alias{ResamplingSameOtherCV}
 \title{Resampling for comparing training on same or other groups}
 \description{
-\code{\link{ResamplingSameOther}} is the abstract base class for
-\code{\link{ResamplingSameOtherCV}},
-which defines how a task is partitioned for
-resampling, for example in
-\code{\link[mlr3:resample]{resample()}} or
-\code{\link[mlr3:benchmark]{benchmark()}}.
+  \code{\link{ResamplingSameOtherCV}}
+  defines how a task is partitioned for
+  resampling, for example in
+  \code{\link[mlr3:resample]{resample()}} or
+  \code{\link[mlr3:benchmark]{benchmark()}}.
 
-Resampling objects can be instantiated on a
-\code{\link[mlr3:Task]{Task}},
-which should define at least one group variable.
-
-After instantiation, sets can be accessed via
-\verb{$train_set(i)} and
-\verb{$test_set(i)}, respectively. 
+  Resampling objects can be instantiated on a
+  \code{\link[mlr3:Task]{Task}},
+  which should define at least one group variable.
+  
+  After instantiation, sets can be accessed via
+  \verb{$train_set(i)} and
+  \verb{$test_set(i)}, respectively. 
 }
 \details{
   A supervised learning algorithm inputs a train set, and outputs a

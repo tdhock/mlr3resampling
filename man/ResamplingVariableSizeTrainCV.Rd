@@ -1,21 +1,19 @@
-\name{ResamplingVariableSizeTrain}
-\alias{ResamplingVariableSizeTrain}
+\name{ResamplingVariableSizeTrainCV}
 \alias{ResamplingVariableSizeTrainCV}
 \title{Resampling for comparing training on same or other groups}
 \description{
-\code{\link{ResamplingVariableSizeTrain}} is the abstract base class for
-\code{\link{ResamplingVariableSizeTrainCV}},
-which defines how a task is partitioned for
-resampling, for example in
-\code{\link[mlr3:resample]{resample()}} or
-\code{\link[mlr3:benchmark]{benchmark()}}.
+  \code{\link{ResamplingVariableSizeTrainCV}}
+  defines how a task is partitioned for
+  resampling, for example in
+  \code{\link[mlr3:resample]{resample()}} or
+  \code{\link[mlr3:benchmark]{benchmark()}}.
 
-Resampling objects can be instantiated on a
-\code{\link[mlr3:Task]{Task}}.
+  Resampling objects can be instantiated on a
+  \code{\link[mlr3:Task]{Task}}.
 
-After instantiation, sets can be accessed via
-\verb{$train_set(i)} and
-\verb{$test_set(i)}, respectively. 
+  After instantiation, sets can be accessed via
+  \verb{$train_set(i)} and
+  \verb{$test_set(i)}, respectively. 
 }
 \details{
   A supervised learning algorithm inputs a train set, and outputs a
@@ -25,18 +23,16 @@ After instantiation, sets can be accessed via
   variable size train sets.
 }
 \section{Stratification}{
-
-\code{\link{ResamplingVariableSizeTrainCV}} supports stratified sampling.
-The stratification variables are assumed to be discrete,
-and must be stored in the \link{Task} with column role \code{"stratum"}.
-In case of multiple stratification variables,
-each combination of the values of the stratification variables forms a stratum.
+  \code{\link{ResamplingVariableSizeTrainCV}} supports stratified sampling.
+  The stratification variables are assumed to be discrete,
+  and must be stored in the \link{Task} with column role \code{"stratum"}.
+  In case of multiple stratification variables,
+  each combination of the values of the stratification variables forms a stratum.
 }
 
 \section{Grouping}{
-
-\code{\link{ResamplingVariableSizeTrainCV}} does not support grouping of observations.
-
+  \code{\link{ResamplingVariableSizeTrainCV}}
+  does not support grouping of observations.
 }
 
 \section{Hyper-parameters}{
