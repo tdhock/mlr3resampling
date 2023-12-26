@@ -1,18 +1,17 @@
-\name{ResamplingSameOther}
-\alias{ResamplingSameOther}
-\alias{ResamplingSameOtherCV}
+\name{ResamplingVariableSizeTrain}
+\alias{ResamplingVariableSizeTrain}
+\alias{ResamplingVariableSizeTrainCV}
 \title{Resampling for comparing training on same or other groups}
 \description{
-\code{\link{ResamplingSameOther}} is the abstract base class for
-\code{\link{ResamplingSameOtherCV}},
+\code{\link{ResamplingVariableSizeTrain}} is the abstract base class for
+\code{\link{ResamplingVariableSizeTrainCV}},
 which defines how a task is partitioned for
 resampling, for example in
 \code{\link[mlr3:resample]{resample()}} or
 \code{\link[mlr3:benchmark]{benchmark()}}.
 
 Resampling objects can be instantiated on a
-\code{\link[mlr3:Task]{Task}},
-which should define at least one group variable.
+\code{\link[mlr3:Task]{Task}}.
 
 After instantiation, sets can be accessed via
 \verb{$train_set(i)} and
@@ -20,24 +19,14 @@ After instantiation, sets can be accessed via
 }
 \details{
   A supervised learning algorithm inputs a train set, and outputs a
-  prediction function, which can be used on a test set. If each data
-  point belongs to a group (such as geographic region, year, etc), then
-  how do we know if it is possible to train on one group, and predict
-  accurately on another group? Cross-validation can be used to determine
-  the extent to which this is possible, by first assigning fold IDs from
-  1 to K to all data (possibly using stratification, usually by group
-  and label). Then we loop over test sets (group/fold combinations),
-  train sets (same group, other groups, all groups), and compute
-  test/prediction accuracy for each combination.  Comparing
-  test/prediction accuracy between same and other, we can determine the
-  extent to which it is possible (perfect if same/other have similar
-  test accuracy for each group; other is usually somewhat less accurate
-  than same; other can be just as bad as featureless baseline when the
-  groups have different patterns).
+  prediction function, which can be used on a test set.
+  How many train samples are required to get accurate predictions on a
+  test set? Cross-validation can be used to answer this question, with
+  variable size train sets.
 }
 \section{Stratification}{
 
-\code{\link{ResamplingSameOtherCV}} supports stratified sampling.
+\code{\link{ResamplingVariableSizeTrainCV}} supports stratified sampling.
 The stratification variables are assumed to be discrete,
 and must be stored in the \link{Task} with column role \code{"stratum"}.
 In case of multiple stratification variables,
@@ -46,36 +35,35 @@ each combination of the values of the stratification variables forms a stratum.
 
 \section{Grouping}{
 
-\code{\link{ResamplingSameOtherCV}} supports grouping of observations.
-The grouping variable is assumed to be discrete,
-and must be stored in the \link{Task} with column role \code{"group"}.
+\code{\link{ResamplingVariableSizeTrainCV}} does not support grouping of observations.
 
-The number of cross-validation folds K should be defined as the
-\code{fold} parameter.
+}
 
-In each group, there will be about an equal number of observations
-assigned to each of the K folds.
-The assignments are stored in
-\verb{$instance$id.dt}.
-The train/test splits are defined by all possible combinations of
-test group, test fold, and train groups (same/other/all).
-The splits are stored in
-\verb{$instance$iteration.dt}.
+\section{Hyper-parameters}{
+
+  The number of cross-validation folds should be defined as the
+  \code{fold} parameter.
+
+  For each fold ID, the corresponding observations are considered the
+  test set, and a variable number of other observations are considered
+  the train set.
+
+  The \code{random_seeds} parameter controls the number of random
+  orderings of the train set that are considered.
+
+  For each random order of the train set, the \code{min_train_data}
+  parameter controls the smallest train set size considered.
+
+  To determine the other train set sizes, we use an equally spaced grid
+  on the log scale, from \code{min_train_data} to the largest train set
+  size (all data not in test set). The
+  number of train set sizes in this grid is determined by the
+  \code{train_sizes} parameter.
+
 }
 
 \examples{
-same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-same_other$param_set$values$folds <- 5
-}
-\seealso{
-  \itemize{
-    \item Blog post
-    \url{https://tdhock.github.io/blog/2023/R-gen-new-subsets/}
-    \item Package \CRANpkg{mlr3} for standard
-    \code{\link[mlr3:Resampling]{Resampling}}, which does not support comparing
-    train on same or other groups.
-    \item \code{\link{score}} and Simulations vignette for more detailed examples.
-  }
+(var_sizes <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
 }
 \concept{Resampling}
 \section{Methods}{
