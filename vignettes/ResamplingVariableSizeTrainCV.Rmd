@@ -35,10 +35,10 @@ given test set.
 ## Simulated regression problems
 
 ```{r}
-N <- 1000
+N <- 100
 library(data.table)
 set.seed(1)
-abs.x <- 20
+abs.x <- 10
 x.vec <- runif(N, -abs.x, abs.x)
 reg.pattern.list <- list(
   sin=sin,
@@ -49,7 +49,7 @@ for(task_id in names(reg.pattern.list)){
   f <- reg.pattern.list[[task_id]]
   task.dt <- data.table(
     x=x.vec,
-    y = f(x.vec)+rnorm(N))
+    y = f(x.vec)+rnorm(N,sd=0.5))
   reg.data.list[[task_id]] <- data.table(task_id, task.dt)
   reg.task.list[[task_id]] <- mlr3::TaskRegr$new(
     task_id, task.dt, target="y"
@@ -68,7 +68,7 @@ if(require(animint2)){
 }
 ```
 
-### Visualizing splits
+### Visualizing instance table
 
 In the code below, we define a K-fold cross-validation experiment.
 
@@ -76,15 +76,17 @@ In the code below, we define a K-fold cross-validation experiment.
 (reg_size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
 ```
 
-
+Below we instantiate the resampling on one of the tasks:
 
 ```{r}
 reg_size_cv$instantiate(reg.task.list[["sin"]])
 reg_size_cv$instance
-table(reg_size_cv$instance$id.dt$fold)
-sapply(reg_size_cv$instance$iteration.dt$train, length)
-sapply(reg_size_cv$instance$iteration.dt$test, length)
 ```
+
+Above we see the instance, 
+
+* `iteration.dt` has one row for each train/test split,
+* `id.dt` has one row for each data point.
 
 ### Benchmark: computing test error
 
@@ -143,6 +145,9 @@ if(require(animint2)){
 }
 ```
 
+Above we plot the test error for each fold and train set size. 
+Below we summarize each train set size, by taking the mean and standard deviation over each random seed.
+
 ```{r}
 reg.mean.dt <- dcast(
   reg.bench.score,
@@ -173,8 +178,130 @@ if(require(animint2)){
 
 It is clear from the plot above that 
 
-* TODO
-* at least 100 samples are required for reasonable prediction error rates in sin task.
+* in constant task, the featureless always has smaller or equal
+  prediction error rates than rpart, which indicates that rpart
+  sometimes overfits for small sample sizes.
+* in sin task, more than 30 samples are required for reasonable
+  prediction error rates.
+  
+### Interactive data viz
+
+The code below can be used to create an interactive data visualization
+which allows exploring how different functions are learned during
+different splits.
+
+```{r ResamplingVariableSizeTrainCVAnimintRegression}
+grid.dt <- data.table(x=seq(-abs.x, abs.x, l=101), y=0)
+grid.task <- mlr3::TaskRegr$new("grid", grid.dt, target="y")
+pred.dt.list <- list()
+point.dt.list <- list()
+for(score.i in 1:nrow(reg.bench.score)){
+  reg.bench.row <- reg.bench.score[score.i]
+  task.dt <- data.table(
+    reg.bench.row$task[[1]]$data(),
+    reg.bench.row$resampling[[1]]$instance$id.dt)
+  set.ids <- data.table(
+    set.name=c("test","train")
+  )[
+  , data.table(row_id=reg.bench.row[[set.name]][[1]])
+  , by=set.name]
+  i.points <- set.ids[
+    task.dt, on="row_id"
+  ][
+    is.na(set.name), set.name := "unused"
+  ]
+  point.dt.list[[score.i]] <- data.table(
+    reg.bench.row[, .(task_id, iteration)],
+    i.points)
+  i.learner <- reg.bench.row$learner[[1]]
+  pred.dt.list[[score.i]] <- data.table(
+    reg.bench.row[, .(
+      task_id, iteration, algorithm
+    )],
+    as.data.table(
+      i.learner$predict(grid.task)
+    )[, .(x=grid.dt$x, y=response)]
+  )
+}
+(pred.dt <- rbindlist(pred.dt.list))
+(point.dt <- rbindlist(point.dt.list))
+set.colors <- c(
+  train="#1B9E77",
+  test="#D95F02",
+  unused="white")
+algo.colors <- c(
+  featureless="blue",
+  rpart="red")
+if(require(animint2)){
+  viz <- animint(
+    title="Variable size train set, regression",
+    pred=ggplot()+
+      ggtitle("Predictions for selected train/test split")+
+      theme_animint(height=400)+
+      scale_fill_manual(values=set.colors)+
+      geom_point(aes(
+        x, y, fill=set.name),
+        showSelected="iteration",
+        size=3,
+        shape=21,
+        data=point.dt)+
+      scale_size_manual(values=c(
+        featureless=3,
+        rpart=2))+
+      scale_color_manual(values=algo.colors)+
+      geom_line(aes(
+        x, y,
+        color=algorithm,
+        size=algorithm,
+        group=paste(algorithm, iteration)),
+        showSelected="iteration",
+        data=pred.dt)+
+      facet_grid(
+        task_id ~ .,
+        labeller=label_both),
+    err=ggplot()+
+      ggtitle("Test error for each split")+
+      theme(legend.position="none")+
+      theme_animint(height=400)+
+      scale_y_log10(
+        "Mean squared error on test set")+
+      scale_color_manual(values=algo.colors)+
+      scale_x_log10(
+        "Train set size")+
+      geom_line(aes(
+        train_size, regr.mse,
+        group=paste(algorithm, seed),
+        color=algorithm),
+        clickSelects="seed",
+        showSelected="algorithm",
+        size=4,
+        data=reg.bench.score)+
+      facet_grid(
+        test.fold~task_id,
+        labeller=label_both,
+        scales="free")+
+      geom_point(aes(
+        train_size, regr.mse,
+        color=algorithm),
+        size=5,
+        stroke=3,
+        fill="black",
+        fill_off=NA,
+        showSelected=c("algorithm","seed"),
+        clickSelects="iteration",
+        data=reg.bench.score),
+    source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Simulations.Rmd")
+  viz
+}
+if(FALSE){
+  animint2pages(viz, "2023-12-26-train-sizes-regression")
+}
+```
+
+If you are viewing this in an installed package or on CRAN, 
+then there will be no data viz on this page, 
+but you can view it on:
+<https://tdhock.github.io/2023-12-26-train-sizes-regression/>
 
 ## Simulated classification problems
 

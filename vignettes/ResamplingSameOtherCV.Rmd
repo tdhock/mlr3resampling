@@ -332,7 +332,7 @@ if(require(animint2)){
         "Split number / cross-validation iteration")+
       scale_y_continuous(
         "Row number"),
-    source="https://github.com/tdhock/mlr3resampling/blob/d7cbe06fdb562ff8c1c8b4ad0bc055b65bd7b2c6/vignettes/Simulations.Rmd")
+    source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/ResamplingSameOtherCV.Rmd")
   viz
 }
 if(FALSE){
@@ -700,7 +700,7 @@ if(require(animint2)){
         "Split number / cross-validation iteration")+
       scale_y_continuous(
         "Row number"),
-    source="https://github.com/tdhock/mlr3resampling/blob/942048163960cfeb90483224f52aa8315b3f50f5/vignettes/Simulations.Rmd")
+    source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/ResamplingSameOtherCV.Rmd")
   viz
 }
 if(FALSE){
