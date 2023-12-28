@@ -108,3 +108,13 @@ test_that("train set max size 67 for 100 data", {
   expect_equal(l.train, inst$iteration.dt$train_size)
   expect_equal(max(l.train), 67)
 })
+
+test_that("test fold 1 for iteration 1", {
+  set.seed(1)
+  size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
+  i100.dt <- data.table(iris)[1:100]
+  i100.task <- mlr3::TaskClassif$new("i10", i100.dt, target="Species")
+  size_cv$instantiate(i100.task)
+  inst <- size_cv$instance
+  expect_equal(inst$iteration.dt$test.fold[1], 1)
+})

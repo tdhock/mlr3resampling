@@ -46,7 +46,7 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
           "task$nrow=%d but should be larger than min_train_data=%d",
           task$nrow, min_train_data))
       }
-      uniq.folds <- unique(folds$fold)
+      uniq.folds <- sort(unique(folds$fold))
       iteration.dt.list <- list()
       for(test.fold in uniq.folds){
         is.set.fold <- list(
