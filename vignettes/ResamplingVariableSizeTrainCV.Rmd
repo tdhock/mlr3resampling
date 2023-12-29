@@ -34,15 +34,36 @@ given test set.
 
 ## Simulated regression problems
 
+The code below creates data for simulated regression problems. First
+we define a vector of input values,
+
 ```{r}
 N <- 300
-library(data.table)
-set.seed(1)
 abs.x <- 10
+set.seed(1)
 x.vec <- runif(N, -abs.x, abs.x)
+str(x.vec)
+```
+
+Below we define a list of two true regression functions (tasks in mlr3
+terminology) for our simulated data,
+
+```{r}
 reg.pattern.list <- list(
   sin=sin,
   constant=function(x)0)
+```
+
+The constant function represents a regression problem which can be
+solved by always predicting the mean value of outputs (featureless is
+the best possible learning algorithm). The sin function will be used
+to generate data with a non-linear pattern that will need to be
+learned. Below we use a for loop over these two functions/tasks, to
+simulate the data which will be used as input to the learning
+algorithms:x
+
+```{r}
+library(data.table)
 reg.task.list <- list()
 reg.data.list <- list()
 for(task_id in names(reg.pattern.list)){
@@ -58,25 +79,47 @@ for(task_id in names(reg.pattern.list)){
 (reg.data <- rbindlist(reg.data.list))
 ```
 
+In the table above, the input is x, and the output is y. Below we
+visualize these data, with one task in each facet/panel:
+
 ```{r}
 if(require(animint2)){
   ggplot()+
     geom_point(aes(
       x, y),
       data=reg.data)+
-    facet_grid(task_id ~ .)
+    facet_grid(task_id ~ ., labeller=label_both)
 }
 ```
 
+In the plot above we can see two different simulated data sets
+(constant and sin).  Note that the code above used the `animint2`
+package, which provides interactive extensions to the static graphics
+of the `ggplot2` package (see below section Interactive data viz). 
+
 ### Visualizing instance table
 
-In the code below, we define a K-fold cross-validation experiment.
+In the code below, we define a K-fold cross-validation experiment,
+with K=3 folds.
 
 ```{r}
 reg_size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
 reg_size_cv$param_set$values$train_sizes <- 6
 reg_size_cv
 ```
+
+In the output above we can see the parameters of the resampling
+object, all of which should be integer scalars:
+
+* `folds` is the number of cross-validation folds.
+* `min_train_data` is the minimum number of train data to consider.
+* `random_seeds` is the number of random seeds, each of which
+  determines a different random ordering of the train data. The random
+  ordering determines which data are included in small train set
+  sizes.
+* `train_sizes` is the number of train set sizes, evenly spaced on a
+  log scale, from `min_train_data` to the max number of train data
+  (determined by `folds`).
 
 Below we instantiate the resampling on one of the tasks:
 
@@ -85,7 +128,8 @@ reg_size_cv$instantiate(reg.task.list[["sin"]])
 reg_size_cv$instance
 ```
 
-Above we see the instance, 
+Above we see the instance, which need not be examined by the user, but
+for informational purposes, it contains the following data:
 
 * `iteration.dt` has one row for each train/test split,
 * `id.dt` has one row for each data point.
@@ -100,8 +144,19 @@ In the code below, we define two learners to compare,
   mlr3::LearnerRegrFeatureless$new()))
 ```
 
+The code above defines 
+
+* `regr.rpart`: Regression Tree learning algorithm, which should be
+  able to learn the non-linear pattern in the sin data (if there are
+  enough data in the train set).
+* `regr.featureless`: Featureless Regression learning algorithm, which
+  should be optimal for the constant data, and can be used as a
+  baseline in the sin data. When the rpart learner gets smaller
+  prediction error rates than featureless, then we know that it has
+  learned some non-trivial relationship between inputs and outputs.
+
 In the code below, we define the benchmark grid, which is all
-combinations of tasks (easy and impossible), learners (rpart and
+combinations of tasks (constant and sin), learners (rpart and
 featureless), and the one resampling method.
 
 ```{r}
@@ -111,7 +166,7 @@ featureless), and the one resampling method.
   reg_size_cv))
 ```
 
-In the code below, we execute the benchmark experiment (in parallel
+In the code below, we execute the benchmark experiment (optionally in parallel
 using the multisession future plan).
 
 ```{r}
@@ -122,12 +177,32 @@ if(FALSE){
   reg.bench.grid, store_models = TRUE))
 ```
 
-The code below computes the test error for each split,
+The code below computes the test error for each split, and visualizes
+the information stored in the first row of the result:
 
 ```{r}
 reg.bench.score <- mlr3resampling::score(reg.bench.result)
 reg.bench.score[1]
 ```
+
+The output above contains all of the results related to a particular
+train/test split. In particular for our purposes, the interesting
+columns are:
+
+* `test.fold` is the cross-validation fold ID.
+* `seed` is the random seed used to determine the train set order.
+* `train_size` is the number of data in the train set.
+* `train` and `test` are vectors of row numbers assigned to each set.
+* `iteration` is an ID for the train/test split, for a particular
+  learning algorithm and task. It is the row number of `iteration.dt`
+  (see instance above), which has one row for each unique combination
+  of `test.fold`, `seed`, and `train_size`.
+* `learner` is the mlr3 learner object, which can be used to compute
+  predictions on new data (including a grid of inputs, to show
+  predictions in the visualization below).
+* `regr.mse` is the mean squared error on the test set.
+* `algorithm` is the name of the learning algorithm (same as
+  `learner_id` but without `regr.` prefix).
 
 The code below visualizes the resulting test accuracy numbers.
 
@@ -138,6 +213,12 @@ if(require(animint2)){
     scale_x_log10(
       breaks=train_size_vec)+
     scale_y_log10()+
+    geom_line(aes(
+      train_size, regr.mse,
+      group=paste(algorithm, seed),
+      color=algorithm),
+      shape=1,
+      data=reg.bench.score)+
     geom_point(aes(
       train_size, regr.mse, color=algorithm),
       shape=1,
@@ -150,6 +231,12 @@ if(require(animint2)){
 ```
 
 Above we plot the test error for each fold and train set size. 
+There is a different panel for each task and test fold.
+Each line represents a random seed (ordering of data in train set), 
+and each dot represents a specific train set size.
+So the plot above shows that some variation in test error, for a given test fold, 
+is due to the random ordering of the train data.
+
 Below we summarize each train set size, by taking the mean and standard deviation over each random seed.
 
 ```{r}
@@ -181,13 +268,17 @@ if(require(animint2)){
 }
 ```
 
+The plot above shows a line for the mean, 
+and a ribbon for the standard deviation, 
+over the three random seeds.
 It is clear from the plot above that 
 
 * in constant task, the featureless always has smaller or equal
   prediction error rates than rpart, which indicates that rpart
-  sometimes overfits for small sample sizes.
-* in sin task, more than 30 samples are required for reasonable
-  prediction error rates.
+  sometimes overfits for large sample sizes.
+* in sin task, more than 30 samples are required for rpart to be more
+  accurate than featureless, which indicates it has learned a
+  non-trivial relationship between input and output.
   
 ### Interactive data viz
 
@@ -312,9 +403,22 @@ then there will be no data viz on this page,
 but you can view it on:
 <https://tdhock.github.io/2023-12-26-train-sizes-regression/>
 
+The interactive data viz consists of two plots:
+
+* The first plot shows the data, with each point colored according to
+  the set it was assigned, in the currently selected
+  split/iteration. The red/blue lines additionally show the learned
+  prediction functions for the currently selected split/iteration.
+* The second plot shows the test error rates, as a function of train
+  set size. Clicking a line selects the corresponding random seed,
+  which makes the corresponding points on that line appear. Clicking a
+  point selects the corresponding iteration (seed, test fold, and train
+  set size).
+
 ## Simulated classification problems
 
-In this section we simulate a binary classification problem.
+Whereas in the section above, we focused on regression (output is a real number),
+in this section we simulate a binary classification problem (output if a factor with two levels).
 
 ```{r}
 class.N <- 300
@@ -344,28 +448,55 @@ for(task_id in names(class.fun.list)){
 (class.data <- rbindlist(class.data.list))
 ```
 
+The simulated data table above consists of two input features (`x1`
+and `x2`) along with an output/label to predict (`y`). Below we count
+the number of times each label appears in each task:
+
 ```{r}
 class.data[, .(count=.N), by=.(task_id, y)]
+```
+
+The table above shows that the `spam` label is the minority class
+(`not` is majority, so that will be the prediction of the featureless
+baseline). Below we visualize the data in the feature space:
+
+```{r}
 if(require(animint2)){
   ggplot()+
     geom_point(aes(
       x1, x2, color=y),
+      shape=1,
       data=class.data)+
     facet_grid(. ~ task_id, labeller=label_both)+
     coord_equal()
 }
 ```
 
+The plot above shows how the output `y` is related to the two inputs `x1` and
+`x2`, for the two tasks.
+
+* For the constant task, the two inputs are not related to the output.
+* For the xor task, the spam label is associated with either `x1` or
+  `x2` being negative (but not both).
+  
+In the mlr3 code below, we define a list of learners, our resampling
+method, and a benchmark grid:
+
 ```{r}
-class.task.list
-(class.learner.list <- list(
+class.learner.list <- list(
   if(requireNamespace("rpart"))mlr3::LearnerClassifRpart$new(),
-  mlr3::LearnerClassifFeatureless$new()))
-(size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new())
+  mlr3::LearnerClassifFeatureless$new())
+size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
 (class.bench.grid <- mlr3::benchmark_grid(
   class.task.list,
   class.learner.list,
   size_cv))
+```
+
+Below we run the learning algorithm for each of the train/test splits
+defined by our benchmark grid:
+
+```{r}
 if(FALSE){
   if(require(future))plan("multisession")
 }
@@ -381,11 +512,22 @@ class.bench.score <- mlr3resampling::score(class.bench.result)
 class.bench.score[1]
 ```
 
+The output above has columns which are very similar to the regression
+example in the previous section. The main difference is the
+`classif.ce` column, which is the classification error on the test
+set.
+
 Finally we plot the test error values below.
 
 ```{r}
 if(require(animint2)){
   ggplot()+
+    geom_line(aes(
+      train_size, classif.ce,
+      group=paste(algorithm, seed),
+      color=algorithm),
+      shape=1,
+      data=class.bench.score)+
     geom_point(aes(
       train_size, classif.ce, color=algorithm),
       shape=1,
@@ -400,7 +542,17 @@ if(require(animint2)){
 
 It is clear from the plot above that 
 
-* TODO
+* in constant task, rpart does not have significantly lower error
+  rates than featureless, which is expected, because the best
+  prediction function is constant (predict the most frequent class, no
+  relationship between inputs and output).
+* in xor task, more than 30 samples are required for rpart to be more
+  accurate than featureless, which indicates it has learned a
+  non-trivial relationship between inputs and output.
+  
+Exercise for the reader: compute and plot mean and SD for these
+classification tasks, similar to the plot for the regression tasks in
+the previous section.
   
 ### Interactive visualization of data, test error, and splits
 
@@ -538,6 +690,22 @@ If you are viewing this in an installed package or on CRAN,
 then there will be no data viz on this page, 
 but you can view it on:
 <https://tdhock.github.io/2023-12-27-train-sizes-classification/>
+
+The interactive data viz consists of two plots
+
+* The first plot shows the data, with each point colored according to
+  its label/y value (black outline for spam, white outline for not),
+  and the set it was assigned (fill color) in the currently selected
+  split/iteration. The red lines additionally show the learned
+  decision boundary for rpart, given the currently selected
+  split/iteration.  For constant, the ideal decision boundary is none
+  (always predict the most frequent class), and for xor, the ideal
+  decision boundary looks like a plus sign.
+* The second plot shows the test error rates, as a function of train
+  set size. Clicking a line selects the corresponding random seed,
+  which makes the corresponding points on that line appear. Clicking a
+  point selects the corresponding iteration (seed, test fold, and train
+  set size).
 
 ## Conclusion
 
