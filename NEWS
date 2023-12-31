@@ -1,3 +1,8 @@
+Changes in version 2023.12.28
+
+- Rename Simulations vignette to ResamplingSameOtherCV.
+- New ResamplingVariableSizeTrainCV class and vignette.
+
 Changes in version 2023.12.23
 
 - To get data set names in Simulations vignette, use task data names instead of learner$state$data_prototype.

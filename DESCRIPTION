@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2023.12.23
+Version: 2023.12.28
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
@@ -52,6 +52,9 @@ Description: A supervised learning algorithm inputs a train set,
  For more information, 
  <https://tdhock.github.io/blog/2023/R-gen-new-subsets/>
  describes the method in depth.
+ How many train samples are required to get accurate predictions on a
+ test set? Cross-validation can be used to answer this question, with
+ variable size train sets.
 License: GPL-3
 URL: https://github.com/tdhock/mlr3resampling
 BugReports: https://github.com/tdhock/mlr3resampling/issues
