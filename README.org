@@ -4,7 +4,18 @@ framework in R
 | [[file:tests/testthat][tests]]    | [[https://github.com/tdhock/mlr3resampling/actions][https://github.com/tdhock/mlr3resampling/workflows/R-CMD-check/badge.svg]] |
 | [[https://github.com/jimhester/covr][coverage]] | [[https://app.codecov.io/gh/tdhock/mlr3resampling?branch=main][https://codecov.io/gh/tdhock/mlr3resampling/branch/main/graph/badge.svg]]  |
 
+** Installation
+
+#+begin_src R
+  install.packages("mlr3resampling")#release version from CRAN
+  ## OR: development version from GitHub:
+  install.packages("remotes")
+  remotes::install_github("tdhock/mlr3resampling")
+#+end_src
+
 ** Description
+
+*** Algorithm 1: cross-validation for comparing train on same and other
 
 A supervised learning algorithm inputs a train set, and outputs a
 prediction function, which can be used on a test set. If each data
@@ -20,15 +31,42 @@ test/prediction accuracy between same and other, we can determine the
 extent to which it is possible (perfect if same/other have similar
 test accuracy for each group; other is usually somewhat less accurate
 than same; other can be just as bad as featureless baseline when the
-groups have different patterns).
-
-** Installation
+groups have different patterns). This is implemented in
 
 #+begin_src R
-  install.packages("remotes")
-  remotes::install_github("tdhock/mlr3resampling")
+> mlr3resampling::ResamplingSameOtherCV$new()
+<ResamplingSameOtherCV> : Same versus Other Cross-Validation
+* Iterations:
+* Instantiated: FALSE
+* Parameters:
+List of 1
+ $ folds: int 3
 #+end_src
 
-** Usage
+*** Algorithm 2: cross-validation for comparing different sized train sets
 
-See https://tdhock.github.io/blog/2023/R-gen-new-subsets/
+How many train samples are required to get accurate predictions on a
+test set? Cross-validation can be used to answer this question, with
+variable size train sets. This is implemented in
+
+#+begin_src R
+> mlr3resampling::ResamplingVariableSizeTrainCV$new()
+<ResamplingVariableSizeTrainCV> : Cross-Validation with variable size train sets
+* Iterations:
+* Instantiated: FALSE
+* Parameters:
+List of 4
+ $ folds         : int 3
+ $ min_train_data: int 10
+ $ random_seeds  : int 3
+ $ train_sizes   : int 5
+#+end_src
+
+*** More Usage Examples
+
+See https://tdhock.github.io/blog/2023/R-gen-new-subsets/ and [[https://cloud.r-project.org/web/packages/mlr3resampling/][vignettes on CRAN]].
+
+*** Related work
+
+mlr3resampling code was copied/modified from Resampling and
+ResamplingCV classes in the excellent [[https://github.com/mlr-org/mlr3][mlr3]] package.
