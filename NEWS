@@ -1,4 +1,4 @@
-Changes in version 2023.12.28
+Changes in version 2024.1.8
 
 - Rename Simulations vignette to ResamplingSameOtherCV.
 - New ResamplingVariableSizeTrainCV class and vignette.
