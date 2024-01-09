@@ -60,7 +60,7 @@ the best possible learning algorithm). The sin function will be used
 to generate data with a non-linear pattern that will need to be
 learned. Below we use a for loop over these two functions/tasks, to
 simulate the data which will be used as input to the learning
-algorithms:x
+algorithms:
 
 ```{r}
 library(data.table)
