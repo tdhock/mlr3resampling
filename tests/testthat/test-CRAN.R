@@ -1,3 +1,5 @@
+library(testthat)
+library(data.table)
 test_that("resampling error if no group", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
@@ -90,6 +92,30 @@ test_that("error for 10 data", {
   },
   "task$nrow=10 but should be larger than min_train_data=10",
   fixed=TRUE)
+})
+
+test_that("strata respected in all sizes", {
+  size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
+  size_cv$param_set$values$min_train_data <- 5
+  size_cv$param_set$values$folds <- 5
+  N <- 100
+  imbalance <- 4
+  strat.vec <- ifelse((1:imbalance)<imbalance, "A","B")
+  istrat.dt <- data.table(iris[1:N,], strat=factor(rep(strat.vec, l=N)))
+  smallest.size.tab <- table(
+    istrat.dt[["strat"]]
+  )/N*imbalance*size_cv$param_set$values$min_train_data
+  istrat.task <- mlr3::TaskClassif$new(
+    "istrat", istrat.dt, target="Species"
+  )$set_col_roles("strat", "stratum")
+  size_cv$instantiate(istrat.task)
+  min.dt <- size_cv$instance$iteration.dt[train_size==min(train_size)]
+  for(min.i in 1:nrow(min.dt)){
+    min.row <- min.dt[min.i]
+    train.i <- min.row$train[[1]]
+    strat.tab <- table(istrat.dt[train.i, strat])
+    expect_identical(strat.tab, smallest.size.tab)
+  }
 })
 
 test_that("train set max size 67 for 100 data", {
