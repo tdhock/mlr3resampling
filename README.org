@@ -71,8 +71,8 @@ List of 4
 The examples linked below have examples with larger data sizes than
 the examples in the CRAN vignettes linked above.
 
-* https://tdhock.github.io/blog/2023/R-gen-new-subsets/
-* [[https://tdhock.github.io/blog/2023/variable-size-train/]]
+- https://tdhock.github.io/blog/2023/R-gen-new-subsets/
+- https://tdhock.github.io/blog/2023/variable-size-train/
 
 ** Related work
 
