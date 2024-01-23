@@ -48,7 +48,8 @@
   orderings of the train set that are considered.
 
   For each random order of the train set, the \code{min_train_data}
-  parameter controls the smallest train set size considered.
+  parameter controls the size of the smallest stratum in the smallest
+  train set considered.
 
   To determine the other train set sizes, we use an equally spaced grid
   on the log scale, from \code{min_train_data} to the largest train set

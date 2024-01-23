@@ -83,15 +83,28 @@ test_that("error for group named test", {
   }, "col with role group must not be named test; please fix by renaming test col")
 })
 
-test_that("error for 10 data", {
+test_that("errors and result for 10 train data in small stratum", {
   size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
-  i10.dt <- data.table(iris)[1:10]
-  i10.task <- mlr3::TaskClassif$new("i10", i10.dt, target="Species")
+  size_cv$param_set$values$folds <- 2
+  i10.dt <- data.table(iris)[1:70]
+  i10.task <- mlr3::TaskClassif$new(
+    "i10", i10.dt, target="Species"
+  )$set_col_roles("Species",c("target","stratum"))
   expect_error({
     size_cv$instantiate(i10.task)
   },
-  "task$nrow=10 but should be larger than min_train_data=10",
+  "max_train_data=10 (in smallest stratum) but should be larger than min_train_data=10, please fix by decreasing min_train_data",
   fixed=TRUE)
+  size_cv$param_set$values$min_train_data <- 9
+  expect_error({
+    size_cv$instantiate(i10.task)
+  },
+  "train sizes not unique, please decrease train_sizes",
+  fixed=TRUE)
+  size_cv$param_set$values$train_sizes <- 2
+  size_cv$instantiate(i10.task)
+  size.tab <- table(size_cv$instance$iteration.dt[["small_stratum_size"]])
+  expect_identical(names(size.tab), c("9","10"))
 })
 
 test_that("strata respected in all sizes", {
@@ -114,7 +127,7 @@ test_that("strata respected in all sizes", {
     min.row <- min.dt[min.i]
     train.i <- min.row$train[[1]]
     strat.tab <- table(istrat.dt[train.i, strat])
-    expect_identical(strat.tab, smallest.size.tab)
+    expect_equal(strat.tab, smallest.size.tab)
   }
 })
 
