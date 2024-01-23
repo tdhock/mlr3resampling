@@ -67,6 +67,7 @@ Imports:
     mlr3misc
 Suggests: 
     animint2,
+    lgr,
     future,
     testthat,
     knitr,
