@@ -21,55 +21,70 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
     },
     instantiate = function(task) {
       task = mlr3::assert_task(mlr3::as_task(task))
-      reserved.names <- c(
-        "row_id", "fold", "group", "display_row",
-        "train.groups", "test.fold", "test.group", "iteration", 
-        "test", "train", "algorithm", "uhash", "nr", "task", "task_id",
-        "learner", "learner_id", "resampling", "resampling_id",
-        "prediction")
-      ## bad.names <- group.name.vec[group.name.vec %in% reserved.names]
-      ## if(length(bad.names)){
-      ##   first.bad <- bad.names[1]
-      ##   stop(sprintf("col with role group must not be named %s; please fix by renaming %s col", first.bad, first.bad))
-      ## }
-      ## orig.group.dt <- task$data(cols=group.name.vec)
       strata <- if(is.null(task$strata)){
         data.dt <- task$data()
         data.table(N=nrow(data.dt), row_id=list(1:nrow(data.dt)))
       }else task$strata
-      sample.list <- lapply(strata$row_id, private$.sample, task = task)
-      folds = private$.combine(sample.list)[order(row_id)]
+      strata.list <- lapply(strata$row_id, private$.sample, task = task)
+      folds = private$.combine(strata.list)[order(row_id)]
+      max.train.vec <- sapply(strata.list, nrow)
+      small.strat.i <- which.min(max.train.vec)
       min_train_data <- self$param_set$values[["min_train_data"]]
-      if(task$nrow <= min_train_data){
-        stop(sprintf(
-          "task$nrow=%d but should be larger than min_train_data=%d",
-          task$nrow, min_train_data))
-      }
       uniq.folds <- sort(unique(folds$fold))
       iteration.dt.list <- list()
       for(test.fold in uniq.folds){
-        is.set.fold <- list(
-          test=folds[["fold"]] == test.fold)
-        is.set.fold[["train"]] <- !is.set.fold[["test"]]
-        i.set.list <- lapply(is.set.fold, which)
-        max_train_data <- length(i.set.list$train)
+        train.strata.list <- lapply(strata.list, function(DT)DT[fold != test.fold])
+        max_train_data <- nrow(train.strata.list[[small.strat.i]])
+        if(max_train_data <= min_train_data){
+          stop(sprintf(
+            "max_train_data=%d (in smallest stratum) but should be larger than min_train_data=%d, please fix by decreasing min_train_data",
+            max_train_data, min_train_data))
+        }
         log.range.data <- log(c(min_train_data, max_train_data))
         seq.args <- c(as.list(log.range.data), list(l=self$param_set$values[["train_sizes"]]))
         log.train.sizes <- do.call(seq, seq.args)
-        train.size.vec <- unique(as.integer(round(exp(log.train.sizes))))
+        train.size.vec <- as.integer(round(exp(log.train.sizes)))
+        size.tab <- table(train.size.vec)
+        if(any(size.tab>1)){
+          stop("train sizes not unique, please decrease train_sizes")
+        }
         for(seed in 1:self$param_set$values[["random_seeds"]]){
           set.seed(seed)
-          ord.i.vec <- sample(i.set.list$train)
+          train.seed.list <- lapply(train.strata.list, function(DT)DT[sample(.N)][, `:=`(
+            row_seed = .I,
+            prop = .I/.N
+          )][])
+          test.index.vec <- do.call(c, lapply(
+            strata.list, function(DT)DT[fold == test.fold, row_id]))
+          train.prop.dt <- train.seed.list[[small.strat.i]][train.size.vec, data.table(prop)]
+          train.i.list <- lapply(train.seed.list, function(DT)DT[
+            train.prop.dt,
+            .(train.i=lapply(row_seed, function(last)DT$row_id[1:last])),
+            on="prop",
+            roll="nearest"])
+          train.index.list <- list()
+          for(train.size.i in seq_along(train.size.vec)){
+            strata.index.list <- lapply(train.i.list, function(DT)DT[["train.i"]][[train.size.i]])
+            train.index.list[[train.size.i]] <- do.call(c, strata.index.list)
+          }
           iteration.dt.list[[paste(test.fold, seed)]] <- data.table(
             test.fold,
             seed,
-            train_size=train.size.vec,
-            train=lapply(train.size.vec, function(last)ord.i.vec[1:last]),
-            test=list(i.set.list$test))
+            small_stratum_size=train.size.vec,
+            train_size_i=seq_along(train.size.vec),
+            train_size=sapply(train.index.list, length),
+            train=train.index.list,
+            test=list(test.index.vec))
         }
       }
       self$instance <- list(
-        iteration.dt=rbindlist(iteration.dt.list)[, iteration := .I][],
+        iteration.dt=rbindlist(
+          iteration.dt.list
+        )[
+        , iteration := .I
+        ][
+        , train_min_size := min(train_size), by=train_size_i
+        ][],
         id.dt=folds)
       self$task_hash = task$hash
       self$task_nrow = task$nrow

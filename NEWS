@@ -1,3 +1,7 @@
+Changes in version 2024.1.23
+
+- ResamplingVariableSizeTrainCV outputs train sets which respect strata.
+
 Changes in version 2024.1.8
 
 - Rename Simulations vignette to ResamplingSameOtherCV.
