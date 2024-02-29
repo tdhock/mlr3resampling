@@ -40,7 +40,7 @@ reg.task.list <- list()
 for(pattern in names(reg.pattern.list)){
   f <- reg.pattern.list[[pattern]]
   yname <- paste0("y_",pattern)
-  reg.dt[, (yname) := f(x,person)+rnorm(N)][]
+  reg.dt[, (yname) := f(x,person)+rnorm(N, sd=0.5)][]
   task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
   reg.task.list[[pattern]] <- mlr3::TaskRegr$new(
     pattern, task.dt, target=yname

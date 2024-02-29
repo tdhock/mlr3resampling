@@ -441,9 +441,10 @@ for(task_id in names(class.fun.list)){
     class.x.dt[, class.fun(x1, x2)+rnorm(class.N, sd=0.5)]>0.5,
     "spam", "not"))
   task.dt <- data.table(class.x.dt, y)
-  class.task.list[[task_id]] <- mlr3::TaskClassif$new(
-    task_id, task.dt, target="y"
-  )$set_col_roles("y",c("target","stratum"))
+  this.task <- mlr3::TaskClassif$new(
+    task_id, task.dt, target="y")
+  this.task$col_roles$stratum <- "y"
+  class.task.list[[task_id]] <- this.task
   class.data.list[[task_id]] <- data.table(task_id, task.dt)
 }
 (class.data <- rbindlist(class.data.list))

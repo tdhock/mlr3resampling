@@ -1,0 +1,172 @@
+---
+title: "Comparing sizes when training on same or other groups"
+author: "Toby Dylan Hocking"
+vignette: >
+  %\VignetteIndexEntry{Comparing sizes when training on same or other groups}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1200px !important;
+  margin: auto;
+}
+</style>
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  fig.width=6,
+  fig.height=6)
+data.table::setDTthreads(1)
+## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
+## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The goal of this vignette is TODO
+
+## Simulated regression problems
+
+```{r simulationScatter}
+N <- 300
+abs.x <- 20
+set.seed(1)
+x.vec <- runif(N, -abs.x, abs.x)
+str(x.vec)
+library(data.table)
+(task.dt <- data.table(
+  x=x.vec,
+  y = sin(x.vec)+rnorm(N,sd=0.5)))
+reg.task <- mlr3::TaskRegr$new(
+  "sin", task.dt, target="y"
+)
+library(animint2)
+ggplot()+
+  geom_point(aes(
+    x, y),
+    shape=1,
+    data=task.dt)+
+  coord_equal()
+```
+
+Above we see a scatterplot of the simulated data. The goal of the
+learning algorithm will be to predict y from x.
+
+## Simulating and combining identical groups
+
+The code below assigns three test groups to the randomly simulated
+data.
+
+```{r}
+task.dt[, random_group := rep(c("A","B","B","C","C","C"), l=.N)][]
+table(group.tab <- task.dt$random_group)
+```
+
+The output above shows the number of samples in each group. 
+Below we define a task using that group,
+
+```{r}
+(group.task <- reg.task <- mlr3::TaskRegr$new(
+  "sin", task.dt, target="y"
+)$set_col_roles("random_group",c("group","stratum")))
+```
+
+Below we define cross-validation using five folds.
+
+```{r}
+same_other_cv <- mlr3resampling::ResamplingSameOtherCV$new()
+same_other_cv$param_set$values$folds <- 2
+```
+
+So using the K-fold cross-validation, TODO 
+We compute and plot the results using the code below,
+
+```{r SameOtherCV}
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+(same.other.grid <- mlr3::benchmark_grid(
+  group.task,
+  reg.learner.list,
+  same_other_cv))
+if(require(future))plan("multisession")
+lgr::get_logger("mlr3")$set_threshold("warn")
+(same.other.result <- mlr3::benchmark(
+  same.other.grid, store_models = TRUE))
+same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score[, n.train := sapply(train, length)]
+same.other.score[1]
+
+ggplot()+
+  geom_point(aes(
+    regr.mse, train.groups, color=algorithm),
+    shape=1,
+    data=same.other.score)+
+  geom_text(aes(
+    Inf, train.groups,
+    label=sprintf("n.train=%d ", n.train)),
+    hjust=1,
+    vjust=1.5,
+    shape=1,
+    data=same.other.score[algorithm=="featureless" & test.fold==1])+
+  facet_grid(. ~ test.group, labeller=label_both, scales="free")+
+  scale_x_log10(
+    "Mean squared prediction error (test set)")
+
+ggplot()+
+  geom_line(aes(
+    n.train, regr.mse,
+    color=algorithm,
+    group=paste(algorithm, test.fold)),
+    data=same.other.score)+
+  geom_label(aes(
+    n.train, regr.mse,
+    color=algorithm,
+    label=train.groups),
+    data=same.other.score)+
+  facet_grid(. ~ test.group, labeller=label_both, scales="free")+
+  scale_y_log10(
+    "Mean squared prediction error (test set)")
+```
+
+The figure above shows a test group in each panel, the train groups on
+the y axis, the test error on the x axis, the two different algorithms
+are shown in two different colors. We can clearly see that 
+
+* For `train.groups=same`, rpart has about the same test error as
+  featureless, which indicates that nothing has been learned (not
+  enough data).
+* For `train.groups=other`, rpart test error is significantly smaller
+  than featureless, indicating that some non-trivial relationship
+  between inputs and outputs has been learned.
+* For `train.groups=all`, rpart test error is smaller still, which
+  indicates that combining all of the groups is beneficial in this
+  case (when the pattern is exactly the same in the different
+  groups).
+  
+## Conclusions
+
+We have shown how to use `mlr3resampling` to determine the number of
+train samples which is required to get non-trivial prediction
+accuracy. In the simulation above, that number was about 100 train
+samples. We then defined groups and cross-validation such that there
+were only 50 train samples per group, so training on just samples from
+the same group is not enough (at least for the rpart learning
+algorithm). We observed smaller test error rates when training on
+other/all groups (larger train sets, all with the same
+distribution). Overall this is a convincing demonstration that it is
+possible for "other" and "all" to be more accurate than "same" --- for
+the case where the groups really do have an identical pattern. If in
+real data we see the opposite (same is the best), then this implies
+that there is a different pattern to learn in each group.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
