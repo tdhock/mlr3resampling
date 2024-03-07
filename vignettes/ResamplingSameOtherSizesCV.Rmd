@@ -32,18 +32,15 @@ The goal of this vignette is TODO
 ## Simulated regression problems
 
 ```{r simulationScatter}
-N <- 300
+N <- 2100
 abs.x <- 20
 set.seed(1)
-x.vec <- runif(N, -abs.x, abs.x)
+x.vec <- sort(runif(N, -abs.x, abs.x))
 str(x.vec)
 library(data.table)
 (task.dt <- data.table(
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
-reg.task <- mlr3::TaskRegr$new(
-  "sin", task.dt, target="y"
-)
 library(animint2)
 ggplot()+
   geom_point(aes(
@@ -62,24 +59,36 @@ The code below assigns three test groups to the randomly simulated
 data.
 
 ```{r}
-task.dt[, random_group := rep(c("A","B","B","C","C","C"), l=.N)][]
+atomic.group.size <- 2
+task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+task.dt[, random_group := rep(
+  rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
+  l=.N
+)][]
 table(group.tab <- task.dt$random_group)
 ```
 
-The output above shows the number of samples in each group. 
+The output above shows the number of rows in each random group. 
 Below we define a task using that group,
 
 ```{r}
-(group.task <- reg.task <- mlr3::TaskRegr$new(
-  "sin", task.dt, target="y"
-)$set_col_roles("random_group",c("group","stratum")))
+reg.task <- mlr3::TaskRegr$new(
+  "sin", task.dt, target="y")
+reg.task$col_roles$group_generalization <- "random_group"
+reg.task$col_roles$group_atomic <- "agroup"
+reg.task$col_roles$stratum <- "random_group"
+reg.task$col_roles$feature <- "x"
+str(reg.task$col_roles)
 ```
 
-Below we define cross-validation using five folds.
+Below we define cross-validation.
 
 ```{r}
-same_other_cv <- mlr3resampling::ResamplingSameOtherCV$new()
-same_other_cv$param_set$values$folds <- 2
+same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+same_other_sizes_cv$instantiate(reg.task)
+same_other_sizes_cv$instance$iteration.dt[, n.train.rows := sapply(train, length)]
+same_other_sizes_cv$instance$iteration.dt[n.train.atoms==atoms & seed==1 & test.fold==1]#same as ResamplineSameOtherCV
+same_other_sizes_cv$instance$iteration.dt[n.train.atoms != atoms & seed==1]#new ones
 ```
 
 So using the K-fold cross-validation, TODO 
