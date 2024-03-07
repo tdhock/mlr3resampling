@@ -140,7 +140,9 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
       }
       self$instance <- list(
-        iteration.dt=rbindlist(iteration.dt.list))
+        iteration.dt=rbindlist(
+          iteration.dt.list
+        )[, iteration := .I][])
       self$task_hash = task$hash
       self$task_nrow = task$nrow
       invisible(self)
