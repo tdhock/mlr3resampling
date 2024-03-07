@@ -86,9 +86,7 @@ Below we define cross-validation.
 ```{r}
 same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 same_other_sizes_cv$instantiate(reg.task)
-same_other_sizes_cv$instance$iteration.dt[, n.train.rows := sapply(train, length)]
-same_other_sizes_cv$instance$iteration.dt[n.train.atoms==atoms & seed==1 & test.fold==1]#same as ResamplineSameOtherCV
-same_other_sizes_cv$instance$iteration.dt[n.train.atoms != atoms & seed==1]#new ones
+same_other_sizes_cv$instance$iteration.dt
 ```
 
 So using the K-fold cross-validation, TODO 
@@ -99,11 +97,11 @@ We compute and plot the results using the code below,
   if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new()))
 (same.other.grid <- mlr3::benchmark_grid(
-  group.task,
+  reg.task,
   reg.learner.list,
-  same_other_cv))
+  same_other_sizes_cv))
 if(require(future))plan("multisession")
-lgr::get_logger("mlr3")$set_threshold("warn")
+##lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
 same.other.score <- mlr3resampling::score(same.other.result)
