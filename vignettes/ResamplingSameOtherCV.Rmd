@@ -450,12 +450,11 @@ for(task_id in c("easy","impossible")){
   feature.names <- grep(task_id, names(full.dt), value=TRUE)
   task.col.names <- c(feature.names, "label", "person")
   task.dt <- full.dt[, task.col.names, with=FALSE]
-  class.task.list[[task_id]] <- mlr3::TaskClassif$new(
-    task_id, task.dt, target="label"
-  )$set_col_roles(
-    "person",c("group","stratum")
-  )$set_col_roles(
-    "label",c("target","stratum"))
+  this.task <- mlr3::TaskClassif$new(
+    task_id, task.dt, target="label")
+  this.task$col_roles$group <- "person"
+  this.task$col_roles$stratum <- c("person","label")
+  class.task.list[[task_id]] <- this.task
 }
 class.task.list
 ```

@@ -157,3 +157,74 @@ test_that("test fold 1 for iteration 1", {
   inst <- size_cv$instance
   expect_equal(inst$iteration.dt$test.fold[1], 1)
 })
+
+## ResamplingSameOtherSizesCV
+test_that("ResamplingSameOtherSizesCV OK", {
+  N <- 2100
+  abs.x <- 20
+  set.seed(1)
+  x.vec <- sort(runif(N, -abs.x, abs.x))
+  (task.dt <- data.table(
+    x=x.vec,
+    y = sin(x.vec)+rnorm(N,sd=0.5)))
+  atomic.group.size <- 2
+  task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+  task.dt[, random_group := rep(
+    rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
+    l=.N
+  )][]
+  group.tab <- table(task.dt$random_group)
+  prop.tab <- group.tab/sum(group.tab)
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$group_generalization <- "random_group"
+  reg.task$col_roles$group_atomic <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$feature <- "x"
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  same_other_sizes_cv$instantiate(reg.task)
+  same.dt <- same_other_sizes_cv$instance$iteration.dt[
+    test.fold==1 & seed==1 & test.group=="A" & train.groups=="same"]
+  same.dt[, expect_identical(test[[1]], test[[2]])]
+  same.dt[, expect_equal(sapply(train, length), n.train.atoms*atomic.group.size)]
+  same.dt[, expect_in(train[[1]], train[[2]])]
+  all.dt <- same_other_sizes_cv$instance$iteration.dt[
+    test.fold==1 & seed==1 & test.group=="A" & train.groups=="all"]
+  all.dt[, expect_identical(test[[1]], test[[2]])]
+  all.dt[, expect_in(train[[1]], train[[2]])]
+  tab.counts <- sapply(all.dt$train, function(i)table(task.dt$random_group[i]))
+  expected.counts <- matrix(
+    all.dt$n.train.atoms*atomic.group.size,
+    length(prop.tab), nrow(all.dt), byrow=TRUE
+  )*as.numeric(prop.tab)
+  expect_true(all(expected.counts-tab.counts < atomic.group.size))
+  agroup.count.vec <- sapply(
+    all.dt$train, function(i)table(table(task.dt$agroup[i])))
+  expect_identical(names(agroup.count.vec), rep(as.character(atomic.group.size), nrow(all.dt)))
+  ## no atomic group.
+  no.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  no.task$col_roles$group_generalization <- "random_group"
+  no.task$col_roles$stratum <- "random_group"
+  no.task$col_roles$feature <- "x"
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  same_other_sizes_cv$instantiate(no.task)
+  same.dt <- same_other_sizes_cv$instance$iteration.dt[
+    test.fold==1 & seed==1 & test.group=="A" & train.groups=="same"]
+  same.dt[, expect_identical(test[[1]], test[[2]])]
+  same.dt[, expect_equal(sapply(train, length), n.train.atoms)]
+  same.dt[, expect_in(train[[1]], train[[2]])]
+  all.dt <- same_other_sizes_cv$instance$iteration.dt[
+    test.fold==1 & seed==1 & test.group=="A" & train.groups=="all"]
+  all.dt[, expect_identical(test[[1]], test[[2]])]
+  all.dt[, expect_in(train[[1]], train[[2]])]
+  tab.counts <- sapply(all.dt$train, function(i)table(task.dt$random_group[i]))
+  expected.counts <- matrix(
+    all.dt$n.train.atoms,
+    length(prop.tab), nrow(all.dt), byrow=TRUE
+  )*as.numeric(prop.tab)
+  expect_true(all(expected.counts-tab.counts < 1))
+  agroup.count.mat <- sapply(#1 sometimes since no atomic grouping.
+    all.dt$test, function(i)table(table(task.dt$agroup[i])))
+  expect_identical(rownames(agroup.count.mat), c("1","2"))
+})
