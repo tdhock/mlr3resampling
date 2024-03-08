@@ -171,6 +171,103 @@ the case where the groups really do have an identical pattern. If in
 real data we see the opposite (same is the best), then this implies
 that there is a different pattern to learn in each group.
 
+## Short 
+
+```{r simulationScatter}
+N <- 600
+abs.x <- 20
+set.seed(1)
+x.vec <- sort(runif(N, -abs.x, abs.x))
+str(x.vec)
+library(data.table)
+(task.dt <- data.table(
+  x=x.vec,
+  y = sin(x.vec)+rnorm(N,sd=0.5)))
+library(animint2)
+ggplot()+
+  geom_point(aes(
+    x, y),
+    shape=1,
+    data=task.dt)+
+  coord_equal()
+atomic.group.size <- 2
+task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+task.dt[, random_group := rep(
+  rep(c("A","B"), each=atomic.group.size),
+  l=.N
+)][]
+table(group.tab <- task.dt$random_group)
+
+reg.task <- mlr3::TaskRegr$new(
+  "sin", task.dt, target="y")
+reg.task$col_roles$group_generalization <- "random_group"
+reg.task$col_roles$group_atomic <- "agroup"
+reg.task$col_roles$stratum <- "random_group"
+reg.task$col_roles$feature <- "x"
+same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+same_other_sizes_cv$instantiate(reg.task)
+same_other_sizes_cv$instance$iteration.dt[n.train.atoms==atoms]
+
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+(same.other.grid <- mlr3::benchmark_grid(
+  reg.task,
+  reg.learner.list,
+  same_other_sizes_cv))
+if(require(future))plan("multisession")
+##lgr::get_logger("mlr3")$set_threshold("warn")
+(same.other.result <- mlr3::benchmark(
+  same.other.grid, store_models = TRUE))
+same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score[1]
+
+ggplot()+
+  geom_point(aes(
+    regr.mse, train.groups, color=algorithm),
+    shape=1,
+    data=same.other.score[atoms==n.train.atoms])+
+  facet_grid(. ~ test.group, labeller=label_both)
+
+ggplot()+
+  geom_point(aes(
+    regr.mse, train.groups, color=algorithm),
+    shape=1,
+    data=same.other.score[n.train.atoms==100])+
+  facet_grid(. ~ test.group, labeller=label_both)
+
+ggplot()+
+  geom_point(aes(
+    n.train.atoms, regr.mse,
+    color=train.groups),
+    shape=1,
+    data=same.other.score)+
+  geom_line(aes(
+    n.train.atoms, regr.mse,
+    group=paste(train.groups, seed, algorithm),
+    linetype=algorithm,
+    color=train.groups),
+    data=same.other.score)+
+  facet_grid(test.fold ~ test.group, labeller=label_both)+
+  scale_x_log10()
+
+rpart.score <- same.other.score[algorithm=="rpart" & train.groups != "other"]
+ggplot()+
+  geom_point(aes(
+    n.train.atoms, regr.mse,
+    color=train.groups),
+    shape=1,
+    data=rpart.score)+
+  geom_line(aes(
+    n.train.atoms, regr.mse,
+    group=paste(train.groups, seed, algorithm),
+    color=train.groups),
+    data=rpart.score)+
+  facet_grid(test.fold ~ test.group, labeller=label_both)+
+  scale_x_log10()
+```
+
+
 ## Session info
 
 ```{r}
