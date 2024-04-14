@@ -1,7 +1,7 @@
 ## copied from
 ## https://github.com/mlr-org/mlr3/blob/main/R/ResamplingCV.R but
 ## error message "cannot combine stratification with grouping" removed.
-ResamplingIgnoreGroup = R6Class(
+ResamplingStrataGroup = R6Class(
   "Resampling",
   public = list(
     #' @template field_label
@@ -184,9 +184,9 @@ ResamplingIgnoreGroup = R6Class(
   )
 )
 
-ResamplingIgnoreGroupCV = R6Class(
-  "ResamplingIgnoreGroupCV",
-  inherit = ResamplingIgnoreGroup,
+ResamplingStrataGroupCV = R6Class(
+  "ResamplingStrataGroupCV",
+  inherit = ResamplingStrataGroup,
   public = list(
     #' @description
     #' Creates a new instance of this [R6][R6::R6Class] class.
