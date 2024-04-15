@@ -83,7 +83,7 @@ default -1 means no down-sampling at all, and 0 means only down-sampling
 to the sizes of the same/other sets.
 
 The \code{ignore_subset} parameter should be either \code{TRUE} or
-\code{FALSE} (default), whether to ignore the \subset{subset}
+\code{FALSE} (default), whether to ignore the \code{subset}
 role. \code{TRUE} only creates splits for same subset (even if task
 defines \code{subset} role), and is useful for subtrain/validation
 splits (hyper-parameter learning). Note that this feature will work on a
