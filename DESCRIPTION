@@ -67,6 +67,7 @@ Imports:
     mlr3misc
 Suggests: 
     animint2,
+    mlr3tuning,
     lgr,
     future,
     testthat,

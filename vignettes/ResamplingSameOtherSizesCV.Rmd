@@ -97,8 +97,10 @@ We compute and plot the results using the code below,
 
 ```{r SameOtherCV}
 (reg.learner.list <- list(
-  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new()))
+if(requireNamespace("rpart")){
+  reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+}
 (same.other.grid <- mlr3::benchmark_grid(
   reg.task,
   reg.learner.list,
@@ -233,8 +235,10 @@ We compute and plot the results using the code below,
 
 ```{r}
 (reg.learner.list <- list(
-  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new()))
+if(requireNamespace("rpart")){
+  reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+}
 (same.other.grid <- mlr3::benchmark_grid(
   task.no.subset,
   reg.learner.list,
@@ -318,8 +322,10 @@ same_other_sizes_cv$param_set$values$sizes <- 0
 same_other_sizes_cv$instantiate(reg.task)
 same_other_sizes_cv$instance$it
 (reg.learner.list <- list(
-  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new()))
+if(requireNamespace("rpart")){
+  reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+}
 (same.other.grid <- mlr3::benchmark_grid(
   reg.task,
   reg.learner.list,
@@ -404,9 +410,112 @@ ggplot()+
   scale_x_log10()
 ```
 
+## Use with auto_tuner on a task with stratification and grouping
+
+In this section we show how `ResamplingSameOtherSizesCV` can be used on a task with stratification and grouping, for hyper-parameter learning. First we recall the previously defined task and evaluation CV.
+
+```{r}
+str(reg.task$col_roles)
+```
+
+We see in the output aove that the task has column roles for both
+`stratum` and `group`, which normally errors when used with
+`ResamplingCV`:
+
+```{r error=TRUE, purl=TRUE}
+mlr3::ResamplingCV$new()$instantiate(reg.task)
+```
+
+Below we show how `ResamplingSameOtherSizesCV` can be used instead:
+
+```{r}
+ignore.cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+ignore.cv$param_set$values$ignore_subset <- TRUE
+ignore.cv$instantiate(reg.task)
+ignore.cv$instance$iteration.dt
+```
+
+To use the above CV object with a learning algorithm in a benchmark
+experiment, we need to use it as the `resampling` argument to
+`auto_tuner`, as in the code below,
+
+```{r}
+do_benchmark <- function(subtrain.valid.cv){
+  reg.learner.list <- list(
+    mlr3::LearnerRegrFeatureless$new())
+  if(requireNamespace("rpart")){
+    reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+    if(requireNamespace("mlr3tuning")){
+      rpart.learner <- mlr3::LearnerRegrRpart$new()
+      ##mlr3tuningspaces::lts(rpart.learner)$param_set$values
+      rpart.learner$param_set$values$cp <- paradox::to_tune(1e-4, 0.1, log=TRUE)
+      reg.learner.list$rpart.tuned <- mlr3tuning::auto_tuner(
+        tuner = mlr3tuning::TunerGridSearch$new(),
+        learner = rpart.learner,
+        resampling = subtrain.valid.cv,
+        measure = mlr3::msr("regr.mse"))
+    }
+  }
+  same.other.grid <- mlr3::benchmark_grid(
+    reg.task,
+    reg.learner.list,
+    same_other_sizes_cv)
+  lgr::get_logger("bbotk")$set_threshold("warn")
+  same.other.result <- mlr3::benchmark(
+    same.other.grid, store_models = TRUE)
+}
+```
+
+```{r error=TRUE, purl=TRUE}
+do_benchmark(mlr3::ResamplingCV$new())
+```
+
+The error above is because `ResamplingCV` does not support
+stratification and grouping. To fix that, we can use the code below:
+
+```{r}
+ignore.cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+ignore.cv$param_set$values$ignore_subset <- TRUE
+(same.other.result <- do_benchmark(ignore.cv))
+```
+
+The output above shows that the benchmark worked.
+The code below plots the results.
+
+```{r}
+same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score[1]
+same.other.wide <- dcast(
+  same.other.score,
+  algorithm + test.subset + train.subsets ~ .,
+  list(mean, sd),
+  value.var="regr.mse")
+ggplot()+
+  geom_segment(aes(
+    regr.mse_mean+regr.mse_sd, train.subsets,
+    xend=regr.mse_mean-regr.mse_sd, yend=train.subsets),
+    shape=1,
+    data=same.other.wide)+
+  geom_point(aes(
+    regr.mse_mean, train.subsets),
+    shape=1,
+    data=same.other.wide)+
+  facet_grid(algorithm ~ test.subset, labeller=label_both)
+```
+
+The plot above has different panels for `rpart` (without tuning) and
+`tuned` (rpart with tuning of `cp`).
+
 ## Conclusions
 
-TODO
+`mlr3resampling::ResamplingSameOtherSizesCV` can be used for model evaluation (train/test split):
+
+* compare prediction accuracy of models trained on same/other/all subsets (need to set column role `subset`).
+* compare prediction accuracy of models trained on down-sampled subsets (need to set param `sizes`).
+
+It can also be used for model training (subtrain/validation split):
+
+* to learn regularization hyper-parameters, on a task with both `stratum` and `group` roles (use is as `resampling` argument of `auto_tuner`).
 
 ## Session info
 
