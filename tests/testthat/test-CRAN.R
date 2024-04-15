@@ -159,72 +159,228 @@ test_that("test fold 1 for iteration 1", {
 })
 
 ## ResamplingSameOtherSizesCV
-test_that("ResamplingSameOtherSizesCV OK", {
-  N <- 2100
-  abs.x <- 20
-  set.seed(1)
-  x.vec <- sort(runif(N, -abs.x, abs.x))
-  (task.dt <- data.table(
-    x=x.vec,
-    y = sin(x.vec)+rnorm(N,sd=0.5)))
-  atomic.group.size <- 2
-  task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
-  task.dt[, random_group := rep(
-    rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
-    l=.N
-  )][]
-  group.tab <- table(task.dt$random_group)
-  prop.tab <- group.tab/sum(group.tab)
+N <- 2100
+abs.x <- 20
+set.seed(1)
+x.vec <- sort(runif(N, -abs.x, abs.x))
+(task.dt <- data.table(
+  x=x.vec,
+  y = sin(x.vec)+rnorm(N,sd=0.5)))
+atomic.group.size <- 2
+task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+task.dt[, random_group := rep(
+  rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
+  l=.N
+)][]
+group.tab <- table(task.dt$random_group)
+get_props <- function(x)x/sum(x)
+prop.tab <- get_props(group.tab)
+get_prop_mat <- function(ilist){
+  sapply(ilist, function(i)get_props(table(task.dt[i, random_group])))
+}
+test_that("ResamplingSameOtherSizesCV no subset, no group, no stratum", {
   reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
-  reg.task$col_roles$group_generalization <- "random_group"
-  reg.task$col_roles$group_atomic <- "agroup"
-  reg.task$col_roles$stratum <- "random_group"
   reg.task$col_roles$feature <- "x"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
   same_other_sizes_cv$instantiate(reg.task)
-  same.dt <- same_other_sizes_cv$instance$iteration.dt[
-    test.fold==1 & seed==1 & test.group=="A" & train.groups=="same"]
-  same.dt[, expect_identical(test[[1]], test[[2]])]
-  same.dt[, expect_equal(sapply(train, length), n.train.atoms*atomic.group.size)]
-  same.dt[, expect_in(train[[1]], train[[2]])]
-  all.dt <- same_other_sizes_cv$instance$iteration.dt[
-    test.fold==1 & seed==1 & test.group=="A" & train.groups=="all"]
-  all.dt[, expect_identical(test[[1]], test[[2]])]
-  all.dt[, expect_in(train[[1]], train[[2]])]
-  tab.counts <- sapply(all.dt$train, function(i)table(task.dt$random_group[i]))
-  expected.counts <- matrix(
-    all.dt$n.train.atoms*atomic.group.size,
-    length(prop.tab), nrow(all.dt), byrow=TRUE
-  )*as.numeric(prop.tab)
-  expect_true(all(expected.counts-tab.counts < atomic.group.size))
-  agroup.count.vec <- sapply(
-    all.dt$train, function(i)table(table(task.dt$agroup[i])))
-  expect_identical(names(agroup.count.vec), rep(as.character(atomic.group.size), nrow(all.dt)))
-  ## no atomic group.
-  no.task <- mlr3::TaskRegr$new(
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expect_equal(computed[["test.fold"]], 1:n.folds)
+  full.train.size <- N*(n.folds-1)/n.folds
+  expect_equal(computed[["n.train.groups"]], rep(full.train.size, n.folds))
+})
+test_that("ResamplingSameOtherSizesCV no subset, yes group, no stratum", {
+  reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
-  no.task$col_roles$group_generalization <- "random_group"
-  no.task$col_roles$stratum <- "random_group"
-  no.task$col_roles$feature <- "x"
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-  same_other_sizes_cv$instantiate(no.task)
-  same.dt <- same_other_sizes_cv$instance$iteration.dt[
-    test.fold==1 & seed==1 & test.group=="A" & train.groups=="same"]
-  same.dt[, expect_identical(test[[1]], test[[2]])]
-  same.dt[, expect_equal(sapply(train, length), n.train.atoms)]
-  same.dt[, expect_in(train[[1]], train[[2]])]
-  all.dt <- same_other_sizes_cv$instance$iteration.dt[
-    test.fold==1 & seed==1 & test.group=="A" & train.groups=="all"]
-  all.dt[, expect_identical(test[[1]], test[[2]])]
-  all.dt[, expect_in(train[[1]], train[[2]])]
-  tab.counts <- sapply(all.dt$train, function(i)table(task.dt$random_group[i]))
-  expected.counts <- matrix(
-    all.dt$n.train.atoms,
-    length(prop.tab), nrow(all.dt), byrow=TRUE
-  )*as.numeric(prop.tab)
-  expect_true(all(expected.counts-tab.counts < 1))
-  agroup.count.mat <- sapply(#1 sometimes since no atomic grouping.
-    all.dt$test, function(i)table(table(task.dt$agroup[i])))
-  expect_identical(rownames(agroup.count.mat), c("1","2"))
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expect_equal(computed[["test.fold"]], 1:n.folds)
+  full.train.size <- N*(n.folds-1)/n.folds
+  expect_equal(computed[["n.train.groups"]], rep(full.train.size/atomic.group.size, n.folds))
+  expect_equal(sapply(computed[["train"]], length), rep(full.train.size, n.folds))
+  expected.props <- matrix(
+    prop.tab, length(prop.tab), n.folds, dimnames=list(names(prop.tab),NULL))
+  computed.train <- get_prop_mat(computed[["train"]])
+  expect_false(identical(computed.train, expected.props))
+  computed.test <- get_prop_mat(computed[["test"]])
+  expect_false(identical(computed.test, expected.props))
+})
+test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expect_equal(computed[["test.fold"]], 1:n.folds)
+  full.train.size <- N*(n.folds-1)/n.folds
+  expect_equal(computed[["n.train.groups"]], rep(full.train.size/atomic.group.size, n.folds))
+  expect_equal(sapply(computed[["train"]], length), rep(full.train.size, n.folds))
+  expected.props <- matrix(
+    prop.tab, length(prop.tab), n.folds, dimnames=list(names(prop.tab),NULL))
+  computed.train <- get_prop_mat(computed[["train"]])
+  expect_identical(computed.train, expected.props)
+  computed.test <- get_prop_mat(computed[["test"]])
+  expect_identical(computed.test, expected.props)
+})
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, ignore_subset", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=TRUE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  ## same as no subset.
+  expect_equal(computed[["test.fold"]], 1:n.folds)
+  full.train.size <- N*(n.folds-1)/n.folds
+  expect_equal(computed[["n.train.groups"]], rep(full.train.size/atomic.group.size, n.folds))
+  expect_equal(sapply(computed[["train"]], length), rep(full.train.size, n.folds))
+  expected.props <- matrix(
+    prop.tab, length(prop.tab), n.folds, dimnames=list(names(prop.tab),NULL))
+  computed.train <- get_prop_mat(computed[["train"]])
+  expect_identical(computed.train, expected.props)
+  computed.test <- get_prop_mat(computed[["test"]])
+  expect_identical(computed.test, expected.props)
+})
+test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum, sizes=0", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=0, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expect_equal(computed[["test.fold"]], 1:n.folds)
+  full.train.size <- N*(n.folds-1)/n.folds
+  expect_equal(computed[["n.train.groups"]], rep(full.train.size/atomic.group.size, n.folds))
+  expect_equal(sapply(computed[["train"]], length), rep(full.train.size, n.folds))
+  expected.props <- matrix(
+    prop.tab, length(prop.tab), n.folds, dimnames=list(names(prop.tab),NULL))
+  computed.train <- get_prop_mat(computed[["train"]])
+  expect_identical(computed.train, expected.props)
+  computed.test <- get_prop_mat(computed[["test"]])
+  expect_identical(computed.test, expected.props)
+})
+test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum, sizes=1", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=1, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expect_equal(computed[["test.fold"]], rep(1:n.folds,each=2))
+  full.train.size <- N*(n.folds-1)/n.folds
+  expected.n <- (full.train.size/atomic.group.size)/c(2,1)
+  expect_equal(computed[["n.train.groups"]], rep(expected.n, n.folds))
+  expected.props <- matrix(
+    prop.tab, length(prop.tab), n.folds*2, dimnames=list(names(prop.tab),NULL))
+  computed.test <- get_prop_mat(computed[["test"]])
+  expect_identical(computed.test, expected.props)
+})
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  expected.subsets <- list(all=c("A","B","C"),other=c("B","C"),same="A")
+  expect_equal(nrow(computed), n.folds*n.subsets*length(expected.subsets))
+  three <- computed[
+    test.fold==1 & seed==1 & test.subset=="A"
+  ][order(train.subsets)]
+  expect_equal(three[["train.subsets"]], names(expected.subsets))
+  expect_identical(three[["test"]][[1]], three[["test"]][[2]])
+  expect_identical(three[["test"]][[1]], three[["test"]][[3]])
+  exp.prop.list <- unname(lapply(expected.subsets, function(N)get_props(group.tab[N,drop=FALSE])))
+  three.prop.list <- get_prop_mat(three[["train"]])
+  expect_identical(three.prop.list, exp.prop.list)
+})
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=0", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=0, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  n.train.per.test <- 6
+  expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
+})
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=1", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=1, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  n.train.per.test <- 9
+  expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
+})
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=2", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values <- list(
+    folds=n.folds, seeds=1, ratio=0.5, sizes=2, ignore_subset=FALSE)
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  n.train.per.test <- 12
+  expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
 })

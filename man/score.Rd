@@ -4,7 +4,7 @@
   Score benchmark results
 }
 \description{
-  Computes a data table of scores, joined with original group columns.
+  Computes a data table of scores.
 }
 \usage{
 score(bench.result, ...)
@@ -19,8 +19,7 @@ score(bench.result, ...)
   }
 }
 \value{
-  data table with scores and original values from columns specified with
-  group role.
+  data table with scores.
 }
 \author{
   Toby Dylan Hocking
@@ -42,12 +41,13 @@ for(pattern in names(reg.pattern.list)){
   yname <- paste0("y_",pattern)
   reg.dt[, (yname) := f(x,person)+rnorm(N, sd=0.5)][]
   task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
-  reg.task.list[[pattern]] <- mlr3::TaskRegr$new(
-    pattern, task.dt, target=yname
-  )$set_col_roles("person",c("group","stratum"))
+  task.obj <- mlr3::TaskRegr$new(
+    pattern, task.dt, target=yname)
+  task.obj$col_roles$stratum <- "person"
+  task.obj$col_roles$subset <- "person"
+  reg.task.list[[pattern]] <- task.obj
 }
-same_other <- mlr3resampling::ResamplingSameOtherCV$new()
-same_other$param_set$values$folds <- 3
+same_other <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.learner.list <- list(
   if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new())
@@ -60,51 +60,14 @@ bench.score <- mlr3resampling::score(bench.result)
 if(require(animint2)){
   ggplot()+
     geom_point(aes(
-      regr.mse, train.groups, color=algorithm),
+      regr.mse, train.subsets, color=algorithm),
       shape=1,
       data=bench.score)+
     facet_grid(
-      person ~ task_id,
+      test.subset ~ task_id,
       labeller=label_both,
       scales="free")+
     scale_x_log10()
-}
-
-if(require(animint2)){
-  inst <- bench.score$resampling[[1]]$instance
-  rect.expand <- 0.2
-  ggplot()+
-    ggtitle("All train/test splits to compute")+
-    theme_bw()+
-    facet_grid(
-      . ~ train.groups,
-      labeller=label_both,
-      scales="free",
-      space="free")+
-    scale_size_manual(values=c(group=3, fold=1))+
-    scale_color_manual(values=c(group="orange", fold="grey50"))+
-    geom_rect(aes(
-      xmin=-Inf, xmax=Inf,
-      color=rows,
-      size=rows,
-      ymin=display_row, ymax=display_end),
-      fill=NA,
-      data=inst$viz.rect.dt)+
-    geom_rect(aes(
-      xmin=iteration-rect.expand, ymin=display_row,
-      xmax=iteration+rect.expand, ymax=display_end,
-      fill=set.name),
-      data=inst$viz.set.dt)+
-    geom_text(aes(
-      ifelse(rows=="group", Inf, -Inf),
-      (display_row+display_end)/2,
-      hjust=ifelse(rows=="group", 1, 0),
-      label=paste0(rows, "=", ifelse(rows=="group", group, fold))),
-      data=data.table(train.name="same", inst$viz.rect.dt))+
-    scale_x_continuous(
-      "Split number")+
-    scale_y_continuous(
-      "Row number (data sorted by group, fold)")
 }
 
 }

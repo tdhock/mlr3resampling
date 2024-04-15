@@ -1,3 +1,8 @@
+Changes in version 2024.4.14
+
+- ResamplingSameOtherSizesCV and ResamplingSameOtherCV now recognize subset (instead of previous group_generalization/group) as the column role for designating subsets to train/test on.
+- ResamplingSameOtherSizesCV now recognizes group (instead of previous group_atomic) as the ID of grouped observations that should not be separated when splitting.
+
 Changes in version 2024.3.6
 
 - new ResamplingSameOtherSizesCV.

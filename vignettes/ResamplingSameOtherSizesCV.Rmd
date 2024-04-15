@@ -74,8 +74,8 @@ Below we define a task using that group,
 ```{r}
 reg.task <- mlr3::TaskRegr$new(
   "sin", task.dt, target="y")
-reg.task$col_roles$group_generalization <- "random_group"
-reg.task$col_roles$group_atomic <- "agroup"
+reg.task$col_roles$subset <- "random_group"
+reg.task$col_roles$group <- "agroup"
 reg.task$col_roles$stratum <- "random_group"
 reg.task$col_roles$feature <- "x"
 str(reg.task$col_roles)
@@ -200,8 +200,8 @@ table(group.tab <- task.dt$random_group)
 
 reg.task <- mlr3::TaskRegr$new(
   "sin", task.dt, target="y")
-reg.task$col_roles$group_generalization <- "random_group"
-reg.task$col_roles$group_atomic <- "agroup"
+reg.task$col_roles$subset <- "random_group"
+reg.task$col_roles$group <- "agroup"
 reg.task$col_roles$stratum <- "random_group"
 reg.task$col_roles$feature <- "x"
 same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
