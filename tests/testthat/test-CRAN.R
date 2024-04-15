@@ -5,82 +5,88 @@ test_that("resampling error if no group", {
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_error({
     same_other$instantiate(itask)
-  }, 'task has no group, but at least one group variable is required; use task$set_col_roles(group_col, c("group","stratum"))', fixed=TRUE)
+  }, 'task has no subset, but at least one subset variable is required', fixed=TRUE)
 })
 
 test_that("resampling error if no strata", {
   iris.dt <- data.table(iris)[, g := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("g", "group")
+  itask$col_roles$subset <- "g"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_error({
     same_other$instantiate(itask)
-  }, 'task has no strata, but at least one stratum variable is required; at least assign the group variable to a stratum, task$set_col_roles(group_col, c("group","stratum"))', fixed=TRUE)
+  }, 'task has no strata, but at least one stratum variable is required; at least assign the subset variable to a stratum', fixed=TRUE)
 })
 
 test_that("instantiation creates instance", {
   iris.dt <- data.table(iris)[, g := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("g", c("stratum","group"))
+  itask$col_roles$subset <- "g"
+  itask$col_roles$stratum <- "g"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   same_other$instantiate(itask)
   expect_identical(same_other$instance$id.dt$g, iris.dt$g)
 })
 
-test_that("error for group named group", {
-  iris.dt <- data.table(iris)[, group := rep(1:3, l=.N)]
+test_that("error for subset named subset", {
+  iris.dt <- data.table(iris)[, subset := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("group", c("stratum","group"))
+  itask$col_roles$subset <- "subset"
+  itask$col_roles$stratum <- "subset"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   expect_error({
     same_other$instantiate(itask)
-  }, "col with role group must not be named group; please fix by renaming group col")
+  }, "col with role subset must not be named subset; please fix by renaming subset col")
 })
 
 test_that("error for group named row_id", {
   iris.dt <- data.table(iris)[, row_id := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("row_id", c("stratum","group"))
+  itask$col_roles$subset <- "row_id"
+  itask$col_roles$stratum <- "row_id"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   expect_error({
     same_other$instantiate(itask)
-  }, "col with role group must not be named row_id; please fix by renaming row_id col")
+  }, "col with role subset must not be named row_id; please fix by renaming row_id col")
 })
 
 test_that("error for group named fold", {
   iris.dt <- data.table(iris)[, fold := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("fold", c("stratum","group"))
+  itask$col_roles$subset <- "fold"
+  itask$col_roles$stratum <- "fold"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   expect_error({
     same_other$instantiate(itask)
-  }, "col with role group must not be named fold; please fix by renaming fold col")
+  }, "col with role subset must not be named fold; please fix by renaming fold col")
 })
 
 test_that("error for group named display_row", {
   iris.dt <- data.table(iris)[, display_row := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("display_row", c("stratum","group"))
+  itask$col_roles$subset <- "display_row"
+  itask$col_roles$stratum <- "display_row"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   expect_error({
     same_other$instantiate(itask)
-  }, "col with role group must not be named display_row; please fix by renaming display_row col")
+  }, "col with role subset must not be named display_row; please fix by renaming display_row col")
 })
 
 test_that("error for group named test", {
   iris.dt <- data.table(iris)[, test := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
-  itask$set_col_roles("test", c("stratum","group"))
+  itask$col_roles$subset <- "test"
+  itask$col_roles$stratum <- "test"
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_identical(same_other$instance, NULL)
   expect_error({
     same_other$instantiate(itask)
-  }, "col with role group must not be named test; please fix by renaming test col")
+  }, "col with role subset must not be named test; please fix by renaming test col")
 })
 
 test_that("errors and result for 10 train data in small stratum", {

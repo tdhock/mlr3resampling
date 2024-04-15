@@ -27,15 +27,16 @@ knitr::opts_chunk$set(
 )
 ```
 
-The goal of this vignette is TODO
+The goal of this vignette is explain how to use
+`ResamplingSameOtherSizesCV` for various kinds of cross-validation.
 
-## Simulated regression problems
+## Comparing training on Same/Other/All subsets
 
 ```{r simulationScatter}
 N <- 2100
-abs.x <- 20
-set.seed(1)
-x.vec <- sort(runif(N, -abs.x, abs.x))
+abs.x <- 70
+set.seed(2)
+x.vec <- runif(N, -abs.x, abs.x)
 str(x.vec)
 library(data.table)
 (task.dt <- data.table(
@@ -52,8 +53,6 @@ ggplot()+
 
 Above we see a scatterplot of the simulated data. The goal of the
 learning algorithm will be to predict y from x.
-
-## Simulating and combining identical groups
 
 The code below assigns three test groups to the randomly simulated
 data.
@@ -89,7 +88,11 @@ same_other_sizes_cv$instantiate(reg.task)
 same_other_sizes_cv$instance$iteration.dt
 ```
 
-So using the K-fold cross-validation, TODO 
+So using the K-fold cross-validation, we will do one train/test split
+for each row of the table above. There is one row for each combination
+of test subset (A/B/C), train subset (same/other/all), and test fold
+(1/2/3).
+
 We compute and plot the results using the code below,
 
 ```{r SameOtherCV}
@@ -100,8 +103,8 @@ We compute and plot the results using the code below,
   reg.task,
   reg.learner.list,
   same_other_sizes_cv))
-if(require(future))plan("multisession")
-##lgr::get_logger("mlr3")$set_threshold("warn")
+##if(require(future))plan("multisession")
+lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
 same.other.score <- mlr3resampling::score(same.other.result)
@@ -110,70 +113,165 @@ same.other.score[1]
 
 ggplot()+
   geom_point(aes(
-    regr.mse, train.groups, color=algorithm),
+    regr.mse, train.subsets, color=algorithm),
     shape=1,
     data=same.other.score)+
   geom_text(aes(
-    Inf, train.groups,
+    Inf, train.subsets,
     label=sprintf("n.train=%d ", n.train)),
     hjust=1,
     vjust=1.5,
     shape=1,
     data=same.other.score[algorithm=="featureless" & test.fold==1])+
-  facet_grid(. ~ test.group, labeller=label_both, scales="free")+
+  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
   scale_x_log10(
     "Mean squared prediction error (test set)")
+
+same.other.wide <- dcast(
+  same.other.score,
+  algorithm + test.subset + train.subsets ~ .,
+  list(mean, sd),
+  value.var="regr.mse")
+ggplot()+
+  geom_segment(aes(
+    regr.mse_mean+regr.mse_sd, train.subsets,
+    xend=regr.mse_mean-regr.mse_sd, yend=train.subsets,
+    color=algorithm),
+    shape=1,
+    data=same.other.wide)+
+  geom_point(aes(
+    regr.mse_mean, train.subsets, color=algorithm),
+    shape=1,
+    data=same.other.wide)+
+  geom_text(aes(
+    Inf, train.subsets,
+    label=sprintf("n.train=%d ", n.train)),
+    hjust=1,
+    vjust=1.5,
+    shape=1,
+    data=same.other.score[algorithm=="featureless" & test.fold==1])+
+  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+  scale_x_log10(
+    "Mean squared prediction error (test set)")
+```
+
+The figures above show a test subset in each panel, the train subsets on
+the y axis, the test error on the x axis, the two different algorithms
+are shown in two different colors. We can clearly see that 
+
+* For `train.subsets=same`, test error is largest, sometimes almost as
+  large as featureless, which is the error rate when no relationship
+  has been learned between inputs and outputs (not enough data).
+* For `train.subsets=other`, rpart test error is significantly smaller
+  than featureless, indicating that some non-trivial relationship
+  between inputs and outputs has been learned. Sometimes other has
+  larger error than same, sometimes smaller (depending on sample
+  size).
+* For `train.subsets=all`, rpart test error tends to be minimal, which
+  indicates that combining all of the subsets is beneficial in this
+  case (when the pattern is exactly the same in the different
+  subsets).
+  
+Overall in the plot above, all tends to have less prediction error
+than same, which suggests that the subsets are similar (and indeed
+there are iid in this simulation).
+  
+Below we visualize test error as a function of train size.
+
+```{r}
+ggplot()+
+  geom_line(aes(
+    n.train, regr.mse,
+    color=algorithm,
+    subset=paste(algorithm, test.fold)),
+    data=same.other.score)+
+  geom_label(aes(
+    n.train, regr.mse,
+    color=algorithm,
+    label=train.subsets),
+    data=same.other.score)+
+  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+  scale_y_log10(
+    "Mean squared prediction error (test set)")
+```
+
+## Downsample to see how many train data are required for good accuracy overall
+
+In the previous section we defined a task using the `subset` role,
+which means that the different values in that column will be used to
+define different subsets for training/testing using same/other/all CV.
+In contrast, below we define a task without the `subset` role, which
+means that we will not have separate CV iterations for same/other/all
+(full data is treated as one subset / train subset is same).
+
+```{r}
+task.no.subset <- mlr3::TaskRegr$new(
+  "sin", task.dt, target="y")
+task.no.subset$col_roles$group <- "agroup"
+task.no.subset$col_roles$stratum <- "random_group"
+task.no.subset$col_roles$feature <- "x"
+str(task.no.subset$col_roles)
+```
+
+Below we define cross-validation, and we set the `sizes` to 5 so we
+can see what happens when we have have train sets that are 5 sizes
+smaller than the full train set size.
+
+```{r}
+same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+same_other_sizes_cv$param_set$values$sizes <- 5
+same_other_sizes_cv$instantiate(task.no.subset)
+same_other_sizes_cv$instance$iteration.dt
+```
+
+So using the K-fold cross-validation, we will do one train/test split
+for each row of the table above. There is one row for each combination
+of `n.train.groups` (full train set size + 5 smaller sizes), and test
+fold (1/2/3).
+
+We compute and plot the results using the code below,
+
+```{r}
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+(same.other.grid <- mlr3::benchmark_grid(
+  task.no.subset,
+  reg.learner.list,
+  same_other_sizes_cv))
+##if(require(future))plan("multisession")
+lgr::get_logger("mlr3")$set_threshold("warn")
+(same.other.result <- mlr3::benchmark(
+  same.other.grid, store_models = TRUE))
+same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score[, n.train := sapply(train, length)]
+same.other.score[1]
 
 ggplot()+
   geom_line(aes(
     n.train, regr.mse,
     color=algorithm,
-    group=paste(algorithm, test.fold)),
+    subset=paste(algorithm, test.fold)),
     data=same.other.score)+
-  geom_label(aes(
+  geom_point(aes(
     n.train, regr.mse,
-    color=algorithm,
-    label=train.groups),
+    color=algorithm),
     data=same.other.score)+
-  facet_grid(. ~ test.group, labeller=label_both, scales="free")+
+  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+  scale_x_log10(
+    "Number of train rows",
+    breaks=unique(same.other.score$n.train))+
   scale_y_log10(
     "Mean squared prediction error (test set)")
 ```
 
-The figure above shows a test group in each panel, the train groups on
-the y axis, the test error on the x axis, the two different algorithms
-are shown in two different colors. We can clearly see that 
+From the plot above, it looks like about 700 rows is enough to get
+minimal test error, using the rpart learner.
 
-* For `train.groups=same`, rpart has about the same test error as
-  featureless, which indicates that nothing has been learned (not
-  enough data).
-* For `train.groups=other`, rpart test error is significantly smaller
-  than featureless, indicating that some non-trivial relationship
-  between inputs and outputs has been learned.
-* For `train.groups=all`, rpart test error is smaller still, which
-  indicates that combining all of the groups is beneficial in this
-  case (when the pattern is exactly the same in the different
-  groups).
   
-## Conclusions
+## Downsample to sizes of other sets
 
-We have shown how to use `mlr3resampling` to determine the number of
-train samples which is required to get non-trivial prediction
-accuracy. In the simulation above, that number was about 100 train
-samples. We then defined groups and cross-validation such that there
-were only 50 train samples per group, so training on just samples from
-the same group is not enough (at least for the rpart learning
-algorithm). We observed smaller test error rates when training on
-other/all groups (larger train sets, all with the same
-distribution). Overall this is a convincing demonstration that it is
-possible for "other" and "all" to be more accurate than "same" --- for
-the case where the groups really do have an identical pattern. If in
-real data we see the opposite (same is the best), then this implies
-that there is a different pattern to learn in each group.
-
-## Short 
-
-```{r simulationScatter}
+```{r simulationShort}
 N <- 600
 abs.x <- 20
 set.seed(1)
@@ -190,24 +288,35 @@ ggplot()+
     shape=1,
     data=task.dt)+
   coord_equal()
-atomic.group.size <- 2
-task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
-task.dt[, random_group := rep(
-  rep(c("A","B"), each=atomic.group.size),
+atomic.subset.size <- 2
+task.dt[, agroup := rep(seq(1, N/atomic.subset.size), each=atomic.subset.size)][]
+task.dt[, random_subset := rep(
+  rep(c("A","B","B","B"), each=atomic.subset.size),
   l=.N
 )][]
-table(group.tab <- task.dt$random_group)
+table(subset.tab <- task.dt$random_subset)
 
 reg.task <- mlr3::TaskRegr$new(
   "sin", task.dt, target="y")
-reg.task$col_roles$subset <- "random_group"
+reg.task$col_roles$subset <- "random_subset"
 reg.task$col_roles$group <- "agroup"
-reg.task$col_roles$stratum <- "random_group"
+reg.task$col_roles$stratum <- "random_subset"
 reg.task$col_roles$feature <- "x"
 same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-same_other_sizes_cv$instantiate(reg.task)
-same_other_sizes_cv$instance$iteration.dt[n.train.atoms==atoms]
+```
 
+In the previous section we analyzed prediction accuracy of
+same/other/all, which corresponds to keeping `sizes` parameter at
+default of -1.  The main difference in this section is that we change
+`sizes` to 0, which means to down-sample same/other/all, so we can see
+if there is an effect for sample size (there should be for iid
+problems with intermediate difficulty). We set sizes to 0 in the next
+line:
+
+```{r}
+same_other_sizes_cv$param_set$values$sizes <- 0
+same_other_sizes_cv$instantiate(reg.task)
+same_other_sizes_cv$instance$it
 (reg.learner.list <- list(
   if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
   mlr3::LearnerRegrFeatureless$new()))
@@ -215,58 +324,89 @@ same_other_sizes_cv$instance$iteration.dt[n.train.atoms==atoms]
   reg.task,
   reg.learner.list,
   same_other_sizes_cv))
-if(require(future))plan("multisession")
-##lgr::get_logger("mlr3")$set_threshold("warn")
+##if(require(future))plan("multisession")
+lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
 same.other.score <- mlr3resampling::score(same.other.result)
 same.other.score[1]
+```
 
+The plot below shows the same results (no down-sampling) as if we did
+`sizes=-1` (like in the previous section.
+
+```{r}
 ggplot()+
   geom_point(aes(
-    regr.mse, train.groups, color=algorithm),
+    regr.mse, train.subsets, color=algorithm),
     shape=1,
-    data=same.other.score[atoms==n.train.atoms])+
-  facet_grid(. ~ test.group, labeller=label_both)
+    data=same.other.score[groups==n.train.groups])+
+  facet_grid(. ~ test.subset, labeller=label_both)
+```
 
+The plots below compare all six train subsets (including three
+down-sampled), and it it is clear there is an effect for sample size.
+
+```{r}
+same.other.score[, subset.N := paste(train.subsets, n.train.groups)][]
+(levs <- same.other.score[order(train.subsets, n.train.groups), unique(subset.N)])
+same.other.score[, subset.N.fac := factor(subset.N, levs)]
 ggplot()+
   geom_point(aes(
-    regr.mse, train.groups, color=algorithm),
+    regr.mse, subset.N.fac, color=algorithm),
     shape=1,
-    data=same.other.score[n.train.atoms==100])+
-  facet_grid(. ~ test.group, labeller=label_both)
+    data=same.other.score)+
+  facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
 
+(levs <- same.other.score[order(n.train.groups, train.subsets), unique(subset.N)])
+same.other.score[, N.subset.fac := factor(subset.N, levs)]
 ggplot()+
   geom_point(aes(
-    n.train.atoms, regr.mse,
-    color=train.groups),
+    regr.mse, N.subset.fac, color=algorithm),
+    shape=1,
+    data=same.other.score)+
+  facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
+```
+
+Another way to view the effect of sample size is to plot the
+test/prediction error, as a function of number of train data, as in
+the plots below.
+
+```{r}
+ggplot()+
+  geom_point(aes(
+    n.train.groups, regr.mse,
+    color=train.subsets),
     shape=1,
     data=same.other.score)+
   geom_line(aes(
-    n.train.atoms, regr.mse,
-    group=paste(train.groups, seed, algorithm),
+    n.train.groups, regr.mse,
+    subset=paste(train.subsets, seed, algorithm),
     linetype=algorithm,
-    color=train.groups),
+    color=train.subsets),
     data=same.other.score)+
-  facet_grid(test.fold ~ test.group, labeller=label_both)+
+  facet_grid(test.fold ~ test.subset, labeller=label_both)+
   scale_x_log10()
 
-rpart.score <- same.other.score[algorithm=="rpart" & train.groups != "other"]
+rpart.score <- same.other.score[algorithm=="rpart" & train.subsets != "other"]
 ggplot()+
   geom_point(aes(
-    n.train.atoms, regr.mse,
-    color=train.groups),
+    n.train.groups, regr.mse,
+    color=train.subsets),
     shape=1,
     data=rpart.score)+
   geom_line(aes(
-    n.train.atoms, regr.mse,
-    group=paste(train.groups, seed, algorithm),
-    color=train.groups),
+    n.train.groups, regr.mse,
+    subset=paste(train.subsets, seed, algorithm),
+    color=train.subsets),
     data=rpart.score)+
-  facet_grid(test.fold ~ test.group, labeller=label_both)+
+  facet_grid(test.fold ~ test.subset, labeller=label_both)+
   scale_x_log10()
 ```
 
+## Conclusions
+
+TODO
 
 ## Session info
 
