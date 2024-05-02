@@ -55,7 +55,6 @@ Below we see a scatterplot of the data:
   map around Flagstaff, AZ.
 
 ```{r}
-library(ggplot2)
 x.center <- -111.72
 y.center <- 35.272
 rect.size <- 0.01/2
@@ -66,41 +65,48 @@ rect.dt <- data.table(
   ymin=y.min.max[1], ymax=y.min.max[2])
 tree.fill.scale <- scale_fill_manual(
   values=c(Tree="black", "Not tree"="white"))
-ggplot()+
-  theme_bw()+
-  tree.fill.scale+
-  geom_rect(aes(
-    xmin=xmin, xmax=xmax, ymin=ymin,ymax=ymax),
-    data=rect.dt,
-    fill="red",
-    linewidth=3,
-    color="red")+
-  geom_point(aes(
-    xcoord, ycoord, fill=y),
-    shape=21,
-    data=AZdt)+
-  coord_equal()
+if(require(ggplot2)){
+  ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    geom_rect(aes(
+      xmin=xmin, xmax=xmax, ymin=ymin,ymax=ymax),
+      data=rect.dt,
+      fill="red",
+      linewidth=3,
+      color="red")+
+    geom_point(aes(
+      xcoord, ycoord, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()
+}
 ```
 
 Note the red square in the plot above. Below we zoom into that square.
 
 ```{r}
-ggplot()+
-  theme_bw()+
-  tree.fill.scale+
-  geom_point(aes(
-    xcoord, ycoord, fill=y),
-    shape=21,
-    data=AZdt)+
-  coord_equal()+
-  scale_x_continuous(
-    limits=x.min.max)+
-  scale_y_continuous(
-    limits=y.min.max)+
-  directlabels::geom_dl(aes(
-    xcoord, ycoord, label=polygon),
-    data=AZdt,
-    method="smart.grid")
+if(require(ggplot2)){
+  gg <- ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    geom_point(aes(
+      xcoord, ycoord, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()+
+    scale_x_continuous(
+      limits=x.min.max)+
+    scale_y_continuous(
+      limits=y.min.max)
+  if(require(directlabels)){
+    gg <- gg+geom_dl(aes(
+      xcoord, ycoord, label=polygon),
+      data=AZdt,
+      method="smart.grid")
+  }
+  gg
+}
 ```
 
 In the plot above, we see that there are several groups of points,
@@ -122,16 +128,18 @@ Below we plot the same data, but this time colored by region.
 ```{r}
 ##dput(RColorBrewer::brewer.pal(3,"Dark2"))
 region.colors <- c(NW="#1B9E77", NE="#D95F02", S="#7570B3")
-ggplot()+
-  theme_bw()+
-  tree.fill.scale+
-  scale_color_manual(
-    values=region.colors)+
-  geom_point(aes(
-    xcoord, ycoord, color=region3, fill=y),
-    shape=21,
-    data=AZdt)+
-  coord_equal()
+if(require(ggplot2)){
+  ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    scale_color_manual(
+      values=region.colors)+
+    geom_point(aes(
+      xcoord, ycoord, color=region3, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()
+}
 ```
 
 We can see in the plot above that there are three values in the
@@ -220,11 +228,13 @@ Below we plot the accuracy results.
 score.long <- melt(
   score.dt,
   measure.vars=measure(variable, pattern="classif.(acc|auc)"))
-ggplot()+
-  geom_point(aes(
-    value, train.subsets, color=algorithm),
-    data=score.long)+
-  facet_grid(test.subset ~ variable, labeller=label_both, scales="free")
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      value, train.subsets, color=algorithm),
+      data=score.long)+
+    facet_grid(test.subset ~ variable, labeller=label_both, scales="free")
+}
 ```
 
 Above we show one dot per train/test split, and below we take the
@@ -236,23 +246,25 @@ score.wide <- dcast(
   algorithm + test.subset + train.subsets + variable ~ .,
   list(mean, sd),
   value.var="value")
-ggplot()+
-  geom_point(aes(
-    value_mean, train.subsets, color=algorithm),
-    size=3,
-    fill="white",
-    shape=21,
-    data=score.wide)+
-  geom_segment(aes(
-    value_mean+value_sd, train.subsets,
-    color=algorithm,
-    linewidth=algorithm,
-    xend=value_mean-value_sd, yend=train.subsets),
-    data=score.wide)+
-  scale_linewidth_manual(values=c(featureless=2, rpart=1))+
-  facet_grid(test.subset ~ variable, labeller=label_both, scales="free")+
-  scale_x_continuous(
-    "Mean +/- SD of test accuracy/AUC over folds/splits")
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      value_mean, train.subsets, color=algorithm),
+      size=3,
+      fill="white",
+      shape=21,
+      data=score.wide)+
+    geom_segment(aes(
+      value_mean+value_sd, train.subsets,
+      color=algorithm,
+      linewidth=algorithm,
+      xend=value_mean-value_sd, yend=train.subsets),
+      data=score.wide)+
+    scale_linewidth_manual(values=c(featureless=2, rpart=1))+
+    facet_grid(test.subset ~ variable, labeller=label_both, scales="free")+
+    scale_x_continuous(
+      "Mean +/- SD of test accuracy/AUC over folds/splits")
+}
 ```
 
 The plot above shows an interesting pattern:

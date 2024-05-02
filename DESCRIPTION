@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2024.4.14
+Version: 2024.5.1
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
@@ -65,7 +65,8 @@ Imports:
     paradox,
     mlr3,
     mlr3misc
-Suggests: 
+Suggests:
+    ggplot2,
     animint2,
     mlr3tuning,
     lgr,
@@ -74,5 +75,6 @@ Suggests:
     knitr,
     rmarkdown,
     nc,
-    rpart
+    rpart,
+    directlabels
 VignetteBuilder: knitr

@@ -1,3 +1,7 @@
+Changes in version 2024.5.1
+
+- new vignette AZtrees, and updated data set.
+
 Changes in version 2024.4.14
 
 - ResamplingSameOtherSizesCV and ResamplingSameOtherCV now recognize subset (instead of previous group_generalization/group) as the column role for designating subsets to train/test on.
