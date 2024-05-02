@@ -191,13 +191,9 @@ Code to re-run:
   same_other_sizes_cv$instance$iteration.dt[, .(n.train.groups, test.fold)]
 #+end_src
 
-*** More Usage Examples and Discussion
+*** Older Usage Examples and Discussion
 
-Older examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/ResamplingSameOtherCV.html][ResamplingSameOtherCV vignette]] and data viz for
-[[https://tdhock.github.io/2023-12-13-train-predict-subsets-regression/][regression]] and [[https://tdhock.github.io/2023-12-13-train-predict-subsets-classification/][classification]].
-
-Older examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/ResamplingVariableSizeTrainCV.html][ResamplingVariableSizeTrainCV vignette]] and data viz
-for [[https://tdhock.github.io/2023-12-26-train-sizes-regression/][regression]] and [[https://tdhock.github.io/2023-12-27-train-sizes-classification/][classification]].
+Older examples in [[https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd][Older resamplers vignette]] (useful for visualization).
 
 The examples linked below have examples with larger data sizes than
 the examples in the CRAN vignettes linked above.
