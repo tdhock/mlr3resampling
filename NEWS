@@ -1,6 +1,7 @@
-Changes in version 2024.5.1
+Changes in version 2024.5.2
 
-- new vignette AZtrees, and updated data set.
+- new section AZtrees in ResamplingSameOtherSizes vignette, and updated data set (factor columns instead of int/char).
+- to save disk space, consolidated vignettes.
 
 Changes in version 2024.4.14
 

@@ -16,6 +16,8 @@
     \item{\code{region4}}{a character vector}
     \item{\code{polygon}}{a numeric vector}
     \item{\code{y}}{a character vector}
+    \item{\code{ycoord}}{latitude}
+    \item{\code{xcoord}}{longitude}
     \item{\code{SAMPLE_1}}{a numeric vector}
     \item{\code{SAMPLE_2}}{a numeric vector}
     \item{\code{SAMPLE_3}}{a numeric vector}

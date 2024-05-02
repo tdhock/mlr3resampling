@@ -30,6 +30,10 @@ knitr::opts_chunk$set(
 The goal of this vignette is explain how to use
 `ResamplingSameOtherSizesCV` for various kinds of cross-validation.
 
+# Simulations
+
+We begin with a simple simulated data set.
+
 ## Comparing training on Same/Other/All subsets
 
 ```{r simulationScatter}
@@ -42,13 +46,14 @@ library(data.table)
 (task.dt <- data.table(
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
-library(animint2)
-ggplot()+
-  geom_point(aes(
-    x, y),
-    shape=1,
-    data=task.dt)+
-  coord_equal()
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      x, y),
+      shape=1,
+      data=task.dt)+
+    coord_equal()
+}
 ```
 
 Above we see a scatterplot of the simulated data. The goal of the
@@ -80,7 +85,10 @@ reg.task$col_roles$feature <- "x"
 str(reg.task$col_roles)
 ```
 
-Below we define cross-validation.
+Below we define the cross-validation object, and instantiate it, in
+order to show details about how it works (but normally you should not
+instantiate it yourself, as this will be done automatically inside the
+call to `mlr3::benchmark`).
 
 ```{r}
 same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
@@ -113,48 +121,53 @@ same.other.score <- mlr3resampling::score(same.other.result)
 same.other.score[, n.train := sapply(train, length)]
 same.other.score[1]
 
-ggplot()+
-  geom_point(aes(
-    regr.mse, train.subsets, color=algorithm),
-    shape=1,
-    data=same.other.score)+
-  geom_text(aes(
-    Inf, train.subsets,
-    label=sprintf("n.train=%d ", n.train)),
-    hjust=1,
-    vjust=1.5,
-    shape=1,
-    data=same.other.score[algorithm=="featureless" & test.fold==1])+
-  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-  scale_x_log10(
-    "Mean squared prediction error (test set)")
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      regr.mse, train.subsets, color=algorithm),
+      shape=1,
+      data=same.other.score)+
+    geom_text(aes(
+      Inf, train.subsets,
+      label=sprintf("n.train=%d ", n.train)),
+      hjust=1,
+      vjust=1.5,
+      shape=1,
+      data=same.other.score[algorithm=="featureless" & test.fold==1])+
+    facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+    scale_x_log10(
+      "Mean squared prediction error (test set)")
+}
 
 same.other.wide <- dcast(
   same.other.score,
   algorithm + test.subset + train.subsets ~ .,
   list(mean, sd),
   value.var="regr.mse")
-ggplot()+
-  geom_segment(aes(
-    regr.mse_mean+regr.mse_sd, train.subsets,
-    xend=regr.mse_mean-regr.mse_sd, yend=train.subsets,
-    color=algorithm),
-    shape=1,
-    data=same.other.wide)+
-  geom_point(aes(
-    regr.mse_mean, train.subsets, color=algorithm),
-    shape=1,
-    data=same.other.wide)+
-  geom_text(aes(
-    Inf, train.subsets,
-    label=sprintf("n.train=%d ", n.train)),
-    hjust=1,
-    vjust=1.5,
-    shape=1,
-    data=same.other.score[algorithm=="featureless" & test.fold==1])+
-  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-  scale_x_log10(
-    "Mean squared prediction error (test set)")
+
+if(require(ggplot2)){
+  ggplot()+
+    geom_segment(aes(
+      regr.mse_mean+regr.mse_sd, train.subsets,
+      xend=regr.mse_mean-regr.mse_sd, yend=train.subsets,
+      color=algorithm),
+      shape=1,
+      data=same.other.wide)+
+    geom_point(aes(
+      regr.mse_mean, train.subsets, color=algorithm),
+      shape=1,
+      data=same.other.wide)+
+    geom_text(aes(
+      Inf, train.subsets,
+      label=sprintf("n.train=%d ", n.train)),
+      hjust=1,
+      vjust=1.5,
+      shape=1,
+      data=same.other.score[algorithm=="featureless" & test.fold==1])+
+    facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+    scale_x_log10(
+      "Mean squared prediction error (test set)")
+}
 ```
 
 The figures above show a test subset in each panel, the train subsets on
@@ -181,20 +194,22 @@ there are iid in this simulation).
 Below we visualize test error as a function of train size.
 
 ```{r}
-ggplot()+
-  geom_line(aes(
-    n.train, regr.mse,
-    color=algorithm,
-    subset=paste(algorithm, test.fold)),
-    data=same.other.score)+
-  geom_label(aes(
-    n.train, regr.mse,
-    color=algorithm,
-    label=train.subsets),
-    data=same.other.score)+
-  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-  scale_y_log10(
-    "Mean squared prediction error (test set)")
+if(require(ggplot2)){
+  ggplot()+
+    geom_line(aes(
+      n.train, regr.mse,
+      color=algorithm,
+      subset=paste(algorithm, test.fold)),
+      data=same.other.score)+
+    geom_label(aes(
+      n.train, regr.mse,
+      color=algorithm,
+      label=train.subsets),
+      data=same.other.score)+
+    facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+    scale_y_log10(
+      "Mean squared prediction error (test set)")
+}
 ```
 
 ## Downsample to see how many train data are required for good accuracy overall
@@ -251,22 +266,24 @@ same.other.score <- mlr3resampling::score(same.other.result)
 same.other.score[, n.train := sapply(train, length)]
 same.other.score[1]
 
-ggplot()+
-  geom_line(aes(
-    n.train, regr.mse,
-    color=algorithm,
-    subset=paste(algorithm, test.fold)),
-    data=same.other.score)+
-  geom_point(aes(
-    n.train, regr.mse,
-    color=algorithm),
-    data=same.other.score)+
-  facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-  scale_x_log10(
-    "Number of train rows",
-    breaks=unique(same.other.score$n.train))+
-  scale_y_log10(
-    "Mean squared prediction error (test set)")
+if(require(ggplot2)){
+  ggplot()+
+    geom_line(aes(
+      n.train, regr.mse,
+      color=algorithm,
+      subset=paste(algorithm, test.fold)),
+      data=same.other.score)+
+    geom_point(aes(
+      n.train, regr.mse,
+      color=algorithm),
+      data=same.other.score)+
+    facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
+    scale_x_log10(
+      "Number of train rows",
+      breaks=unique(same.other.score$n.train))+
+    scale_y_log10(
+      "Mean squared prediction error (test set)")
+}
 ```
 
 From the plot above, it looks like about 700 rows is enough to get
@@ -285,13 +302,14 @@ library(data.table)
 (task.dt <- data.table(
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
-library(animint2)
-ggplot()+
-  geom_point(aes(
-    x, y),
-    shape=1,
-    data=task.dt)+
-  coord_equal()
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      x, y),
+      shape=1,
+      data=task.dt)+
+    coord_equal()
+}
 atomic.subset.size <- 2
 task.dt[, agroup := rep(seq(1, N/atomic.subset.size), each=atomic.subset.size)][]
 task.dt[, random_subset := rep(
@@ -342,12 +360,14 @@ The plot below shows the same results (no down-sampling) as if we did
 `sizes=-1` (like in the previous section.
 
 ```{r}
+if(require(ggplot2)){
 ggplot()+
   geom_point(aes(
     regr.mse, train.subsets, color=algorithm),
     shape=1,
     data=same.other.score[groups==n.train.groups])+
   facet_grid(. ~ test.subset, labeller=label_both)
+}
 ```
 
 The plots below compare all six train subsets (including three
@@ -357,21 +377,24 @@ down-sampled), and it it is clear there is an effect for sample size.
 same.other.score[, subset.N := paste(train.subsets, n.train.groups)][]
 (levs <- same.other.score[order(train.subsets, n.train.groups), unique(subset.N)])
 same.other.score[, subset.N.fac := factor(subset.N, levs)]
-ggplot()+
-  geom_point(aes(
-    regr.mse, subset.N.fac, color=algorithm),
-    shape=1,
-    data=same.other.score)+
-  facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
-
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      regr.mse, subset.N.fac, color=algorithm),
+      shape=1,
+      data=same.other.score)+
+    facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
+}
 (levs <- same.other.score[order(n.train.groups, train.subsets), unique(subset.N)])
 same.other.score[, N.subset.fac := factor(subset.N, levs)]
-ggplot()+
-  geom_point(aes(
-    regr.mse, N.subset.fac, color=algorithm),
-    shape=1,
-    data=same.other.score)+
-  facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      regr.mse, N.subset.fac, color=algorithm),
+      shape=1,
+      data=same.other.score)+
+    facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
+}
 ```
 
 Another way to view the effect of sample size is to plot the
@@ -379,35 +402,38 @@ test/prediction error, as a function of number of train data, as in
 the plots below.
 
 ```{r}
-ggplot()+
-  geom_point(aes(
-    n.train.groups, regr.mse,
-    color=train.subsets),
-    shape=1,
-    data=same.other.score)+
-  geom_line(aes(
-    n.train.groups, regr.mse,
-    subset=paste(train.subsets, seed, algorithm),
-    linetype=algorithm,
-    color=train.subsets),
-    data=same.other.score)+
-  facet_grid(test.fold ~ test.subset, labeller=label_both)+
-  scale_x_log10()
-
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      n.train.groups, regr.mse,
+      color=train.subsets),
+      shape=1,
+      data=same.other.score)+
+    geom_line(aes(
+      n.train.groups, regr.mse,
+      subset=paste(train.subsets, seed, algorithm),
+      linetype=algorithm,
+      color=train.subsets),
+      data=same.other.score)+
+    facet_grid(test.fold ~ test.subset, labeller=label_both)+
+    scale_x_log10()
+}
 rpart.score <- same.other.score[algorithm=="rpart" & train.subsets != "other"]
-ggplot()+
-  geom_point(aes(
-    n.train.groups, regr.mse,
-    color=train.subsets),
-    shape=1,
-    data=rpart.score)+
-  geom_line(aes(
-    n.train.groups, regr.mse,
-    subset=paste(train.subsets, seed, algorithm),
-    color=train.subsets),
-    data=rpart.score)+
-  facet_grid(test.fold ~ test.subset, labeller=label_both)+
-  scale_x_log10()
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      n.train.groups, regr.mse,
+      color=train.subsets),
+      shape=1,
+      data=rpart.score)+
+    geom_line(aes(
+      n.train.groups, regr.mse,
+      subset=paste(train.subsets, seed, algorithm),
+      color=train.subsets),
+      data=rpart.score)+
+    facet_grid(test.fold ~ test.subset, labeller=label_both)+
+    scale_x_log10()
+}
 ```
 
 ## Use with auto_tuner on a task with stratification and grouping
@@ -490,17 +516,19 @@ same.other.wide <- dcast(
   algorithm + test.subset + train.subsets ~ .,
   list(mean, sd),
   value.var="regr.mse")
-ggplot()+
-  geom_segment(aes(
-    regr.mse_mean+regr.mse_sd, train.subsets,
-    xend=regr.mse_mean-regr.mse_sd, yend=train.subsets),
-    shape=1,
-    data=same.other.wide)+
-  geom_point(aes(
-    regr.mse_mean, train.subsets),
-    shape=1,
-    data=same.other.wide)+
-  facet_grid(algorithm ~ test.subset, labeller=label_both)
+if(require(ggplot2)){
+  ggplot()+
+    geom_segment(aes(
+      regr.mse_mean+regr.mse_sd, train.subsets,
+      xend=regr.mse_mean-regr.mse_sd, yend=train.subsets),
+      shape=1,
+      data=same.other.wide)+
+    geom_point(aes(
+      regr.mse_mean, train.subsets),
+      shape=1,
+      data=same.other.wide)+
+    facet_grid(algorithm ~ test.subset, labeller=label_both)
+}
 ```
 
 The plot above has different panels for `rpart` (without tuning) and
@@ -517,7 +545,269 @@ It can also be used for model training (subtrain/validation split):
 
 * to learn regularization hyper-parameters, on a task with both `stratum` and `group` roles (use is as `resampling` argument of `auto_tuner`).
 
-## Session info
+# Arizona trees data
+
+The goal of this section is explain the differences between various
+column roles:
+
+* `group` is used to designate observations which should stay together
+  when splitting. In other words, two rows in the same `group` should
+  never appear in different sets.
+* `subset` designates a column whose values are each treated as a test
+  set (the train data come from Same/Other/All subsets).
+
+## What is a group?
+
+Below we load the data set.
+
+```{r}
+data(AZtrees,package="mlr3resampling")
+library(data.table)
+AZdt <- data.table(AZtrees)
+AZdt[1]
+```
+
+Above we see one row of data. 
+Below we see a scatterplot of the data:
+
+* Every row is a labeled pixel.
+* Every dot is plotted at the xcoord/ycoord (lat/long) position on a
+  map around Flagstaff, AZ.
+
+```{r}
+x.center <- -111.72
+y.center <- 35.272
+rect.size <- 0.01/2
+x.min.max <- x.center+c(-1, 1)*rect.size
+y.min.max <- y.center+c(-1, 1)*rect.size
+rect.dt <- data.table(
+  xmin=x.min.max[1], xmax=x.min.max[2],
+  ymin=y.min.max[1], ymax=y.min.max[2])
+if(require(ggplot2)){
+  tree.fill.scale <- scale_fill_manual(
+    values=c(Tree="black", "Not tree"="white"))
+  ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    geom_rect(aes(
+      xmin=xmin, xmax=xmax, ymin=ymin,ymax=ymax),
+      data=rect.dt,
+      fill="red",
+      linewidth=3,
+      color="red")+
+    geom_point(aes(
+      xcoord, ycoord, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()
+}
+```
+
+Note the red square in the plot above. Below we zoom into that square.
+
+```{r}
+if(require(ggplot2)){
+  gg <- ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    geom_point(aes(
+      xcoord, ycoord, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()+
+    scale_x_continuous(
+      limits=x.min.max)+
+    scale_y_continuous(
+      limits=y.min.max)
+  if(require(directlabels)){
+    gg <- gg+geom_dl(aes(
+      xcoord, ycoord, label=polygon),
+      data=AZdt,
+      method="smart.grid")
+  }
+  gg
+}
+```
+
+In the plot above, we see that there are several groups of points,
+each with a black number. Each group of points comes from a single
+polygon (label drawn in GIS software), and the black number is the
+polygon ID number. So each polygon represents one label, either tree
+or not, and there are one or more points/pixels with that label inside
+each polygon.
+
+A polygon is an example of a group. Each polygon results in one or
+more rows of training data (pixels), but since pixels in a given group
+were all labeled together, we would like to keep them together when
+splitting the data.
+
+## What is a subset?
+
+Below we plot the same data, but this time colored by region.
+
+```{r}
+##dput(RColorBrewer::brewer.pal(3,"Dark2"))
+region.colors <- c(NW="#1B9E77", NE="#D95F02", S="#7570B3")
+if(require(ggplot2)){
+  ggplot()+
+    theme_bw()+
+    tree.fill.scale+
+    scale_color_manual(
+      values=region.colors)+
+    geom_point(aes(
+      xcoord, ycoord, color=region3, fill=y),
+      shape=21,
+      data=AZdt)+
+    coord_equal()
+}
+```
+
+We can see in the plot above that there are three values in the
+`region3` column: NE, NW, and S (different geographical regions on the
+map which are well-separated). We would like to know if it is possible
+to train on one region, and then accurately predict on another region.
+
+## Cross-validation
+
+First we create a task:
+
+```{r}
+ctask <- mlr3::TaskClassif$new(
+  "AZtrees", AZdt, target="y")
+ctask$col_roles$subset <- "region3"
+ctask$col_roles$group <- "polygon"
+ctask$col_roles$stratum <- "y"
+ctask$col_roles$feature <- grep("SAMPLE",names(AZdt),value=TRUE)
+str(ctask$col_roles)
+```
+
+Then we can instantiate the CV to see how it works (but usually you do
+not need to instantiate, if you are using `benchmark` it does it for
+you).
+
+```{r}
+same.other.cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+same.other.cv$param_set$values$folds <- 3
+same.other.cv$instantiate(ctask)
+same.other.cv$instance$iteration.dt[, .(
+  train.subsets, test.fold, test.subset, n.train.groups,
+  train.rows=sapply(train, length))]
+```
+
+The table above has one row per train/test split for which
+error/accuracy metrics will be computed.  The `n.train.groups` column
+is the number of polygons which are used in the train set, which is
+defined as the intersection of the train subsets and the train folds.
+To double check, below we compute the total number of groups/polygons per
+subset/region, and the expected number of train groups/polygons.
+
+```{r}
+AZdt[, .(
+  polygons=length(unique(polygon))
+), by=region3][
+, train.polygons := polygons*with(same.other.cv$param_set$values, (folds-1)/folds)
+][]
+```
+
+It is clear that the counts in the `train.polygons` column above match
+the numbers in the previous table column `n.train.groups`. To
+determine the number of rows of train data, we can look at the
+`train.rows` column in the previous table.
+
+## Benchmark and test error computation
+
+Below we define the benchmark experiment.
+
+```{r}
+same.other.cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+(learner.list <- list(
+  mlr3::LearnerClassifFeatureless$new()))
+if(requireNamespace("rpart")){
+  learner.list$rpart <- mlr3::LearnerClassifRpart$new()
+}
+for(learner.i in seq_along(learner.list)){
+  learner.list[[learner.i]]$predict_type <- "prob"
+}
+(bench.grid <- mlr3::benchmark_grid(ctask, learner.list, same.other.cv))
+```
+
+Above we see one row per combination of task, learner, and resampling.
+Below we compute the benchmark result and test accuracy.
+
+```{r}
+bench.result <- mlr3::benchmark(bench.grid)
+measure.list <- mlr3::msrs(c("classif.acc","classif.auc"))
+score.dt <- mlr3resampling::score(bench.result, measure.list)
+score.dt[1]
+```
+
+Above we see one row of the result, for one train/test split.
+Below we plot the accuracy results.
+
+```{r}
+score.long <- melt(
+  score.dt,
+  measure.vars=measure(variable, pattern="classif.(acc|auc)"))
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      value, train.subsets, color=algorithm),
+      data=score.long)+
+    facet_grid(test.subset ~ variable, labeller=label_both, scales="free")
+}
+```
+
+Above we show one dot per train/test split, and below we take the
+mean/SD over folds.
+
+```{r}
+score.wide <- dcast(
+  score.long,
+  algorithm + test.subset + train.subsets + variable ~ .,
+  list(mean, sd),
+  value.var="value")
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      value_mean, train.subsets, color=algorithm),
+      size=3,
+      fill="white",
+      shape=21,
+      data=score.wide)+
+    geom_segment(aes(
+      value_mean+value_sd, train.subsets,
+      color=algorithm,
+      linewidth=algorithm,
+      xend=value_mean-value_sd, yend=train.subsets),
+      data=score.wide)+
+    scale_linewidth_manual(values=c(featureless=2, rpart=1))+
+    facet_grid(test.subset ~ variable, labeller=label_both, scales="free")+
+    scale_x_continuous(
+      "Mean +/- SD of test accuracy/AUC over folds/splits")
+}
+```
+
+The plot above shows an interesting pattern:
+
+* For test subsets NE and NW, training on other subsets is less
+  accurate than training on the same subset. Training on All subsets
+  is no more accurate than training on the same subset. These results
+  suggest that learnable patterns in other subsets are too different
+  to be beneficial for predicting on these subsets.
+* For test subset S, training on other subsets is slightly more
+  accurate than training on the same subset, and training on all
+  subsets is slightly more accurate still. These results suggest that
+  the learnable pattern is similar enough in the other subsets so as
+  to be beneficial for prediction in subset S.
+
+## Conclusion
+
+Column roles `group`, `stratum`, and `subset` may be used together, in
+the same task, in order to perform a cross-validation experiment which
+captures the structure in the data.
+
+
+# Session info
 
 ```{r}
 sessionInfo()
