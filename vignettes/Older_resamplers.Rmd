@@ -1,18 +1,7 @@
----
-title: "Older resamplers"
-author: "Toby Dylan Hocking"
-vignette: >
-  %\VignetteIndexEntry{Older resamplers}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-<style type="text/css">
-.main-container {
-  max-width: 1200px !important;
-  margin: auto;
-}
-</style>
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Older resamplers}
+-->
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(

@@ -1,18 +1,7 @@
----
-title: "Comparing sizes when training on same or other groups"
-author: "Toby Dylan Hocking"
-vignette: >
-  %\VignetteIndexEntry{Comparing sizes when training on same or other groups}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
-
-<style type="text/css">
-.main-container {
-  max-width: 1200px !important;
-  margin: auto;
-}
-</style>
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Comparing sizes when training on same or other groups}
+-->
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
