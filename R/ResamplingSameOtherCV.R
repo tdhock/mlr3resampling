@@ -24,7 +24,7 @@ ResamplingSameOtherCV = R6::R6Class(
       }
       reserved.names <- c(
         "row_id", "fold", "subset", "display_row",
-        "train.subsets", "test.fold", "test.subset", "iteration", 
+        "train.subsets", "test.fold", "test.subset", "iteration",
         "test", "train", "algorithm", "uhash", "nr", "task", "task_id",
         "learner", "learner_id", "resampling", "resampling_id",
         "prediction")
@@ -106,7 +106,7 @@ ResamplingSameOtherCV = R6::R6Class(
           rows="fold",
           display_row=min(display_row),
           display_end=max(display_row)
-        ), by=.(subset, fold)])        
+        ), by=.(subset, fold)])
       self$instance <- list(
         iteration.dt=iteration.dt,
         id.dt=id.fold.subsets[order(row_id)],
