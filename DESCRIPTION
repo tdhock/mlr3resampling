@@ -73,7 +73,7 @@ Suggests:
     future,
     testthat,
     knitr,
-    rmarkdown,
+    markdown,
     nc,
     rpart,
     directlabels
