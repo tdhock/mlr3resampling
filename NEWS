@@ -1,3 +1,7 @@
+Changes in version 2024.5.13
+
+- rename ResamplingSameOtherSizes.Rmd to Newer_resamplers.Rmd to avoid error on windows, file name conversion problem -- name too long?
+
 Changes in version 2024.5.2
 
 - new section AZtrees in ResamplingSameOtherSizes vignette, and updated data set (factor columns instead of int/char).
