@@ -49,7 +49,7 @@ Description: A supervised learning algorithm inputs a train set,
  test accuracy for each group; other is usually somewhat less accurate
  than same; other can be just as bad as featureless baseline when the
  groups have different patterns).
- For more information, 
+ For more information,
  <https://tdhock.github.io/blog/2023/R-gen-new-subsets/>
  describes the method in depth.
  How many train samples are required to get accurate predictions on a
@@ -78,4 +78,3 @@ Suggests:
     rpart,
     directlabels
 VignetteBuilder: knitr
-RoxygenNote: 7.3.1
