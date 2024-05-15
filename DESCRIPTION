@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2024.5.13
+Version: 2024.5.14
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",

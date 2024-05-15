@@ -1,3 +1,7 @@
+Changes in version 2024.5.14
+
+- mlr3misc::leanify_package() and add ResamplingSameOtherSizesCV to mlr_resamplings as same_other_sizes_cv, thanks @sebffischer.
+
 Changes in version 2024.5.13
 
 - rename ResamplingSameOtherSizes.Rmd to Newer_resamplers.Rmd to avoid error on windows, file name conversion problem -- name too long?
