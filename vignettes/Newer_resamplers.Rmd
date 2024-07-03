@@ -465,7 +465,7 @@ do_benchmark <- function(subtrain.valid.cv){
       ##mlr3tuningspaces::lts(rpart.learner)$param_set$values
       rpart.learner$param_set$values$cp <- paradox::to_tune(1e-4, 0.1, log=TRUE)
       reg.learner.list$rpart.tuned <- mlr3tuning::auto_tuner(
-        tuner = mlr3tuning::TunerBatchGridSearch$new(),
+        tuner = mlr3tuning::tnr("grid_search"), #mlr3tuning::TunerBatchGridSearch$new()
         learner = rpart.learner,
         resampling = subtrain.valid.cv,
         measure = mlr3::msr("regr.mse"))
