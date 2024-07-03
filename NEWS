@@ -1,3 +1,7 @@
+Changes in version 2024.7.3
+
+- use mlr3tuning::TunerBatchGridSearch instead of TunerGridSearch in Newer_resamplers vignette (same functionality, new name).
+
 Changes in version 2024.5.14
 
 - mlr3misc::leanify_package() and add ResamplingSameOtherSizesCV to mlr_resamplings as same_other_sizes_cv, thanks @sebffischer.
