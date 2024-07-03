@@ -24,6 +24,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         man = "ResamplingSameOtherSizesCV")
     },
     instantiate = function(task) {
+      . <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
+      ## Above to avoid CRAN NOTEs.
       task = mlr3::assert_task(mlr3::as_task(task))
       reserved.names <- c(
         "row_id", "fold",

@@ -14,6 +14,8 @@ ResamplingSameOtherCV = R6::R6Class(
         man = "ResamplingSameOtherCV")
     },
     instantiate = function(task) {
+      row_id <- fold <- display_row <- . <- train.subsets <- iteration <- NULL
+      ## Above to avoid CRAN NOTEs.
       task = mlr3::assert_task(mlr3::as_task(task))
       if(length(task$col_roles$group)){
         stop("since version 2024.4.15, ResamplingSameOtherCV no longer supports group role (used to avoid splitting related rows into different subsets), but still supports defining same/other/all train groups (now called subset role). Please fix by either changing group role to subset, or using ResamplingSameOtherSizesCV instead (it supports group and subset).")
