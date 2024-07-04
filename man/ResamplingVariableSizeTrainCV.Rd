@@ -25,7 +25,7 @@
 \section{Stratification}{
   \code{\link{ResamplingVariableSizeTrainCV}} supports stratified sampling.
   The stratification variables are assumed to be discrete,
-  and must be stored in the \link{Task} with column role \code{"stratum"}.
+  and must be stored in the \link[mlr3:Task]{Task} with column role \code{"stratum"}.
   In case of multiple stratification variables,
   each combination of the values of the stratification variables forms a stratum.
 }
@@ -97,8 +97,7 @@ Set of hyperparameters.}
 
 \item{\code{duplicated_ids}}{(\code{logical(1)})\cr
 Set to \code{TRUE} if this resampling strategy may have duplicated row ids in a single training set or test set.
-
-Note that this object is typically constructed via a derived classes, e.g. \link{ResamplingCV} or \link{ResamplingHoldout}.}
+}
 
 \item{\code{label}}{(\code{character(1)})\cr
 Label for the new instance.}

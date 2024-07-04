@@ -1,6 +1,7 @@
 Changes in version 2024.7.3
 
 - use mlr3tuning::tnr("grid_search") instead of TunerGridSearch in Newer_resamplers vignette (same functionality, new name is TunerBatchGridSearch).
+- fix Rd files Task -> mlr3:Task, rm ResamplingHoldout etc.
 
 Changes in version 2024.5.14
 
