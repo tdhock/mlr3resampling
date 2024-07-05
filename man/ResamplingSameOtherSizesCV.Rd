@@ -61,7 +61,7 @@ and must be stored in the \link[mlr3:Task]{Task} with column role \code{"group"}
 \code{\link{ResamplingSameOtherSizesCV}} supports training on different
 subsets of observations.
 The subset variable is assumed to be discrete,
-and must be stored in the \link{Task} with column role \code{"subset"}.
+and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"}.
 
 }
 
