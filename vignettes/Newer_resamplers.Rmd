@@ -437,7 +437,7 @@ We see in the output aove that the task has column roles for both
 `stratum` and `group`, which normally errors when used with
 `ResamplingCV`:
 
-```{r error=TRUE, purl=TRUE}
+```{r error=TRUE, purl=FALSE}
 mlr3::ResamplingCV$new()$instantiate(reg.task)
 ```
 
@@ -481,7 +481,7 @@ do_benchmark <- function(subtrain.valid.cv){
 }
 ```
 
-```{r error=TRUE, purl=TRUE}
+```{r error=TRUE, purl=FALSE}
 do_benchmark(mlr3::ResamplingCV$new())
 ```
 

@@ -1,3 +1,7 @@
+Changes in version 2024.7.7
+
+- use purl=FALSE in vignettes to avoid CRAN check error.
+
 Changes in version 2024.7.3
 
 - use mlr3tuning::tnr("grid_search") instead of TunerGridSearch in Newer_resamplers vignette (same functionality, new name is TunerBatchGridSearch).
