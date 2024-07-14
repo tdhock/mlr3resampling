@@ -1,3 +1,7 @@
+Changes in version 2024.7.14
+
+- fix typo newere in vignette.
+
 Changes in version 2024.7.7
 
 - use purl=FALSE in vignettes to avoid CRAN check error.
