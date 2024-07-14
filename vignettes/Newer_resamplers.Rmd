@@ -121,7 +121,6 @@ if(require(ggplot2)){
       label=sprintf("n.train=%d ", n.train)),
       hjust=1,
       vjust=1.5,
-      shape=1,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
     scale_x_log10(
@@ -140,7 +139,6 @@ if(require(ggplot2)){
       regr.mse_mean+regr.mse_sd, train.subsets,
       xend=regr.mse_mean-regr.mse_sd, yend=train.subsets,
       color=algorithm),
-      shape=1,
       data=same.other.wide)+
     geom_point(aes(
       regr.mse_mean, train.subsets, color=algorithm),
@@ -151,7 +149,6 @@ if(require(ggplot2)){
       label=sprintf("n.train=%d ", n.train)),
       hjust=1,
       vjust=1.5,
-      shape=1,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
     scale_x_log10(
@@ -510,7 +507,6 @@ if(require(ggplot2)){
     geom_segment(aes(
       regr.mse_mean+regr.mse_sd, train.subsets,
       xend=regr.mse_mean-regr.mse_sd, yend=train.subsets),
-      shape=1,
       data=same.other.wide)+
     geom_point(aes(
       regr.mse_mean, train.subsets),
