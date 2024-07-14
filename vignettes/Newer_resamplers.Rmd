@@ -185,7 +185,7 @@ if(require(ggplot2)){
     geom_line(aes(
       n.train, regr.mse,
       color=algorithm,
-      subset=paste(algorithm, test.fold)),
+      group=paste(algorithm, test.fold)),
       data=same.other.score)+
     geom_label(aes(
       n.train, regr.mse,
@@ -257,7 +257,7 @@ if(require(ggplot2)){
     geom_line(aes(
       n.train, regr.mse,
       color=algorithm,
-      subset=paste(algorithm, test.fold)),
+      group=paste(algorithm, test.fold)),
       data=same.other.score)+
     geom_point(aes(
       n.train, regr.mse,
@@ -397,7 +397,7 @@ if(require(ggplot2)){
       data=same.other.score)+
     geom_line(aes(
       n.train.groups, regr.mse,
-      subset=paste(train.subsets, seed, algorithm),
+      group=paste(train.subsets, seed, algorithm),
       linetype=algorithm,
       color=train.subsets),
       data=same.other.score)+
@@ -414,7 +414,7 @@ if(require(ggplot2)){
       data=rpart.score)+
     geom_line(aes(
       n.train.groups, regr.mse,
-      subset=paste(train.subsets, seed, algorithm),
+      group=paste(train.subsets, seed, algorithm),
       color=train.subsets),
       data=rpart.score)+
     facet_grid(test.fold ~ test.subset, labeller=label_both)+
