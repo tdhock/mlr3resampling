@@ -87,8 +87,8 @@ same_other_sizes_cv$instance$iteration.dt
 
 So using the K-fold cross-validation, we will do one train/test split
 for each row of the table above. There is one row for each combination
-of test subset (A/B/C), train subset (same/other/all), and test fold
-(1/2/3).
+of test subset (A, B, C), train subset (same, other, all), and test fold
+(1, 2, 3).
 
 We compute and plot the results using the code below,
 
