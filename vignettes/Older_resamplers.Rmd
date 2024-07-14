@@ -20,7 +20,7 @@ The goal of this vignette is to explain the older resamplers:
 `ResamplingVariableSizeTrainCV` and `ResamplingSameOtherCV`, which
 output some data which are useful for visualizing the train/test
 splits. If you do not want to visualize the train/test splits, then it
-is recommended to instead use the newere resampler,
+is recommended to instead use the newer resampler,
 `ResamplingSameOtherSizesCV` (see other vignette).
 
 # Same/Other/All resampler
