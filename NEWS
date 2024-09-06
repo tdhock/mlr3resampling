@@ -1,3 +1,7 @@
+Changes in version 2024.9.6
+
+- .onLoad, add subset to mlr3_reflections$task_col_roles for classif and regr.
+
 Changes in version 2024.7.14
 
 - fix typo newere in vignette.
