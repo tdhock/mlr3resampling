@@ -62,25 +62,39 @@ table(group.tab <- task.dt$random_group)
 ```
 
 The output above shows the number of rows in each random group. 
-Below we define a task using that group,
+Below we define a task,
 
 ```{r}
 reg.task <- mlr3::TaskRegr$new(
   "sin", task.dt, target="y")
-reg.task$col_roles$subset <- "random_group"
 reg.task$col_roles$group <- "agroup"
 reg.task$col_roles$stratum <- "random_group"
 reg.task$col_roles$feature <- "x"
-str(reg.task$col_roles)
 ```
 
-Below we define the cross-validation object, and instantiate it, in
+Note that if we assign the `subset` role at this point, we will get an
+error, because this is not a standard mlr3 role.
+
+
+```{r error=TRUE, purl=FALSE}
+reg.task$col_roles$subset <- "random_group" 
+```
+
+Below we define the cross-validation object, which loads the
+mlr3resampling package, and then we assign the random group column to
+be used as the `subset` role.
+
+```{r}
+same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+reg.task$col_roles$subset <- "random_group" 
+```
+
+Below we instantiate the resampler, in
 order to show details about how it works (but normally you should not
 instantiate it yourself, as this will be done automatically inside the
 call to `mlr3::benchmark`).
 
 ```{r}
-same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 same_other_sizes_cv$instantiate(reg.task)
 same_other_sizes_cv$instance$iteration.dt
 ```
