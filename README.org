@@ -20,7 +20,7 @@ For an overview of functionality, [[https://tdhock.github.io/blog/2024/cv-all-sa
 
 *** SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets
 
-See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/ResamplingSameOtherSizesCV.html][ResamplingSameOtherSizesCV vignette]] and data viz for
+See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/Newer_resamplers.html][Newer resamplers vignette]] and data viz for
 [[https://tdhock.github.io/2023-12-13-train-predict-subsets-regression/][regression]] and [[https://tdhock.github.io/2023-12-13-train-predict-subsets-classification/][classification]].
 
 A supervised learning algorithm inputs a train set, and outputs a
