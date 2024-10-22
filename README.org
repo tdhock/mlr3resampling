@@ -143,8 +143,8 @@ below,
 #+end_src
 
 The output above indicates we have 5956 rows and 189 polygons. We can
-do cross-validation on either polygons (if task has =subset= role) or
-rows (if no =subset= role set). The code below sets a down-sampling
+do cross-validation on either polygons (if task has =group= role) or
+rows (if no =group= role set). The code below sets a down-sampling
 =ratio= of 0.8, and four =sizes= of down-sampled train sets.
 
 #+begin_src R
