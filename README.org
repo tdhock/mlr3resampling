@@ -127,7 +127,7 @@ Code to re-run:
 
 *** Algorithm 2: cross-validation for comparing different sized train sets
 
-See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/ResamplingSameOtherSizesCV.html][ResamplingSameOtherSizes vignette]] and data viz for
+See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/Newer_resamplers.html][Newer Resamplers vignette]] and data viz for
 [[https://tdhock.github.io/2023-12-26-train-sizes-regression/][regression]] and [[https://tdhock.github.io/2023-12-27-train-sizes-classification/][classification]].
 
 How many train samples are required to get accurate predictions on a
