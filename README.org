@@ -15,29 +15,31 @@ framework in R
 
 ** Description
 
-For an overview of functionality, [[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]].
+For an overview of functionality, [[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]], the
+[[https://arxiv.org/abs/2410.08643][SOAK arXiv paper]], and [[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
 
-*** Algorithm 1: cross-validation for comparing train on same and other
+*** SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets
 
 See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/ResamplingSameOtherSizesCV.html][ResamplingSameOtherSizesCV vignette]] and data viz for
 [[https://tdhock.github.io/2023-12-13-train-predict-subsets-regression/][regression]] and [[https://tdhock.github.io/2023-12-13-train-predict-subsets-classification/][classification]].
 
 A supervised learning algorithm inputs a train set, and outputs a
-prediction function, which can be used on a test set. If each data
-point belongs to a group (such as geographic region, year, etc), then
-how do we know if it is possible to train on one group, and predict
-accurately on another group? Cross-validation can be used to determine
-the extent to which this is possible, by first assigning fold IDs from
-1 to K to all data (possibly using stratification, usually by group
-and label). Then we loop over test sets (group/fold combinations),
-train sets (same group, other groups, all groups), and compute
-test/prediction accuracy for each combination.  Comparing
-test/prediction accuracy between same and other, we can determine the
-extent to which it is possible:
+prediction function, which can be used on a test set.  If each data
+point belongs to a subset (such as geographic region, year, etc), then
+how do we know if subsets are similar enough so that we can get
+accurate predictions on one subset, after training on Other subsets?
+And how do we know if training on All subsets would improve prediction
+accuracy, relative to training on the Same subset?  SOAK,
+Same/Other/All K-fold cross-validation, can be used to answer these
+question, by fixing a test subset, training models on Same/Other/All
+subsets, and then comparing test error rates (Same versus Other and
+Same versus All).
 
-- perfect if same/other have similar test accuracy for each group, and all is more accuate;
-- other/all are usually somewhat less accurate than same in real data;
-- other can be just as bad as featureless baseline when the groups have different patterns.
+- subsets are similar if All is more accurate than Same, and the
+  subset with more data (Same/Other) is more accurate.
+- subsets are different if All/Other is less accurate than Same.
+- Other can be just as bad as featureless baseline (or worse) when the
+  subsets have different patterns.
 
 This is implemented in =ResamplingSameOtherSizesCV= when you use it on
 a task that defines the =subset= role, for example the Arizona trees
@@ -60,16 +62,16 @@ experiment.  The rows 12,15,18 below represent splits that attempt to
 answer that question (test.subset=S, train.subsets=other).
 
 #+begin_src R
+> same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 > task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
 > task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)
-> task.obj$col_roles$strata <- "y"  #keep data proportional when splitting.
+> task.obj$col_roles$stratum <- "y"  #keep data proportional when splitting.
 > task.obj$col_roles$group <- "polygon"  #keep data together when splitting.
 > task.obj$col_roles$subset <- "region3" #fix one test region, train on same/other/all region(s).
-> same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 > same_other_sizes_cv$instantiate(task.obj)
 > same_other_sizes_cv$instance$iteration.dt[, .(test.subset, train.subsets, test.fold)]
     test.subset train.subsets test.fold
-	 <char>        <char>     <int>
+         <char>        <char>     <int>
  1:          NE           all         1
  2:          NW           all         1
  3:           S           all         1
@@ -105,18 +107,20 @@ The rows in the output above represent different kinds of splits:
 - train.subsets=same is used as a baseline.
 - train.subsets=all is used to answer the question, "is it beneficial
   to combine all subsets when training?"
+- train.subsets=other is used to answer the question, "can we train on
+  one subset, and accurately predict on another?"
 
 Code to re-run:
 
 #+begin_src R
   data(AZtrees,package="mlr3resampling")
   table(AZtrees$region3)
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
   task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)
-  task.obj$col_roles$strata <- "y"  #keep data proportional when splitting.
+  task.obj$col_roles$stratum <- "y"  #keep data proportional when splitting.
   task.obj$col_roles$group <- "polygon"  #keep data together when splitting.
   task.obj$col_roles$subset <- "region3" #fix one test region, train on same/other/all region(s).
-  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   same_other_sizes_cv$instantiate(task.obj)
   same_other_sizes_cv$instance$iteration.dt[, .(test.subset, train.subsets, test.fold)]
 #+end_src
@@ -139,14 +143,18 @@ below,
 #+end_src
 
 The output above indicates we have 5956 rows and 189 polygons. We can
-do cross-validation on either polygons (if task has =group= role) or
-rows (if no =group= role set). The code below sets a down-sampling
+do cross-validation on either polygons (if task has =subset= role) or
+rows (if no =subset= role set). The code below sets a down-sampling
 =ratio= of 0.8, and four =sizes= of down-sampled train sets.
 
 #+begin_src R
 > same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-> same_other_sizes_cv$param_set$values$ratio <- 0.8
 > same_other_sizes_cv$param_set$values$sizes <- 4
+> same_other_sizes_cv$param_set$values$ratio <- 0.8
+> task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
+> task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)
+> task.obj$col_roles$stratum <- "y"  #keep data proportional when splitting.
+> task.obj$col_roles$group <- "polygon"  #keep data together when splitting.
 > same_other_sizes_cv$instantiate(task.obj)
 > same_other_sizes_cv$instance$iteration.dt[, .(n.train.groups, test.fold)]
     n.train.groups test.fold
@@ -180,28 +188,22 @@ Code to re-run:
   data(AZtrees,package="mlr3resampling")
   dim(AZtrees)
   length(unique(AZtrees$polygon))
-  task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
-  task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)
-  task.obj$col_roles$strata <- "y"  #keep data proportional when splitting.
-  task.obj$col_roles$group <- "polygon"  #keep data together when splitting.
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   same_other_sizes_cv$param_set$values$sizes <- 4
   same_other_sizes_cv$param_set$values$ratio <- 0.8
+  task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
+  task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)
+  task.obj$col_roles$stratum <- "y"  #keep data proportional when splitting.
+  task.obj$col_roles$group <- "polygon"  #keep data together when splitting.
   same_other_sizes_cv$instantiate(task.obj)
   same_other_sizes_cv$instance$iteration.dt[, .(n.train.groups, test.fold)]
 #+end_src
 
-*** Older Usage Examples and Discussion
-
-Older examples in [[https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd][Older resamplers vignette]] (useful for visualization).
-
-The examples linked below have examples with larger data sizes than
-the examples in the CRAN vignettes linked above.
-
-- https://tdhock.github.io/blog/2023/R-gen-new-subsets/
-- https://tdhock.github.io/blog/2023/variable-size-train/
-
 ** Related work
 
-mlr3resampling code was copied/modified from Resampling and
-ResamplingCV classes in the excellent [[https://github.com/mlr-org/mlr3][mlr3]] package.
+- mlr3resampling code was copied/modified from Resampling and
+  ResamplingCV classes in the excellent [[https://github.com/mlr-org/mlr3][mlr3]] package.
+- As of Oct 2024, scikit-learn in python implements support for groups
+  via [[https://scikit-learn.org/stable/modules/cross_validation.html#group-k-fold][GroupKFold]] (keeping samples together when splitting) but not
+  subsets (test data come from one subset, train data come from
+  Same/Other/All subsets).
