@@ -107,8 +107,8 @@ The rows in the output above represent different kinds of splits:
 - train.subsets=same is used as a baseline.
 - train.subsets=all is used to answer the question, "is it beneficial
   to combine all subsets when training?"
-- train.subsets=other is used to answer the question, "can we train on
-  one subset, and accurately predict on another?"
+- train.subsets=other is used to answer the question, "can we accurately predict on
+  one subset, after training on the other subsets?"
 
 Code to re-run:
 
