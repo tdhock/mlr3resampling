@@ -857,6 +857,8 @@ combinations of tasks (constant and sin), learners (rpart and
 featureless), and the one resampling method.
 
 ```{r}
+reg_size_cv <- mlr3resampling::ResamplingVariableSizeTrainCV$new()
+reg_size_cv$param_set$values$train_sizes <- 6
 (reg.bench.grid <- mlr3::benchmark_grid(
   reg.task.list,
   reg.learner.list,

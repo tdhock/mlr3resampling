@@ -1,3 +1,7 @@
+Changes in version 2024.11.4
+
+- another $new() in vignette to avoid new instantiation error.
+
 Changes in version 2024.10.28
 
 - .onLoad, add mlr3resampling to mlr3_reflections$loaded_packages, thanks @be-marc for the idea, https://github.com/tdhock/mlr3resampling/issues/17
