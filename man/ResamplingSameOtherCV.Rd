@@ -1,6 +1,6 @@
 \name{ResamplingSameOtherCV}
 \alias{ResamplingSameOtherCV}
-\title{Resampling for comparing training on same or other groups}
+\title{Resampling for comparing training on same or other subsets}
 \description{
   \code{\link{ResamplingSameOtherCV}}
   defines how a task is partitioned for
@@ -10,28 +10,38 @@
 
   Resampling objects can be instantiated on a
   \code{\link[mlr3:Task]{Task}},
-  which should define at least one group variable.
+  which should define at least one subset variable.
   
   After instantiation, sets can be accessed via
   \verb{$train_set(i)} and
   \verb{$test_set(i)}, respectively. 
 }
 \details{
+  This provides an implementation of SOAK, Same/Other/All K-fold
+  cross-validation. After instantiation, this class provides information
+  in \verb{$instance} that can be used for visualizing the
+  splits, as shown in the vignette. Most typical machine learning users
+  should instead use
+  \code{\link{ResamplingSameOtherSizesCV}}, which does not support these
+  visualization features, but provides other relevant machine learning
+  features, such as group role, which is not supported by
+  \code{\link{ResamplingSameOtherCV}}.
+
   A supervised learning algorithm inputs a train set, and outputs a
   prediction function, which can be used on a test set. If each data
-  point belongs to a group (such as geographic region, year, etc), then
-  how do we know if it is possible to train on one group, and predict
-  accurately on another group? Cross-validation can be used to determine
+  point belongs to a subset (such as geographic region, year, etc), then
+  how do we know if it is possible to train on one subset, and predict
+  accurately on another subset? Cross-validation can be used to determine
   the extent to which this is possible, by first assigning fold IDs from
-  1 to K to all data (possibly using stratification, usually by group
-  and label). Then we loop over test sets (group/fold combinations),
-  train sets (same group, other groups, all groups), and compute
+  1 to K to all data (possibly using stratification, usually by subset
+  and label). Then we loop over test sets (subset/fold combinations),
+  train sets (same subset, other subsets, all subsets), and compute
   test/prediction accuracy for each combination.  Comparing
   test/prediction accuracy between same and other, we can determine the
   extent to which it is possible (perfect if same/other have similar
-  test accuracy for each group; other is usually somewhat less accurate
+  test accuracy for each subset; other is usually somewhat less accurate
   than same; other can be just as bad as featureless baseline when the
-  groups have different patterns).
+  subsets have different patterns).
 }
 \section{Stratification}{
 
@@ -44,21 +54,28 @@ each combination of the values of the stratification variables forms a stratum.
 
 \section{Grouping}{
 
-\code{\link{ResamplingSameOtherCV}} supports grouping of observations.
-The grouping variable is assumed to be discrete,
-and must be stored in the \link[mlr3:Task]{Task} with column role \code{"group"}.
+\code{\link{ResamplingSameOtherCV}} does not support grouping of
+observations that should not be split in cross-validation.
+See \code{\link{ResamplingSameOtherSizesCV}} for another sampler which
+does support both \code{group} and \code{subset} roles.
 
+}
+
+\section{Subsets}{
+
+The subset variable is assumed to be discrete,
+and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"}.
 The number of cross-validation folds K should be defined as the
 \code{fold} parameter.
-
-In each group, there will be about an equal number of observations
+In each subset, there will be about an equal number of observations
 assigned to each of the K folds.
 The assignments are stored in
 \verb{$instance$id.dt}.
 The train/test splits are defined by all possible combinations of
-test group, test fold, and train groups (same/other/all).
+test subset, test fold, and train subsets (Same/Other/All).
 The splits are stored in
 \verb{$instance$iteration.dt}.
+
 }
 
 \examples{
@@ -67,12 +84,14 @@ same_other$param_set$values$folds <- 5
 }
 \seealso{
   \itemize{
-    \item Blog post
-    \url{https://tdhock.github.io/blog/2023/R-gen-new-subsets/}
+    \item arXiv paper \url{https://arxiv.org/abs/2410.08643} describing
+    SOAK algorithm.
+    \item Articles
+    \url{https://github.com/tdhock/mlr3resampling/wiki/Articles}
     \item Package \CRANpkg{mlr3} for standard
     \code{\link[mlr3:Resampling]{Resampling}}, which does not support comparing
-    train on same or other groups.
-    \item \code{\link{score}} and Simulations vignette for more detailed examples.
+    train on Same/Other/All subsets.
+    \item \code{vignette(package="mlr3resampling")} for more detailed examples.
   }
 }
 \concept{Resampling}

@@ -1,3 +1,11 @@
+Changes in version 2024.10.28
+
+- .onLoad, add mlr3resampling to mlr3_reflections$loaded_packages, thanks @be-marc for the idea, https://github.com/tdhock/mlr3resampling/issues/17
+
+Changes in version 2024.10.22
+
+- update docs, group -> subset.
+
 Changes in version 2024.9.6
 
 - .onLoad, add subset to mlr3_reflections$task_col_roles for classif and regr.
