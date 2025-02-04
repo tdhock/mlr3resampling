@@ -206,7 +206,7 @@ different splits.
 
 ```{r SimulationsAnimintRegression}
 inst <- reg.bench.score$resampling[[1]]$instance
-rect.expand <- 0.2
+rect.expand <- 0.3
 grid.dt <- data.table(x=seq(-abs.x, abs.x, l=101), y=0)
 grid.task <- mlr3::TaskRegr$new("grid", grid.dt, target="y")
 pred.dt.list <- list()
@@ -257,7 +257,8 @@ make_person_subset(reg.bench.score)
 
 if(require(animint2)){
   viz <- animint(
-    title="Train/predict on subsets, regression",
+    title="SOAK algorithm: train/predict on subsets, regression",
+    video="https://vimeo.com/1053413000",
     pred=ggplot()+
       ggtitle("Predictions for selected train/test split")+
       theme_animint(height=400)+
@@ -266,11 +267,14 @@ if(require(animint2)){
         x, y, fill=set.name),
         showSelected="iteration",
         size=3,
+        help="One dot for each train/test/unused data point.",
         shape=21,
         data=point.dt)+
       scale_color_manual(values=algo.colors)+
       geom_line(aes(
-        x, y, color=algorithm, subset=paste(algorithm, iteration)),
+        x, y, color=algorithm,
+        group=paste(algorithm, iteration)),
+        help="One line for each learned prediction function.",
         showSelected="iteration",
         data=pred.dt)+
       facet_grid(
@@ -278,11 +282,15 @@ if(require(animint2)){
         labeller=label_both,
         space="free",
         scales="free")+
+      scale_x_continuous(
+        "x = input/feature in regression")+
       scale_y_continuous(
+        "y = output to predict in regression",
         breaks=seq(-100, 100, by=2)),
     err=ggplot()+
       ggtitle("Test error for each split")+
-      theme_animint(height=400)+
+      theme_animint(height=400, width=350)+
+      guides(fill="none")+
       scale_y_log10(
         "Mean squared error on test set")+
       scale_fill_manual(values=algo.colors)+
@@ -290,11 +298,13 @@ if(require(animint2)){
         "People/subsets in train set")+
       geom_point(aes(
         train.subsets, regr.mse, fill=algorithm),
+        help="One dot per test set.",
         shape=1,
         size=5,
         stroke=2,
         color="black",
         color_off=NA,
+        showSelected="algorithm",
         clickSelects="iteration",
         data=reg.bench.score)+
       facet_grid(
@@ -304,7 +314,7 @@ if(require(animint2)){
     diagram=ggplot()+
       ggtitle("Select train/test split")+
       theme_bw()+
-      theme_animint(height=300)+
+      theme_animint(height=400, width=300)+
       facet_grid(
         . ~ train.subsets,
         scales="free",
@@ -316,26 +326,35 @@ if(require(animint2)){
         color=rows,
         size=rows,
         ymin=display_row, ymax=display_end),
+        help="One rect per chunk of data with common fold (grey) and subset (gold).",
         fill=NA,
         data=inst$viz.rect.dt)+
       scale_fill_manual(values=set.colors)+
+      geom_text(aes(
+        x=ifelse(rows=="subset", Inf, -Inf),
+        y=(display_row+display_end)/2,
+        hjust=ifelse(rows=="subset", 1, 0),
+        label=paste0(rows, "=", ifelse(rows=="subset", subset, fold))),
+        help="Text labels indicate chunks of data with common fold (grey) and subset (gold).",
+        showSelected="rows",
+        data=data.table(train.name="same", inst$viz.rect.dt))+
       geom_rect(aes(
         xmin=iteration-rect.expand, ymin=display_row,
         xmax=iteration+rect.expand, ymax=display_end,
         fill=set.name),
+        help="One rect per chunk of data assigned to train/test set in cross-validation.",
+        alpha=0.5,
+        alpha_off=0.5,
+        color="black",
+        color_off=NA,
         clickSelects="iteration",
         data=inst$viz.set.dt)+
-      geom_text(aes(
-        ifelse(rows=="subset", Inf, -Inf),
-        (display_row+display_end)/2,
-        hjust=ifelse(rows=="subset", 1, 0),
-        label=paste0(rows, "=", ifelse(rows=="subset", subset, fold))),
-        data=data.table(train.name="same", inst$viz.rect.dt))+
       scale_x_continuous(
-        "Split number / cross-validation iteration")+
+        "Split number",
+        breaks=c(1,6, 7,12, 13,18))+
       scale_y_continuous(
         "Row number"),
-    source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/ResamplingSameOtherCV.Rmd")
+    source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
   viz
 }
 if(FALSE){
