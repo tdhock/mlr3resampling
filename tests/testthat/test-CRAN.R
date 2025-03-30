@@ -390,3 +390,26 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   n.train.per.test <- 12
   expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
 })
+
+test_that("hjust correct for two algos far apart", {
+  bench.score <- rbind(
+    data.table(
+      task_id="easy",
+      test.subset=1,
+      algorithm="featureless",
+      test.fold=c(1,2,1,2,1,2),
+      regr.rmse=c(24.1,25,26.2,27,28.3,29)+100,
+      train.subsets=c("same","same","other","other","all","all")),
+    data.table(
+      task_id="easy",
+      test.subset=1,
+      algorithm="rpart",
+      test.fold=c(1,2,1,2,1,2),
+      regr.rmse=c(8.1,9,12.2,13,22.3,23),
+      train.subsets=c("all","all","other","other","same","same")))
+  bench.plist <- mlr3resampling::pvalue(bench.score)
+  expect_equal(bench.plist$pvalues[algorithm=="featureless", hjust], c(1,1))
+  expect_equal(bench.plist$pvalues[algorithm=="rpart", hjust], c(0,0))
+  expect_equal(bench.plist$stats[algorithm=="featureless", hjust], c(1,1,1))
+  expect_equal(bench.plist$stats[algorithm=="rpart", hjust], c(0,0,0))
+})

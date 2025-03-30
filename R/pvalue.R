@@ -1,5 +1,5 @@
 pvalue <- function(score_in, value.var=NULL){
-  Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- min_mean <- p.paired <- NULL
+  Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- NULL
   if(is.null(value.var)){
     value.var <- grep("classif|regr", names(score_in), value=TRUE)[1]
   }
@@ -119,7 +119,7 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         data=x$pvalues)+
       animint2::facet_grid(
         algorithm ~ task_id + test.subset,
-        labeller=label_both,
+        labeller=animint2::label_both,
         scales="free")+
       animint2::scale_x_continuous(
         x$value.var)+

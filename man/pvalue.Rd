@@ -30,12 +30,13 @@ Toby Dylan Hocking
 
 \examples{
 
-N <- 100
+N <- 90
 library(data.table)
 set.seed(1)
+max.abs.x <- 10
 reg.dt <- data.table(
-  x=runif(N, -2, 2),
-  person=rep(1:2, each=0.5*N))
+  x=runif(N, -max.abs.x, max.abs.x),
+  person=rep(1:3, l=N))
 reg.pattern.list <- list(
   easy=function(x, person)x^2,
   impossible=function(x, person)(x^2+person*3)*(-1)^person)
@@ -63,6 +64,22 @@ if(requireNamespace("rpart")){
   same_other))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+
+bench.score <- rbind(
+  data.table(
+    task_id="easy",
+    test.subset=1,
+    algorithm="featureless",
+    test.fold=c(1,2,1,2,1,2),
+    regr.rmse=c(24.1,25,26.2,27,28.3,29)+100,
+    train.subsets=c("same","same","other","other","all","all")),
+  data.table(
+    task_id="easy",
+    test.subset=1,
+    algorithm="rpart",
+    test.fold=c(1,2,1,2,1,2),
+    regr.rmse=c(8.1,9,12.2,13,22.3,23),
+    train.subsets=c("all","all","other","other","same","same")))
 bench.plist <- mlr3resampling::pvalue(bench.score)
 plot(bench.plist)
 
