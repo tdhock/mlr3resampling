@@ -26,7 +26,7 @@ score(bench.result, ...)
 }
 \examples{
 
-N <- 100
+N <- 80
 library(data.table)
 set.seed(1)
 reg.dt <- data.table(
@@ -34,8 +34,8 @@ reg.dt <- data.table(
   person=rep(1:2, each=0.5*N))
 reg.pattern.list <- list(
   easy=function(x, person)x^2,
-  impossible=function(x, person)(x^2+person*3)*(-1)^person)
-same_other <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  impossible=function(x, person)(x^2)*(-1)^person)
+SOAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task.list <- list()
 for(pattern in names(reg.pattern.list)){
   f <- reg.pattern.list[[pattern]]
@@ -56,7 +56,7 @@ if(requireNamespace("rpart")){
 (bench.grid <- mlr3::benchmark_grid(
   reg.task.list,
   reg.learner.list,
-  same_other))
+  SOAK))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
 plot(bench.score)

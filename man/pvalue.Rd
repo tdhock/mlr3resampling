@@ -30,17 +30,16 @@ Toby Dylan Hocking
 
 \examples{
 
-N <- 90
+N <- 80
 library(data.table)
 set.seed(1)
-max.abs.x <- 10
 reg.dt <- data.table(
-  x=runif(N, -max.abs.x, max.abs.x),
-  person=rep(1:3, l=N))
+  x=runif(N, -2, 2),
+  person=rep(1:2, each=0.5*N))
 reg.pattern.list <- list(
   easy=function(x, person)x^2,
-  impossible=function(x, person)(x^2+person*3)*(-1)^person)
-same_other <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  impossible=function(x, person)(x^2)*(-1)^person)
+SOAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task.list <- list()
 for(pattern in names(reg.pattern.list)){
   f <- reg.pattern.list[[pattern]]
@@ -61,7 +60,7 @@ if(requireNamespace("rpart")){
 (bench.grid <- mlr3::benchmark_grid(
   reg.task.list,
   reg.learner.list,
-  same_other))
+  SOAK))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
 bench.plist <- mlr3resampling::pvalue(bench.score)
