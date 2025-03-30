@@ -1,4 +1,4 @@
-pvalue <- function(score_in, value.var=NULL){
+pvalue <- function(score_in, value.var=NULL, digits=3){
   Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- NULL
   if(is.null(value.var)){
     value.var <- grep("classif|regr", names(score_in), value=TRUE)[1]
@@ -32,9 +32,12 @@ pvalue <- function(score_in, value.var=NULL){
   range_dt <- stats_dt[, .(
     mid=(min(lo)+max(hi))/2
   ), by=.(task_id, test.subset)]
+  try.test <- function(...)tryCatch({
+    t.test(...)
+  }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
   pval_dt <- score_long[, {
-    paired <- t.test(value, same, paired=TRUE)
-    unpaired <- t.test(value, same, paired=FALSE)
+    paired <- try.test(value, same, paired=TRUE)
+    unpaired <- try.test(value, same, paired=FALSE)
     data.table(
       mean_diff=paired$estimate,
       diff_mean=diff(unpaired$estimate),
@@ -72,7 +75,9 @@ pvalue <- function(score_in, value.var=NULL){
     stats_dt, on=.(task_id,test.subset)
   ][, let(
     hjust = ifelse(value_mean<mid, 0, 1),
-    text_label = sprintf("%.1f\u00B1%.1f", value_mean, value_sd)
+    text_label = sprintf(
+      paste0("%.",digits,"f\u00B1%.",digits,"f"),
+      value_mean, value_sd)
   )][]
   structure(list(
     value.var=value.var,
