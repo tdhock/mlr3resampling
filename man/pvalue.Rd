@@ -64,22 +64,6 @@ if(requireNamespace("rpart")){
   same_other))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
-
-bench.score <- rbind(
-  data.table(
-    task_id="easy",
-    test.subset=1,
-    algorithm="featureless",
-    test.fold=c(1,2,1,2,1,2),
-    regr.rmse=c(24.1,25,26.2,27,28.3,29)+100,
-    train.subsets=c("same","same","other","other","all","all")),
-  data.table(
-    task_id="easy",
-    test.subset=1,
-    algorithm="rpart",
-    test.fold=c(1,2,1,2,1,2),
-    regr.rmse=c(8.1,9,12.2,13,22.3,23),
-    train.subsets=c("all","all","other","other","same","same")))
 bench.plist <- mlr3resampling::pvalue(bench.score)
 plot(bench.plist)
 
