@@ -82,26 +82,26 @@ pvalue <- function(score_in, value.var=NULL){
 
 plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
   value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- label_both <- NULL
-  if(requireNamespace("animint2")){
-    animint2::ggplot()+
-      animint2::theme_bw()+
-      animint2::geom_point(animint2::aes(
+  if(requireNamespace("ggplot2")){
+    ggplot2::ggplot()+
+      ggplot2::theme_bw()+
+      ggplot2::geom_point(ggplot2::aes(
         value_mean,
         Train_subsets),
         shape=1,
         data=x$stats)+
-      animint2::geom_segment(animint2::aes(
+      ggplot2::geom_segment(ggplot2::aes(
         hi,
         Train_subsets,
         xend=lo, yend=Train_subsets),
         size=sd.seg.size,
         data=x$stats)+
-      animint2::geom_segment(animint2::aes(
+      ggplot2::geom_segment(ggplot2::aes(
         compare_mean, Train_subsets,
         xend=same_mean, yend=Train_subsets),
         color=p.color,
         data=x$pvalues)+
-      animint2::geom_text(animint2::aes(
+      ggplot2::geom_text(ggplot2::aes(
         value_mean,
         Train_subsets,
         hjust=hjust,
@@ -109,7 +109,7 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         size=text.size,
         vjust=-0.5,
         data=x$stats)+
-      animint2::geom_text(animint2::aes(
+      ggplot2::geom_text(ggplot2::aes(
         text_value, Train_subsets,
         label=text_label,
         hjust=hjust),
@@ -117,13 +117,13 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         size=text.size,
         vjust=-0.5,
         data=x$pvalues)+
-      animint2::facet_grid(
+      ggplot2::facet_grid(
         algorithm ~ task_id + test.subset,
-        labeller=animint2::label_both,
+        labeller=ggplot2::label_both,
         scales="free")+
-      animint2::scale_x_continuous(
+      ggplot2::scale_x_continuous(
         x$value.var)+
-      animint2::scale_y_discrete(
+      ggplot2::scale_y_discrete(
         "Train subsets",
         drop=FALSE)
   }
