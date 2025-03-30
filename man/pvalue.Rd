@@ -1,29 +1,33 @@
-\name{score}
-\alias{score}
+\name{pvalue}
+\alias{pvalue}
 \title{
-  Score benchmark results
+  P-values for comparing Same/Other/All training
 }
 \description{
-  Computes a data table of scores.
+  Same/Other/All K-fold cross-validation (SOAK) results in K measures of
+  test error/accuracy. This function computes P-values (two-sided
+  T-test) between Same and All/Other.
 }
 \usage{
-score(bench.result, ...)
+pvalue(score_in, value.var = NULL)
 }
 \arguments{
-  \item{bench.result}{
-    Output of \code{\link[mlr3:benchmark]{benchmark()}}.
-  }
-  \item{\dots}{
-    Additional arguments to pass to \code{bench.result$score}, for
-    example \code{measures}. 
-  }
+  \item{score_in}{
+Data table output from \code{\link{score}}.    
+}
+  \item{value.var}{
+    Name of column to use as the evaluation metric in T-test. Default
+    NULL means to use the first column matching \code{"classif|regr"}.
+}
 }
 \value{
-  data table with scores.
+  List of class "pvalue" with named elements \code{value.var},
+  \code{stats}, \code{pvalues}.
 }
 \author{
-  Toby Dylan Hocking
+Toby Dylan Hocking
 }
+
 \examples{
 
 N <- 100
@@ -59,6 +63,7 @@ if(requireNamespace("rpart")){
   same_other))
 bench.result <- mlr3::benchmark(bench.grid)
 bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
-plot(bench.score)
+bench.plist <- mlr3resampling::pvalue(bench.score)
+plot(bench.plist)
 
 }
