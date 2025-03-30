@@ -31,7 +31,7 @@ pvalue <- function(score_in, value.var=NULL){
   )]
   range_dt <- stats_dt[, .(
     mid=(min(lo)+max(hi))/2
-  ), by=.(task_id, algorithm, test.subset)]
+  ), by=.(task_id, test.subset)]
   pval_dt <- score_long[, {
     paired <- t.test(value, same, paired=TRUE)
     unpaired <- t.test(value, same, paired=FALSE)
@@ -48,7 +48,7 @@ pvalue <- function(score_in, value.var=NULL){
     Train_subsets=factor(paste0(train.subsets,"-same"), levs)
   )]
   pval_range <- range_dt[
-    pval_dt, on=.(task_id,algorithm,test.subset)
+    pval_dt, on=.(task_id,test.subset)
   ][, let(
     pmin_mean = pmin(same_mean, compare_mean),
     pmax_mean = pmax(same_mean, compare_mean)
@@ -69,7 +69,7 @@ pvalue <- function(score_in, value.var=NULL){
       default=(pmin_mean+pmax_mean)/2)
   )][]
   stats_range <- range_dt[
-    stats_dt, on=.(task_id,algorithm,test.subset)
+    stats_dt, on=.(task_id,test.subset)
   ][, let(
     hjust = ifelse(value_mean<mid, 0, 1),
     text_label = sprintf("%.1f\u00B1%.1f", value_mean, value_sd)
