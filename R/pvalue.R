@@ -1,4 +1,5 @@
 pvalue <- function(score_in, value.var=NULL){
+  Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- min_mean <- p.paired <- NULL
   if(is.null(value.var)){
     value.var <- grep("classif|regr", names(score_in), value=TRUE)[1]
   }
@@ -71,7 +72,7 @@ pvalue <- function(score_in, value.var=NULL){
     stats_dt, on=.(task_id,algorithm,test.subset)
   ][, let(
     hjust = ifelse(value_mean<mid, 0, 1),
-    text_label = sprintf("%.1f±%.1f", value_mean, value_sd)
+    text_label = sprintf("%.1f\u00B1%.1f", value_mean, value_sd)
   )][]
   structure(list(
     value.var=value.var,
@@ -80,6 +81,7 @@ pvalue <- function(score_in, value.var=NULL){
 }
 
 plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
+  value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- label_both <- NULL
   if(requireNamespace("animint2")){
     animint2::ggplot()+
       animint2::theme_bw()+
@@ -87,18 +89,18 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         value_mean,
         Train_subsets),
         shape=1,
-        data=plist$stats)+
+        data=x$stats)+
       animint2::geom_segment(animint2::aes(
         hi,
         Train_subsets,
         xend=lo, yend=Train_subsets),
         size=sd.seg.size,
-        data=plist$stats)+
+        data=x$stats)+
       animint2::geom_segment(animint2::aes(
         compare_mean, Train_subsets,
         xend=same_mean, yend=Train_subsets),
         color=p.color,
-        data=plist$pvalues)+
+        data=x$pvalues)+
       animint2::geom_text(animint2::aes(
         value_mean,
         Train_subsets,
@@ -106,7 +108,7 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         label=text_label),
         size=text.size,
         vjust=-0.5,
-        data=plist$stats)+
+        data=x$stats)+
       animint2::geom_text(animint2::aes(
         text_value, Train_subsets,
         label=text_label,
@@ -114,13 +116,13 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         color=p.color,
         size=text.size,
         vjust=-0.5,
-        data=plist$pvalues)+
+        data=x$pvalues)+
       animint2::facet_grid(
         algorithm ~ task_id + test.subset,
         labeller=label_both,
         scales="free")+
       animint2::scale_x_continuous(
-        plist$value.var)+
+        x$value.var)+
       animint2::scale_y_discrete(
         "Train subsets",
         drop=FALSE)

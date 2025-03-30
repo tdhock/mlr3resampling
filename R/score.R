@@ -16,6 +16,7 @@ score <- function(bench.result, ...){
 }
 
 plot.score <- function(x, ..., value.var=NULL){
+  value <- train.subsets <- NULL
   if(requireNamespace("animint2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
@@ -28,7 +29,7 @@ plot.score <- function(x, ..., value.var=NULL){
         data=dt)+
       animint2::facet_grid(
         algorithm ~ task_id + test.subset,
-        labeller=label_both,
+        labeller=animint2::label_both,
         scales="free")+
       animint2::scale_x_continuous(value.var)
   }
