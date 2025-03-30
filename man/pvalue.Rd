@@ -9,7 +9,7 @@
   T-test) between Same and All/Other.
 }
 \usage{
-pvalue(score_in, value.var = NULL)
+pvalue(score_in, value.var = NULL, digits=3)
 }
 \arguments{
   \item{score_in}{
@@ -18,6 +18,9 @@ Data table output from \code{\link{score}}.
   \item{value.var}{
     Name of column to use as the evaluation metric in T-test. Default
     NULL means to use the first column matching \code{"classif|regr"}.
+}
+  \item{digits}{
+    Number of decimal places to show for mean and standard deviation.
 }
 }
 \value{
