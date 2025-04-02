@@ -15,7 +15,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         seeds=1L,
         ratio=0.5,
         sizes=-1L,
-        ignore_subset=FALSE
+        ignore_subset=FALSE,
+        subsets=NULL
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -49,7 +50,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
       )
       n.subsets <- length(unique(subset.dt[["test.subset"]]))
-      train.subsets <- c(
+      train.subsets <- self$param_set$values$subsets
+      if(is.null(train.subsets))train.subsets <- c(
         if(n.subsets>1)c("all","other"),
         "same")
       n.folds <- self$param_set$values$folds
