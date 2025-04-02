@@ -8,14 +8,16 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         seeds = paradox::p_int(1L, tags = "required"),
         ratio = paradox::p_dbl(0,1, tags = "required"),
         sizes = paradox::p_int(-1, tags = "required"),
-        ignore_subset = paradox::p_lgl(tags="required")
+        ignore_subset = paradox::p_lgl(tags="required"),
+        subsets = paradox::p_fct(c("same","other","all"), special_vals=list(NULL))
       )
       ps$values = list(
         folds=3L,
         seeds=1L,
         ratio=0.5,
         sizes=-1L,
-        ignore_subset=FALSE
+        ignore_subset=FALSE,
+        subsets=NULL
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -49,7 +51,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
       )
       n.subsets <- length(unique(subset.dt[["test.subset"]]))
-      train.subsets <- c(
+      train.subsets <- self$param_set$values$subsets
+      if(is.null(train.subsets))train.subsets <- c(
         if(n.subsets>1)c("all","other"),
         "same")
       n.folds <- self$param_set$values$folds
