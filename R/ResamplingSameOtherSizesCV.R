@@ -8,7 +8,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         seeds = paradox::p_int(1L, tags = "required"),
         ratio = paradox::p_dbl(0,1, tags = "required"),
         sizes = paradox::p_int(-1, tags = "required"),
-        ignore_subset = paradox::p_lgl(tags="required")
+        ignore_subset = paradox::p_lgl(tags="required"),
+        subsets = paradox::p_fct(c("same","other","all"), special_vals=list(NULL))
       )
       ps$values = list(
         folds=3L,
