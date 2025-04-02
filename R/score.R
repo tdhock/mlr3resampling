@@ -17,20 +17,20 @@ score <- function(bench.result, ...){
 
 plot.score <- function(x, ..., value.var=NULL){
   value <- train.subsets <- NULL
-  if(requireNamespace("animint2")){
+  if(requireNamespace("ggplot2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
     }
     dt <- data.table(x)[, value := get(value.var)][]
-    animint2::ggplot()+
-      animint2::geom_point(animint2::aes(
+    ggplot2::ggplot()+
+      ggplot2::geom_point(ggplot2::aes(
         value, train.subsets),
         shape=1,
         data=dt)+
-      animint2::facet_grid(
+      ggplot2::facet_grid(
         algorithm ~ task_id + test.subset,
-        labeller=animint2::label_both,
+        labeller=ggplot2::label_both,
         scales="free")+
-      animint2::scale_x_continuous(value.var)
+      ggplot2::scale_x_continuous(value.var)
   }
 }  

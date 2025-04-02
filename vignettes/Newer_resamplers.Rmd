@@ -120,14 +120,22 @@ if(requireNamespace("rpart")){
 lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
-same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score <- mlr3resampling::score(
+  same.other.result, mlr3::msr("regr.rmse"))
+plot(same.other.score)
+```
+
+The plot method above shows a multi-panel figure (vertical facet for
+each algorithm), whereas below we make a custom ggplot with no
+vertical facets, and color for algorithm.
+
+```{r}
 same.other.score[, n.train := sapply(train, length)]
 same.other.score[1]
-
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
-      regr.mse, train.subsets, color=algorithm),
+      regr.rmse, train.subsets, color=algorithm),
       shape=1,
       data=same.other.score)+
     geom_text(aes(
@@ -137,25 +145,28 @@ if(require(ggplot2)){
       vjust=1.5,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-    scale_x_log10(
-      "Mean squared prediction error (test set)")
+    scale_x_continuous(
+      "Root mean squared prediction error (test set)")
 }
+```
 
+The figure above shows the effect of train set size on test error.
+
+```{r}
 same.other.wide <- dcast(
   same.other.score,
   algorithm + test.subset + train.subsets ~ .,
   list(mean, sd),
-  value.var="regr.mse")
-
+  value.var="regr.rmse")
 if(require(ggplot2)){
   ggplot()+
     geom_segment(aes(
-      regr.mse_mean+regr.mse_sd, train.subsets,
-      xend=regr.mse_mean-regr.mse_sd, yend=train.subsets,
+      regr.rmse_mean+regr.rmse_sd, train.subsets,
+      xend=regr.rmse_mean-regr.rmse_sd, yend=train.subsets,
       color=algorithm),
       data=same.other.wide)+
     geom_point(aes(
-      regr.mse_mean, train.subsets, color=algorithm),
+      regr.rmse_mean, train.subsets, color=algorithm),
       shape=1,
       data=same.other.wide)+
     geom_text(aes(
@@ -165,12 +176,12 @@ if(require(ggplot2)){
       vjust=1.5,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-    scale_x_log10(
-      "Mean squared prediction error (test set)")
+    scale_x_continuous(
+      "Root mean squared prediction error (test set)")
 }
 ```
 
-The figures above show a test subset in each panel, the train subsets on
+The figure above shows a test subset in each panel, the train subsets on
 the y axis, the test error on the x axis, the two different algorithms
 are shown in two different colors. We can clearly see that 
 
@@ -188,8 +199,17 @@ are shown in two different colors. We can clearly see that
   subsets).
   
 Overall in the plot above, all tends to have less prediction error
-than same, which suggests that the subsets are similar (and indeed
-there are iid in this simulation).
+than same, which suggests that the subsets are similar (and indeed the
+subsets are i.i.d. in this simulation). Another visualization method
+is shown below,
+
+```{r}
+plist <- mlr3resampling::pvalue(same.other.score, digits=3)
+plot(plist)
+```
+
+The visualization above includes P-values (two-sided T-test) for the
+differences between Same and Other/All.
   
 Below we visualize test error as a function of train size.
 
@@ -197,18 +217,18 @@ Below we visualize test error as a function of train size.
 if(require(ggplot2)){
   ggplot()+
     geom_line(aes(
-      n.train, regr.mse,
+      n.train, regr.rmse,
       color=algorithm,
       group=paste(algorithm, test.fold)),
       data=same.other.score)+
     geom_label(aes(
-      n.train, regr.mse,
+      n.train, regr.rmse,
       color=algorithm,
       label=train.subsets),
       data=same.other.score)+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
-    scale_y_log10(
-      "Mean squared prediction error (test set)")
+    scale_y_continuous(
+      "Root mean squared prediction error (test set)")
 }
 ```
 
@@ -262,27 +282,28 @@ if(requireNamespace("rpart")){
 lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
-same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score <- mlr3resampling::score(
+  same.other.result, mlr3::msr("regr.rmse"))
 same.other.score[, n.train := sapply(train, length)]
 same.other.score[1]
 
 if(require(ggplot2)){
   ggplot()+
     geom_line(aes(
-      n.train, regr.mse,
+      n.train, regr.rmse,
       color=algorithm,
       group=paste(algorithm, test.fold)),
       data=same.other.score)+
     geom_point(aes(
-      n.train, regr.mse,
+      n.train, regr.rmse,
       color=algorithm),
       data=same.other.score)+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
     scale_x_log10(
       "Number of train rows",
       breaks=unique(same.other.score$n.train))+
-    scale_y_log10(
-      "Mean squared prediction error (test set)")
+    scale_y_continuous(
+      "Root mean squared prediction error (test set)")
 }
 ```
 
@@ -352,7 +373,8 @@ if(requireNamespace("rpart")){
 lgr::get_logger("mlr3")$set_threshold("warn")
 (same.other.result <- mlr3::benchmark(
   same.other.grid, store_models = TRUE))
-same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score <- mlr3resampling::score(
+  same.other.result, mlr3::msr("regr.rmse"))
 same.other.score[1]
 ```
 
@@ -363,7 +385,7 @@ The plot below shows the same results (no down-sampling) as if we did
 if(require(ggplot2)){
 ggplot()+
   geom_point(aes(
-    regr.mse, train.subsets, color=algorithm),
+    regr.rmse, train.subsets, color=algorithm),
     shape=1,
     data=same.other.score[groups==n.train.groups])+
   facet_grid(. ~ test.subset, labeller=label_both)
@@ -380,7 +402,7 @@ same.other.score[, subset.N.fac := factor(subset.N, levs)]
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
-      regr.mse, subset.N.fac, color=algorithm),
+      regr.rmse, subset.N.fac, color=algorithm),
       shape=1,
       data=same.other.score)+
     facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
@@ -390,7 +412,7 @@ same.other.score[, N.subset.fac := factor(subset.N, levs)]
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
-      regr.mse, N.subset.fac, color=algorithm),
+      regr.rmse, N.subset.fac, color=algorithm),
       shape=1,
       data=same.other.score)+
     facet_wrap("test.subset", labeller=label_both, scales="free", nrow=1)
@@ -405,34 +427,32 @@ the plots below.
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
-      n.train.groups, regr.mse,
+      n.train.groups, regr.rmse,
       color=train.subsets),
       shape=1,
       data=same.other.score)+
     geom_line(aes(
-      n.train.groups, regr.mse,
+      n.train.groups, regr.rmse,
       group=paste(train.subsets, seed, algorithm),
       linetype=algorithm,
       color=train.subsets),
       data=same.other.score)+
-    facet_grid(test.fold ~ test.subset, labeller=label_both)+
-    scale_x_log10()
+    facet_grid(test.fold ~ test.subset, labeller=label_both)
 }
 rpart.score <- same.other.score[algorithm=="rpart" & train.subsets != "other"]
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
-      n.train.groups, regr.mse,
+      n.train.groups, regr.rmse,
       color=train.subsets),
       shape=1,
       data=rpart.score)+
     geom_line(aes(
-      n.train.groups, regr.mse,
+      n.train.groups, regr.rmse,
       group=paste(train.subsets, seed, algorithm),
       color=train.subsets),
       data=rpart.score)+
-    facet_grid(test.fold ~ test.subset, labeller=label_both)+
-    scale_x_log10()
+    facet_grid(test.fold ~ test.subset, labeller=label_both)
 }
 ```
 
@@ -479,7 +499,7 @@ do_benchmark <- function(subtrain.valid.cv){
         tuner = mlr3tuning::tnr("grid_search"), #mlr3tuning::TunerBatchGridSearch$new()
         learner = rpart.learner,
         resampling = subtrain.valid.cv,
-        measure = mlr3::msr("regr.mse"))
+        measure = mlr3::msr("regr.rmse"))
     }
   }
   same.other.grid <- mlr3::benchmark_grid(
@@ -509,21 +529,22 @@ The output above shows that the benchmark worked.
 The code below plots the results.
 
 ```{r}
-same.other.score <- mlr3resampling::score(same.other.result)
+same.other.score <- mlr3resampling::score(
+  same.other.result, mlr3::msr("regr.rmse"))
 same.other.score[1]
 same.other.wide <- dcast(
   same.other.score,
   algorithm + test.subset + train.subsets ~ .,
   list(mean, sd),
-  value.var="regr.mse")
+  value.var="regr.rmse")
 if(require(ggplot2)){
   ggplot()+
     geom_segment(aes(
-      regr.mse_mean+regr.mse_sd, train.subsets,
-      xend=regr.mse_mean-regr.mse_sd, yend=train.subsets),
+      regr.rmse_mean+regr.rmse_sd, train.subsets,
+      xend=regr.rmse_mean-regr.rmse_sd, yend=train.subsets),
       data=same.other.wide)+
     geom_point(aes(
-      regr.mse_mean, train.subsets),
+      regr.rmse_mean, train.subsets),
       shape=1,
       data=same.other.wide)+
     facet_grid(algorithm ~ test.subset, labeller=label_both)
@@ -741,7 +762,7 @@ score.dt[1]
 ```
 
 Above we see one row of the result, for one train/test split.
-Below we plot the accuracy results.
+Below we plot the accuracy results using two different methods.
 
 ```{r}
 score.long <- melt(
@@ -756,7 +777,13 @@ if(require(ggplot2)){
 }
 ```
 
-Above we show one dot per train/test split, and below we take the
+Above we show one dot per train/test split, and another way to do that is via the plot method, as below.
+
+```{r}
+plot(score.dt)
+```
+
+Below we take the
 mean/SD over folds.
 
 ```{r}
@@ -798,6 +825,22 @@ The plot above shows an interesting pattern:
   subsets is slightly more accurate still. These results suggest that
   the learnable pattern is similar enough in the other subsets so as
   to be beneficial for prediction in subset S.
+
+Another way to visualize these patterns is via the plot method for pvalue objects, as below.
+
+```{r}
+AZ_pval <- mlr3resampling::pvalue(score.dt, digits=3)
+plot(AZ_pval)
+```
+
+The figure above shows P-values for classification accuracy (by
+default the first measure is used). If we want to compute P-values for
+AUC, we can use the code below:
+
+```{r}
+AZ_pval_AUC <- mlr3resampling::pvalue(score.dt, "classif.auc", digits=3)
+plot(AZ_pval_AUC)
+```
 
 ## Conclusion
 
