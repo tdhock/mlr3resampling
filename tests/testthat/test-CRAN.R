@@ -413,3 +413,32 @@ test_that("hjust correct for two algos far apart", {
   expect_equal(bench.plist$stats[algorithm=="featureless", hjust], c(1,1,1))
   expect_equal(bench.plist$stats[algorithm=="rpart", hjust], c(0,0,0))
 })
+
+test_that("hjust=0.5 for algo in middle", {
+  score_dt <- rbind(
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="same",
+      test.fold=1:3,
+      algorithm="featureless",
+      classif.auc=0.5),
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="same",
+      test.fold=1:3,
+      algorithm="conv",
+      classif.auc=c(0.91,0.915, 0.93)),
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="other",
+      test.fold=1:3,
+      algorithm="conv",
+      classif.auc=c(0.71,0.715, 0.72)))
+  plist <- mlr3resampling::pvalue(score_dt)
+  expect_equal(plist$stats[algorithm=="featureless", hjust], 0)
+  expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="other", hjust], 0.5)
+  expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="same", hjust], 1)
+})
