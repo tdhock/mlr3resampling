@@ -12,12 +12,24 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   if(!value.var %in% names(score_in)){
     stop("value.var must be a column name of score_in")
   }
-  levs <- c(
+  measure.possible <- c("other","all")
+  measure.vars <- measure.possible[measure.possible %in% score_in$train.subsets]
+  if(length(measure.vars)==0){
+    stop("score_in$train.subsets does not contain 'all' or 'other' which are necessary for computing p-values")
+  }
+  levs.present <- c(
+    "same",
+    measure.vars,
+    paste0(measure.vars,"-same"))
+  levs.possible <- c(
     "all",
     "all-same",
     "same",
     "other-same",
     "other")
+  levs <- c(
+    levs.possible[levs.possible %in% levs.present],
+    "")#for space above.
   score_dt <- data.table(score_in)[
   , Train_subsets := factor(train.subsets, levs)
   ][
@@ -28,7 +40,7 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     task_id + test.subset + algorithm + test.fold ~ train.subsets)
   score_long <- melt(
     score_wide,
-    measure.vars=c("other","all"),
+    measure.vars=measure.vars,
     variable.name="train.subsets")
   stats_dt <- dcast(
     score_dt,
@@ -38,9 +50,16 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     lo=value_mean-value_sd,
     hi=value_mean+value_sd
   )]
-  range_dt <- stats_dt[, .(
-    mid=(min(lo)+max(hi))/2
-  ), by=.(task_id, test.subset)]
+  range_dt <- stats_dt[, {
+    min_val <- min(lo,na.rm=TRUE)
+    max_val <- max(hi,na.rm=TRUE)
+    data.table(
+      min_val,
+      mid_lo=min_val*2/3+max_val*1/3,
+      mid=(min_val+max_val)/2,
+      mid_hi=min_val*1/3+max_val*2/3,
+      max_val)
+  }, by=.(task_id, test.subset)]
   try.test <- function(...)tryCatch({
     t.test(...)
   }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
@@ -83,7 +102,10 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   stats_range <- range_dt[
     stats_dt, on=.(task_id,test.subset)
   ][, let(
-    hjust = ifelse(value_mean<mid, 0, 1),
+    hjust = fcase(
+      value_mean<mid_lo, 0,
+      value_mean>mid_hi, 1,
+      default=0.5),
     text_label = sprintf(
       paste0("%.",digits,"f\u00B1%.",digits,"f"),
       value_mean, value_sd)
