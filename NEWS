@@ -2,6 +2,7 @@ Changes in version 2025.3.30
 
 - new plot() method for score().
 - pvalue() with plot() method.
+- ResamplingSameOtherSizesCV gains subsets parameter which specifies which subsets to use for training: S, O, A, SO, SA, SOA (S=same, O=other, A=All).
 
 Changes in version 2024.10.28
 
