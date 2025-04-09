@@ -93,6 +93,11 @@ splits (hyper-parameter learning). Note that this feature will work on a
 task with both \code{stratum} and \code{group} roles (unlike
 \code{ResamplingCV}).
 
+The \code{subsets} parameter should specify the train subsets of
+interest: \code{"S"} (same),
+\code{"O"} (other), \code{"A"} (all), \code{"SO"}, \code{"SA"},
+\code{"SOA"} (default).
+
 In each subset, there will be about an equal number of observations
 assigned to each of the K folds.
 The train/test splits are defined by all possible combinations of
