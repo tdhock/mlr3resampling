@@ -190,8 +190,11 @@ test_that("ResamplingSameOtherSizesCV no subset, no group, no stratum", {
   reg.task$col_roles$feature <- "x"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expect_equal(computed[["test.fold"]], 1:n.folds)
@@ -205,8 +208,11 @@ test_that("ResamplingSameOtherSizesCV no subset, yes group, no stratum", {
   reg.task$col_roles$group <- "agroup"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expect_equal(computed[["test.fold"]], 1:n.folds)
@@ -228,8 +234,11 @@ test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum", {
   reg.task$col_roles$stratum <- "random_group"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expect_equal(computed[["test.fold"]], 1:n.folds)
@@ -253,8 +262,11 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, ignore
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=TRUE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- TRUE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   ## same as no subset.
@@ -277,8 +289,11 @@ test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum, sizes=0
   reg.task$col_roles$stratum <- "random_group"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=0, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- 0
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expect_equal(computed[["test.fold"]], 1:n.folds)
@@ -300,8 +315,11 @@ test_that("ResamplingSameOtherSizesCV no subset, yes group, yes stratum, sizes=1
   reg.task$col_roles$stratum <- "random_group"
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- 1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expect_equal(computed[["test.fold"]], rep(1:n.folds,each=2))
@@ -323,8 +341,11 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum", {
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=-1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   expected.subsets <- list(all=c("A","B","C"),other=c("B","C"),same="A")
@@ -349,8 +370,11 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=0, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- 0
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   n.train.per.test <- 6
@@ -366,8 +390,11 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=1, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- 1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   n.train.per.test <- 9
@@ -383,11 +410,36 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   n.folds <- 3
-  same_other_sizes_cv$param_set$values <- list(
-    folds=n.folds, seeds=1, ratio=0.5, sizes=2, ignore_subset=FALSE)
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- 2
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
   n.train.per.test <- 12
+  expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
+})
+
+test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=2, same/other", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$group <- "agroup"
+  reg.task$col_roles$stratum <- "random_group"
+  reg.task$col_roles$subset <- "random_group"
+  n.subsets <- length(unique(task.dt$random_group))
+  same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$seeds <- 1
+  same_other_sizes_cv$param_set$values$ratio <- 0.5
+  same_other_sizes_cv$param_set$values$sizes <- -1
+  same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
+  same_other_sizes_cv$param_set$values$subsets <- "SO"
+  same_other_sizes_cv$instantiate(reg.task)
+  computed <- same_other_sizes_cv$instance$iteration.dt
+  n.train.per.test <- 2
   expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
 })
 
@@ -412,4 +464,33 @@ test_that("hjust correct for two algos far apart", {
   expect_equal(bench.plist$pvalues[algorithm=="rpart", hjust], c(0,0))
   expect_equal(bench.plist$stats[algorithm=="featureless", hjust], c(1,1,1))
   expect_equal(bench.plist$stats[algorithm=="rpart", hjust], c(0,0,0))
+})
+
+test_that("hjust=0.5 for algo in middle", {
+  score_dt <- rbind(
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="same",
+      test.fold=1:3,
+      algorithm="featureless",
+      classif.auc=0.5),
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="same",
+      test.fold=1:3,
+      algorithm="conv",
+      classif.auc=c(0.91,0.915, 0.93)),
+    data.table(
+      task_id="test",
+      test.subset="foo",
+      train.subsets="other",
+      test.fold=1:3,
+      algorithm="conv",
+      classif.auc=c(0.71,0.715, 0.72)))
+  plist <- mlr3resampling::pvalue(score_dt)
+  expect_equal(plist$stats[algorithm=="featureless", hjust], 0)
+  expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="other", hjust], 0.5)
+  expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="same", hjust], 1)
 })
