@@ -31,7 +31,7 @@ accurate predictions on one subset, after training on Other subsets?
 And how do we know if training on All subsets would improve prediction
 accuracy, relative to training on the Same subset?  SOAK,
 Same/Other/All K-fold cross-validation, can be used to answer these
-question, by fixing a test subset, training models on Same/Other/All
+questions, by fixing a test subset, training models on Same/Other/All
 subsets, and then comparing test error rates (Same versus Other and
 Same versus All).
 

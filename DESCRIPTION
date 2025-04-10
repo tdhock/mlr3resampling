@@ -44,7 +44,7 @@ Description: A supervised learning algorithm inputs a train set,
  And how do we know if training on All subsets would improve
  prediction accuracy, relative to training on the Same subset?
  SOAK, Same/Other/All K-fold cross-validation, <doi:10.48550/arXiv.2410.08643>
- can be used to answer these question, by fixing a test subset,
+ can be used to answer these questions, by fixing a test subset,
  training models on Same/Other/All subsets, and then
  comparing test error rates (Same versus Other and Same versus All).
  Also provides code for estimating how many train samples
