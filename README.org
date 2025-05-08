@@ -35,11 +35,17 @@ questions, by fixing a test subset, training models on Same/Other/All
 subsets, and then comparing test error rates (Same versus Other and
 Same versus All).
 
-- subsets are similar if All is more accurate than Same, and the
-  subset with more data (Same/Other) is more accurate.
-- subsets are different if All/Other is less accurate than Same.
+- subsets are similar (for the learning algorithm) if All is more
+  accurate than Same, and the subset with more data (Same/Other) is
+  more accurate.
+- subsets are different (for the learning algorithm) if All/Other is
+  less accurate than Same.
 - Other can be just as bad as featureless baseline (or worse) when the
-  subsets have different patterns.
+  subsets have different learnable/predictable patterns.
+- Note that results depend on the data set and on the learning
+  algorithm. For a given data set, a linear model may not be able to
+  learn on one subset and accurately predict on the other, but a more
+  complex learning algorithm may be able to.
 
 This is implemented in =ResamplingSameOtherSizesCV= when you use it on
 a task that defines the =subset= role, for example the Arizona trees
@@ -104,11 +110,16 @@ answer that question (test.subset=S, train.subsets=other).
 
 The rows in the output above represent different kinds of splits:
 
-- train.subsets=same is used as a baseline.
-- train.subsets=all is used to answer the question, "is it beneficial
-  to combine all subsets when training?"
-- train.subsets=other is used to answer the question, "can we accurately predict on
-  one subset, after training on the other subsets?"
+- train.subsets=same is used as a baseline, to answer the question,
+  "what is the baseline error rate, if we train on data from the same
+  subset as test?" This imporant baseline allows us to
+  see if the all and other models do better or worse.
+- train.subsets=all is used to answer the question, "can we get
+  accurate predictions on a given test subset, by training on data
+  from all subsets?"
+- train.subsets=other is used to answer the question, "can be get
+  accurate predictions on a given test subset, by training using data
+  from other subsets?"
 
 Code to re-run:
 
