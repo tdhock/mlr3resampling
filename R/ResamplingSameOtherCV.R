@@ -116,6 +116,7 @@ ResamplingSameOtherCV = R6::R6Class(
         viz.rect.dt=viz.rect.dt)
       self$task_hash = task$hash
       self$task_nrow = task$nrow
+      self$task_row_hash = task$row_hash
       invisible(self)
     }
   )

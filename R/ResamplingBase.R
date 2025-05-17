@@ -7,6 +7,7 @@ ResamplingBase = R6::R6Class(
     instance = NULL,
     task_hash = NA_character_,
     task_nrow = NA_integer_,
+    task_row_hash = NA_character_,
     duplicated_ids = NULL,
     man = NULL,
     initialize = function(id, param_set = ps(), duplicated_ids = FALSE, label = NA_character_, man = NA_character_) {
