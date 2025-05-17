@@ -25,10 +25,9 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         label = "Compare Same/Other and Sizes Cross-Validation",
         man = "ResamplingSameOtherSizesCV")
     },
-    instantiate = function(task) {
+    get_instance = function(task) {
       . <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
-      task = mlr3::assert_task(mlr3::as_task(task))
       reserved.names <- c(
         "row_id", "fold",
         "subset", "group",
@@ -170,14 +169,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           }
         }
       }
-      self$instance <- list(
+      list(
         iteration.dt=rbindlist(
           iteration.dt.list
         )[, iteration := .I][])
-      self$task_hash = task$hash
-      self$task_nrow = task$nrow
-      self$task_row_hash = task$row_hash
-      invisible(self)
     }
   )
 )

@@ -13,10 +13,9 @@ ResamplingSameOtherCV = R6::R6Class(
         label = "Same versus Other Cross-Validation",
         man = "ResamplingSameOtherCV")
     },
-    instantiate = function(task) {
+    get_instance = function(task) {
       row_id <- fold <- display_row <- . <- train.subsets <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
-      task = mlr3::assert_task(mlr3::as_task(task))
       if(length(task$col_roles$group)){
         stop("since version 2024.4.15, ResamplingSameOtherCV no longer supports group role (used to avoid splitting related rows into different subsets), but still supports defining same/other/all train groups (now called subset role). Please fix by either changing group role to subset, or using ResamplingSameOtherSizesCV instead (it supports group and subset).")
       }
@@ -109,15 +108,11 @@ ResamplingSameOtherCV = R6::R6Class(
           display_row=min(display_row),
           display_end=max(display_row)
         ), by=.(subset, fold)])
-      self$instance <- list(
+      list(
         iteration.dt=iteration.dt,
         id.dt=id.fold.subsets[order(row_id)],
         viz.set.dt=rbindlist(disp.dt.list),
         viz.rect.dt=viz.rect.dt)
-      self$task_hash = task$hash
-      self$task_nrow = task$nrow
-      self$task_row_hash = task$row_hash
-      invisible(self)
     }
   )
 )
