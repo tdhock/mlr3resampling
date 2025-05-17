@@ -5,7 +5,7 @@
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
-  fig.width=6,
+  fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
 ## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
@@ -36,12 +36,14 @@ library(data.table)
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
 if(require(ggplot2)){
+  text.size <- 6
+  my_theme <- theme_bw(20)
+  theme_set(my_theme)
   ggplot()+
     geom_point(aes(
       x, y),
       shape=1,
-      data=task.dt)+
-    coord_equal()
+      data=task.dt)
 }
 ```
 
@@ -122,14 +124,14 @@ lgr::get_logger("mlr3")$set_threshold("warn")
   same.other.grid, store_models = TRUE))
 same.other.score <- mlr3resampling::score(
   same.other.result, mlr3::msr("regr.rmse"))
-plot(same.other.score)
+plot(same.other.score)+my_theme
 ```
 
 The plot method above shows a multi-panel figure (vertical facet for
 each algorithm), whereas below we make a custom ggplot with no
 vertical facets, and color for algorithm.
 
-```{r}
+```{r fig.height=3}
 same.other.score[, n.train := sapply(train, length)]
 same.other.score[1]
 if(require(ggplot2)){
@@ -141,6 +143,7 @@ if(require(ggplot2)){
     geom_text(aes(
       Inf, train.subsets,
       label=sprintf("n.train=%d ", n.train)),
+      size=text.size,
       hjust=1,
       vjust=1.5,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
@@ -152,7 +155,7 @@ if(require(ggplot2)){
 
 The figure above shows the effect of train set size on test error.
 
-```{r}
+```{r fig.height=3}
 same.other.wide <- dcast(
   same.other.score,
   algorithm + test.subset + train.subsets ~ .,
@@ -172,6 +175,7 @@ if(require(ggplot2)){
     geom_text(aes(
       Inf, train.subsets,
       label=sprintf("n.train=%d ", n.train)),
+      size=text.size,
       hjust=1,
       vjust=1.5,
       data=same.other.score[algorithm=="featureless" & test.fold==1])+
@@ -205,7 +209,7 @@ is shown below,
 
 ```{r}
 plist <- mlr3resampling::pvalue(same.other.score, digits=3)
-plot(plist)
+plot(plist)+my_theme
 ```
 
 The visualization above includes P-values (two-sided T-test) for the
@@ -225,6 +229,7 @@ if(require(ggplot2)){
       n.train, regr.rmse,
       color=algorithm,
       label=train.subsets),
+      size=text.size,
       data=same.other.score)+
     facet_grid(. ~ test.subset, labeller=label_both, scales="free")+
     scale_y_continuous(
@@ -381,7 +386,7 @@ same.other.score[1]
 The plot below shows the same results (no down-sampling) as if we did
 `sizes=-1` (like in the previous section.
 
-```{r}
+```{r fig.height=2}
 if(require(ggplot2)){
 ggplot()+
   geom_point(aes(
@@ -395,8 +400,8 @@ ggplot()+
 The plots below compare all six train subsets (including three
 down-sampled), and it it is clear there is an effect for sample size.
 
-```{r}
-same.other.score[, subset.N := paste(train.subsets, n.train.groups)][]
+```{r fig.height=4}
+same.other.score[, subset.N := paste(train.subsets, n.train.groups)]
 (levs <- same.other.score[order(train.subsets, n.train.groups), unique(subset.N)])
 same.other.score[, subset.N.fac := factor(subset.N, levs)]
 if(require(ggplot2)){
@@ -423,7 +428,7 @@ Another way to view the effect of sample size is to plot the
 test/prediction error, as a function of number of train data, as in
 the plots below.
 
-```{r}
+```{r fig.height=5}
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
@@ -528,7 +533,7 @@ ignore.cv$param_set$values$ignore_subset <- TRUE
 The output above shows that the benchmark worked.
 The code below plots the results.
 
-```{r}
+```{r fig.height=7}
 same.other.score <- mlr3resampling::score(
   same.other.result, mlr3::msr("regr.rmse"))
 same.other.score[1]
@@ -607,7 +612,6 @@ if(require(ggplot2)){
   tree.fill.scale <- scale_fill_manual(
     values=c(Tree="black", "Not tree"="white"))
   ggplot()+
-    theme_bw()+
     tree.fill.scale+
     geom_rect(aes(
       xmin=xmin, xmax=xmax, ymin=ymin,ymax=ymax),
@@ -628,7 +632,6 @@ Note the red square in the plot above. Below we zoom into that square.
 ```{r}
 if(require(ggplot2)){
   gg <- ggplot()+
-    theme_bw()+
     tree.fill.scale+
     geom_point(aes(
       xcoord, ycoord, fill=y),
@@ -641,9 +644,9 @@ if(require(ggplot2)){
       limits=y.min.max)
   if(require(directlabels)){
     gg <- gg+geom_dl(aes(
-      xcoord, ycoord, label=polygon),
+      xcoord, ycoord, label=paste("polygon",polygon)),
       data=AZdt,
-      method="smart.grid")
+      method=list(cex=2, "smart.grid"))
   }
   gg
 }
@@ -670,7 +673,6 @@ Below we plot the same data, but this time colored by region.
 region.colors <- c(NW="#1B9E77", NE="#D95F02", S="#7570B3")
 if(require(ggplot2)){
   ggplot()+
-    theme_bw()+
     tree.fill.scale+
     scale_color_manual(
       values=region.colors)+
@@ -780,7 +782,7 @@ if(require(ggplot2)){
 Above we show one dot per train/test split, and another way to do that is via the plot method, as below.
 
 ```{r}
-plot(score.dt)
+plot(score.dt)+my_theme
 ```
 
 Below we take the
@@ -830,7 +832,7 @@ Another way to visualize these patterns is via the plot method for pvalue object
 
 ```{r}
 AZ_pval <- mlr3resampling::pvalue(score.dt, digits=3)
-plot(AZ_pval)
+plot(AZ_pval)+my_theme
 ```
 
 The figure above shows P-values for classification accuracy (by
@@ -839,7 +841,7 @@ AUC, we can use the code below:
 
 ```{r}
 AZ_pval_AUC <- mlr3resampling::pvalue(score.dt, "classif.auc", digits=3)
-plot(AZ_pval_AUC)
+plot(AZ_pval_AUC)+my_theme
 ```
 
 ## Conclusion
