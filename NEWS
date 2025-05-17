@@ -1,3 +1,7 @@
+Changes in version 2025.5.17
+
+- ResamplingBase defines instantiate() which now saves task hash (PR#26, thanks Marc Becker); sub-classes define get_instance().
+
 Changes in version 2025.3.30
 
 - new plot() method for score().
