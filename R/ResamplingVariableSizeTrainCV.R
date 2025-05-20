@@ -27,7 +27,7 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         data.table(N=task$nrow, row_id=list(seq_len(task$nrow)))
       }else task$strata
       strata.list <- lapply(strata$row_id, private$.sample, task = task)
-      folds = private$.combine(strata.list)[order(row_id)]
+      folds = rbindlist(strata.list)[order(row_id)]
       max.train.vec <- sapply(strata.list, nrow)
       small.strat.i <- which.min(max.train.vec)
       min_train_data <- self$param_set$values[["min_train_data"]]

@@ -41,7 +41,7 @@ ResamplingSameOtherCV = R6::R6Class(
       if(is.null(task$strata)){
         stop('task has no strata, but at least one stratum variable is required; at least assign the subset variable to a stratum')
       }
-      folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
+      folds = rbindlist(lapply(task$strata$row_id, private$.sample, task = task))
       setkey(folds, row_id)
       id.fold.subsets <- data.table(
         folds,
