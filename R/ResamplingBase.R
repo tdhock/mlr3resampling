@@ -8,13 +8,11 @@ ResamplingBase = R6::R6Class(
     task_hash = NA_character_,
     task_nrow = NA_integer_,
     task_row_hash = NA_character_,
-    duplicated_ids = NULL,
     man = NULL,
-    initialize = function(id, param_set = ps(), duplicated_ids = FALSE, label = NA_character_, man = NA_character_) {
+    initialize = function(id, param_set = ps(), label = NA_character_, man = NA_character_) {
       self$id = checkmate::assert_string(id, min.chars = 1L)
       self$label = checkmate::assert_string(label, na.ok = TRUE)
       self$param_set = paradox::assert_param_set(param_set)
-      self$duplicated_ids = checkmate::assert_flag(duplicated_ids)
       self$man = checkmate::assert_string(man, na.ok = TRUE)
     },
     format = function(...) {
