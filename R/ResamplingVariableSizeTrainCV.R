@@ -19,10 +19,9 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         label = "Cross-Validation with variable size train sets",
         man = "ResamplingVariableSizeTrainCV")
     },
-    instantiate = function(task) {
+    get_instance = function(task) {
       row_id <- fold <- prop <- . <- row_seed <- iteration <- train_min_size <- train_size <- train_size_i <- NULL
       ## Above to avoid CRAN NOTEs.
-      task = mlr3::assert_task(mlr3::as_task(task))
       strata <- if(is.null(task$strata)){
         data.table(N=task$nrow, row_id=list(seq_len(task$nrow)))
       }else task$strata
@@ -78,7 +77,7 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
             test=list(test.index.vec))
         }
       }
-      self$instance <- list(
+      list(
         iteration.dt=rbindlist(
           iteration.dt.list
         )[
@@ -87,10 +86,6 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         , train_min_size := min(train_size), by=train_size_i
         ][],
         id.dt=folds)
-      self$task_hash = task$hash
-      self$task_nrow = task$nrow
-      self$task_row_hash = task$row_hash
-      invisible(self)
     }
   )
 )
