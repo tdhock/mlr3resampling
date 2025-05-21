@@ -20,6 +20,14 @@ ResamplingBase = R6::R6Class(
     format = function(...) {
       sprintf("<%s>", class(self)[1L])
     },
+    instantiate = function(task) {
+      task = mlr3::assert_task(mlr3::as_task(task))
+      self$instance = self$get_instance(task)
+      self$task_hash = task$hash
+      self$task_nrow = task$nrow
+      self$task_row_hash = task$row_hash
+      invisible(self)
+    },
     print = function(...) {
       cat(
         format(self),
