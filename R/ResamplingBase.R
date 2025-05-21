@@ -14,7 +14,7 @@ ResamplingBase = R6::R6Class(
       nrow(self$instance$iteration.dt)
     }
   ),
-  private=list(
+  private = list(
     .sample = function(ids, ...) {
       data.table(
         row_id = ids,
