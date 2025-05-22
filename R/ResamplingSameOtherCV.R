@@ -12,8 +12,10 @@ ResamplingSameOtherCV = R6::R6Class(
         param_set = ps,
         label = "Same versus Other Cross-Validation",
         man = "ResamplingSameOtherCV")
-    },
-    get_instance = function(task) {
+    }
+  ),
+  private = list(
+    .get_instance = function(task) {
       row_id <- fold <- display_row <- . <- train.subsets <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
       if(length(task$col_roles$group)){
