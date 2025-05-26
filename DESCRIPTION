@@ -72,4 +72,4 @@ Suggests:
     rpart,
     directlabels
 VignetteBuilder: knitr
-Remotes: tdhock/mlr3@get_instance
+Remotes: mlr-org/mlr3
