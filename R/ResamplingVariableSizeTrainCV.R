@@ -18,15 +18,17 @@ ResamplingVariableSizeTrainCV = R6::R6Class(
         param_set = ps,
         label = "Cross-Validation with variable size train sets",
         man = "ResamplingVariableSizeTrainCV")
-    },
-    get_instance = function(task) {
+    }
+  ),
+  private = list(
+    .get_instance = function(task) {
       row_id <- fold <- prop <- . <- row_seed <- iteration <- train_min_size <- train_size <- train_size_i <- NULL
       ## Above to avoid CRAN NOTEs.
       strata <- if(is.null(task$strata)){
         data.table(N=task$nrow, row_id=list(seq_len(task$nrow)))
       }else task$strata
       strata.list <- lapply(strata$row_id, private$.sample, task = task)
-      folds = private$.combine(strata.list)[order(row_id)]
+      folds = rbindlist(strata.list)[order(row_id)]
       max.train.vec <- sapply(strata.list, nrow)
       small.strat.i <- which.min(max.train.vec)
       min_train_data <- self$param_set$values[["min_train_data"]]

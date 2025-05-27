@@ -12,8 +12,10 @@ ResamplingSameOtherCV = R6::R6Class(
         param_set = ps,
         label = "Same versus Other Cross-Validation",
         man = "ResamplingSameOtherCV")
-    },
-    get_instance = function(task) {
+    }
+  ),
+  private = list(
+    .get_instance = function(task) {
       row_id <- fold <- display_row <- . <- train.subsets <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
       if(length(task$col_roles$group)){
@@ -40,7 +42,7 @@ ResamplingSameOtherCV = R6::R6Class(
       if(is.null(task$strata)){
         stop('task has no strata, but at least one stratum variable is required; at least assign the subset variable to a stratum')
       }
-      folds = private$.combine(lapply(task$strata$row_id, private$.sample, task = task))
+      folds = rbindlist(lapply(task$strata$row_id, private$.sample, task = task))
       setkey(folds, row_id)
       id.fold.subsets <- data.table(
         folds,

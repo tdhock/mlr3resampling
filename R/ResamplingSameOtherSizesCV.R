@@ -24,8 +24,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         param_set = ps,
         label = "Compare Same/Other and Sizes Cross-Validation",
         man = "ResamplingSameOtherSizesCV")
-    },
-    get_instance = function(task) {
+    }
+  ),
+  private = list(
+    .get_instance = function(task) {
       . <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
