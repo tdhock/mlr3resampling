@@ -137,19 +137,24 @@ proj_results <- function(proj_dir){
     nomatch=0L]
 }
 
-proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1){
+proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   reg.dir <- file.path(proj_dir, "registry")
   reg <- batchtools::makeRegistry(reg.dir)
   bm.jobs <- batchtools::batchMap(function(i){
-    mlr3resampling::proj_compute_until_done(proj_dir)
+    mlr3resampling::proj_compute_until_done(proj_dir, verbose=verbose)
   }, seq_len(tasks))
-  bm.jobs$chunk <- 1
-  batchtools::submitJobs(bm.jobs, resources=list(
-    walltime = 60*60*hours,#seconds
-    memory = 1024*gigabytes,#megabytes per cpu
-    ncpus=1,  #>1 for multicore/parallel jobs.
-    ntasks=1, #>1 for MPI jobs.
-    chunks.as.arrayjobs=TRUE))
+  if(identical(reg$cluster.functions$name, "Slurm")){
+    bm.jobs$chunk <- 1
+    resources <- list(
+      walltime = 60*60*hours,#seconds
+      memory = 1024*gigabytes,#megabytes per cpu
+      ncpus=1,  #>1 for multicore/parallel jobs.
+      ntasks=1, #>1 for MPI jobs.
+      chunks.as.arrayjobs=TRUE)
+  }else{
+    resources <- list()
+  }
+  batchtools::submitJobs(bm.jobs, resources)
 }
 
 proj_results_save <- function(proj_dir){
