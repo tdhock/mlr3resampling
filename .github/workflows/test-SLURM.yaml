@@ -6,13 +6,11 @@ on:
   pull_request:
     branches: [main, master]
 
-name: R-CMD-check
+name: Test SLURM
 
 jobs:
   test-SLURM:
     runs-on: ubuntu-latest
-
-    name: Test SLURM
 
     strategy:
       fail-fast: false
