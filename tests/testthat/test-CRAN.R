@@ -494,3 +494,43 @@ test_that("hjust=0.5 for algo in middle", {
   expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="other", hjust], 0.5)
   expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="same", hjust], 1)
 })
+
+test_that("regular K fold CV works in proj", {
+  N <- 80
+  set.seed(1)
+  reg.dt <- data.table(
+    x=runif(N, -2, 2),
+    person=factor(rep(c("Alice","Bob"), each=0.5*N)))
+  reg.pattern.list <- list(
+    easy=function(x, person)x^2,
+    impossible=function(x, person)(x^2)*(-1)^as.integer(person))
+  kfold <- mlr3::ResamplingCV$new()
+  reg.task.list <- list()
+  for(pattern in names(reg.pattern.list)){
+    f <- reg.pattern.list[[pattern]]
+    task.dt <- data.table(reg.dt)[
+    , y := f(x,person)+rnorm(N, sd=0.5)
+    ][]
+    task.obj <- mlr3::TaskRegr$new(
+      pattern, task.dt, target="y")
+    task.obj$col_roles$feature <- "x"
+    task.obj$col_roles$stratum <- "person"
+    task.obj$col_roles$subset <- "person"
+    reg.task.list[[pattern]] <- task.obj
+  }
+  reg.learner.list <- list(
+    featureless=mlr3::LearnerRegrFeatureless$new())
+  if(requireNamespace("rpart")){
+    reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+  }
+  pkg.proj.dir <- tempfile()
+  mlr3resampling::proj_grid(
+    pkg.proj.dir,
+    reg.task.list,
+    reg.learner.list,
+    kfold,
+    score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+  expect_equal(nrow(grid_jobs), 40)
+})

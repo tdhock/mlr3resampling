@@ -6,25 +6,33 @@ on:
   pull_request:
     branches: [main, master]
 
-name: test-coverage
+name: Test SLURM
 
 jobs:
-  test-coverage:
+  test-SLURM:
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
         with:
+          r-version: release
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::covr
-          needs: coverage
+          extra-packages: any::rcmdcheck
+          needs: check
 
       - name: slurm config
         shell: bash
@@ -50,25 +58,6 @@ jobs:
         shell: bash
         run: R CMD INSTALL .
 
-      - name: Test coverage
-        run: |
-          covr::codecov(
-            quiet = FALSE,
-            clean = FALSE,
-            install_path = file.path(Sys.getenv("RUNNER_TEMP"), "package")
-          )
-        shell: Rscript {0}
-
-      - name: Show testthat output
-        if: always()
-        run: |
-          ## --------------------------------------------------------------------
-          find ${{ runner.temp }}/package -name 'testthat.Rout*' -exec cat '{}' \; || true
+      - name: run tests
         shell: bash
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-test-failures
-          path: ${{ runner.temp }}/package
+        run: R --vanilla < tests/testthat/test-actions.R
