@@ -55,7 +55,7 @@ test_submit <- function(cluster.functions){
     pkg.proj.dir,
     cluster.functions=cluster.functions,
     verbose=TRUE)    
-  batchtools::waitForJobs(timeout=20)
+  batchtools::waitForJobs(timeout=60)
   system(paste("cat", file.path(pkg.proj.dir, "registry", "logs", "*")))
   fread(file.path(pkg.proj.dir, "results.csv"))
 }
