@@ -1,4 +1,6 @@
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
+  . <- NULL
+  ## Above to avoid CRAN NOTE.
   proj.grid <- list()
   for(arg in c("tasks", "learners", "resamplings")){
     value <- get(arg)
@@ -64,6 +66,8 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
 }
 
 proj_compute <- function(proj_dir, verbose=FALSE){
+  status <- . <- task.i <- learner.i <- resampling.i <- iteration <- NULL
+  ## Above to avoid CRAN NOTE.
   grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
   grid_jobs.csv.lock <- paste0(grid_jobs.csv, ".lock")
   before.lock <- filelock::lock(grid_jobs.csv.lock)

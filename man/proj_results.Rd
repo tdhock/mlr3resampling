@@ -22,13 +22,13 @@ proj_results_save(proj_dir)
   Actually, if step 2 worked as intended, the last \code{\link{proj_compute}}
   calls \code{\link{proj_results_save}}, which saves two result files to disk
   that you can read directly:
-  \begin{itemize}
-  \item \code{results.csv} contains test measures for each split, and
-  can be read via \code{fread()}.
-  \item \code{results.rds} contains additional list columns for \code{learner}
-  and \code{pred} (useful for model interpretation), and can be read via
-  \code{readRDS()}.
-  \end{itemize}
+  \describe{
+    \item{\code{results.csv}}{contains test measures for each split, and
+      can be read via \code{fread()}}
+    \item{\code{results.rds}}{contains additional list columns for \code{learner}
+      and \code{pred} (useful for model interpretation), and can be read via
+      \code{readRDS()}}
+  }
 }
 \value{
   \code{proj_results} returns a data table, whereas
