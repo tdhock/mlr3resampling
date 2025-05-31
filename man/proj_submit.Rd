@@ -11,7 +11,9 @@
   each iteration runs \code{\link{proj_compute_until_done}}.
 }
 \usage{
-proj_submit(proj_dir, tasks = 2, hours = 1, gigabytes = 1, verbose = FALSE)
+proj_submit(
+  proj_dir, tasks = 2, hours = 1, gigabytes = 1,
+  verbose = FALSE, cluster.functions = NULL)
 }
 \arguments{
   \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
@@ -20,6 +22,8 @@ proj_submit(proj_dir, tasks = 2, hours = 1, gigabytes = 1, verbose = FALSE)
   \item{hours}{Hours of walltime to ask the SLURM scheduler.}
   \item{gigabytes}{Gigabytes of memory to ask the SLURM scheduler.}
   \item{verbose}{Logical: print messages?}
+  \item{cluster.functions}{Cluster functions from \code{batchtools},
+    useful for testing.}
 }
 \details{
   This is Step 2 out of the

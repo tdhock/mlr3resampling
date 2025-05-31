@@ -129,7 +129,7 @@ proj_compute <- function(proj_dir, verbose=FALSE){
 proj_compute_until_done <- function(proj_dir, verbose=FALSE){
   done <- FALSE
   while(!done){
-    result <- proj_compute(proj_dir)
+    result <- proj_compute(proj_dir, verbose=verbose)
     if(is.null(result)){
       done <- TRUE
     }else{
@@ -149,9 +149,10 @@ proj_results <- function(proj_dir){
     nomatch=0L]
 }
 
-proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
+proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE, cluster.functions=NULL){
   reg.dir <- file.path(proj_dir, "registry")
   reg <- batchtools::makeRegistry(reg.dir)
+  if(!is.null(cluster.functions))reg$cluster.functions <- cluster.functions
   bm.jobs <- batchtools::batchMap(function(i){
     mlr3resampling::proj_compute_until_done(proj_dir, verbose=verbose)
   }, seq_len(tasks))

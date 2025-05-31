@@ -1,3 +1,5 @@
+slurm-config.sh
+slurm.conf
 .github
 README.org
 build.sh
