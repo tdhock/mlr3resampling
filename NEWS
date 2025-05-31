@@ -1,3 +1,7 @@
+Changes in version 2025.5.31
+
+- proj_* functions for SLURM load balancing (PR#32).
+
 Changes in version 2025.5.21
 
 - ResamplingBase inherits from mlr3::Resampling (PR#31, thanks Sebastian Fischer).
