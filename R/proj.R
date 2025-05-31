@@ -48,9 +48,17 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
   saveRDS(ml_job_dt, grid_jobs.rds)
   grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
+  expected.rds <- file.path(proj_dir, "grid_jobs", paste0(1:nrow(ml_job_dt), ".rds"))
   out_dt <- ml_job_dt[, .(
     task.i, learner.i, resampling.i, iteration,
-    status="not started")]
+    status=ifelse(file.exists(expected.rds), "done", "not started")
+  )]
+  if(file.exists(grid_jobs.csv)){
+    old_jobs_dt <- fread(grid_jobs.csv)
+    if(!identical(out_dt, old_jobs_dt)){
+      warning("grid_jobs.csv changed!")
+    }
+  }
   fwrite(out_dt, grid_jobs.csv)
   ml_job_dt
 }
@@ -155,6 +163,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
     resources <- list()
   }
   batchtools::submitJobs(bm.jobs, resources)
+  reg
 }
 
 proj_results_save <- function(proj_dir){
