@@ -2,7 +2,6 @@ library(testthat)
 library(data.table)
 
 N <- 80
-library(data.table)
 set.seed(1)
 reg.dt <- data.table(
   x=runif(N, -2, 2),
