@@ -19,6 +19,7 @@ proj_submit(proj_dir, tasks = 2, hours = 1, gigabytes = 1, verbose = FALSE)
     into one SLURM job array with this number of tasks.}
   \item{hours}{Hours of walltime to ask the SLURM scheduler.}
   \item{gigabytes}{Gigabytes of memory to ask the SLURM scheduler.}
+  \item{verbose}{Logical: print messages?}
 }
 \details{
   This is Step 2 out of the
@@ -67,8 +68,10 @@ mlr3resampling::proj_grid(
   reg.task.list,
   reg.learner.list,
   SOAK,
+  order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
 mlr3resampling::proj_submit(pkg.proj.dir)
+batchtools::waitForJobs()
 fread(file.path(pkg.proj.dir, "results.csv"))
 
 }

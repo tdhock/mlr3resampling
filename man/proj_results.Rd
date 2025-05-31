@@ -75,6 +75,7 @@ mlr3resampling::proj_grid(
   reg.task.list,
   reg.learner.list,
   SOAK,
+  order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
 mlr3resampling::proj_compute_until_done(pkg.proj.dir)
 fread(file.path(pkg.proj.dir, "results.csv"))

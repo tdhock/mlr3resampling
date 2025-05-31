@@ -9,7 +9,10 @@
   This function creates a project directory with files to describe the grid.
 }
 \usage{
-proj_grid(proj_dir, tasks, learners, resamplings, order_jobs = NULL, score_args = NULL, save_learner = FALSE, save_pred = FALSE)
+proj_grid(
+  proj_dir, tasks, learners, resamplings,
+  order_jobs = NULL, score_args = NULL,
+  save_learner = FALSE, save_pred = FALSE)
 }
 \arguments{
   \item{proj_dir}{Path to directory to create.}
