@@ -40,10 +40,6 @@ jobs:
         shell: bash
         run: sudo bash slurm-config.sh
 
-      - name: run tests
-        shell: bash
-        run: R --vanilla < tests/testthat/test-actions.R
-
       - name: slurmd log
         shell: bash
         run: systemctl status slurmd.service -l
@@ -52,9 +48,21 @@ jobs:
         shell: bash
         run: systemctl status slurmctld.service -l
 
+      - name: sinfo
+        shell: bash
+        run: sinfo
+
+      - name: scontrol
+        shell: bash
+        run: scontrol show node
+
       - name: R CMD INSTALL
         shell: bash
         run: R CMD INSTALL .
+
+      - name: run tests
+        shell: bash
+        run: R --vanilla < tests/testthat/test-actions.R
 
       - uses: r-lib/actions/check-r-package@v2
         with:

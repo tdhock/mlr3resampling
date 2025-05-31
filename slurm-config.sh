@@ -1,4 +1,5 @@
 #!/bin/bash
+# from https://github.com/litz-lab/scarab-infra/blob/main/docs/slurm_install_guide.md
 set -o errexit
 apt-get install libmunge-dev libmunge2 munge
 systemctl enable munge
