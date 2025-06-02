@@ -15,3 +15,8 @@ for d in /var/spool/slurmd /var/lib/slurm-llnl /var/lib/slurm-llnl/slurmd /var/l
 done
 systemctl restart slurmctld
 systemctl restart slurmd
+systemctl status slurmd.service -l
+systemctl status slurmctld.service -l
+sinfo
+scontrol show node
+

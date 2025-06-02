@@ -30,26 +30,6 @@ jobs:
         shell: bash
         run: sudo bash slurm-config.sh
 
-      - name: slurmd log
-        shell: bash
-        run: systemctl status slurmd.service -l
-
-      - name: slurmctld log
-        shell: bash
-        run: systemctl status slurmctld.service -l
-
-      - name: sinfo
-        shell: bash
-        run: sinfo
-
-      - name: scontrol
-        shell: bash
-        run: scontrol show node
-
-      - name: R CMD INSTALL
-        shell: bash
-        run: R CMD INSTALL .
-
       - name: Test coverage
         run: |
           covr::codecov(
