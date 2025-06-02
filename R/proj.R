@@ -1,12 +1,16 @@
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
   . <- NULL
   ## Above to avoid CRAN NOTE.
+  if(is.null(score_args) && isFALSE(save_learner) && isFALSE(save_pred)){
+    warning("no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
+  }
   proj.grid <- list()
   for(arg in c("tasks", "learners", "resamplings")){
     value <- get(arg)
     if(!is.list(value)){
       value <- list(value)
     }
+    if(length(value)==0)stop(arg, " is empty, but need at least one")
     proj.grid[[arg]] <- value
   }
   do.call(mlr3::benchmark_grid, proj.grid) # error checking.
@@ -177,4 +181,5 @@ proj_results_save <- function(proj_dir){
   keep_vec <- sapply(join_dt, is.atomic)
   atomic_dt <- join_dt[, keep_vec, with=FALSE]
   fwrite(atomic_dt, file.path(proj_dir, "results.csv"))
+  atomic_dt
 }

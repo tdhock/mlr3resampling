@@ -524,13 +524,72 @@ test_that("regular K fold CV works in proj", {
     reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
   }
   pkg.proj.dir <- tempfile()
+  expect_error({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      list(),
+      reg.learner.list,
+      kfold,
+      score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  }, "tasks is empty, but need at least one")
+  expect_error({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      reg.task.list,
+      list(),
+      kfold,
+      score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  }, "learners is empty, but need at least one")
+  expect_error({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      reg.task.list,
+      reg.learner.list,
+      list(),
+      score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  }, "resamplings is empty, but need at least one")
   mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
     reg.learner.list,
     kfold,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+  expect_true(all(grid_jobs$status=="not started"))
   expect_equal(nrow(grid_jobs), 40)
+  results.csv <- file.path(pkg.proj.dir, "results.csv")
+  expect_false(file.exists(results.csv))
+  row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
+  expect_equal(nrow(row1), 1)
+  mlr3resampling::proj_grid(
+    pkg.proj.dir,
+    reg.task.list,
+    reg.learner.list,
+    kfold,
+    score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+  expect_identical(grid_jobs$status, c("done", rep("not started", 39)))
+  row2 <- mlr3resampling::proj_compute(pkg.proj.dir)
+  expect_equal(nrow(row2), 1)
+  two_rows <- mlr3resampling::proj_results(pkg.proj.dir)
+  expect_equal(nrow(two_rows), 2)
+  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  results_dt <- fread(results.csv)
+  expect_equal(nrow(results_dt), 40)
+  expect_warning({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      reg.task.list,
+      reg.learner.list,
+      kfold)
+  }, "no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
+  kfold$param_set$values$folds <- 5
+  expect_warning({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      reg.task.list,
+      reg.learner.list,
+      kfold,
+      score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+  }, "grid_jobs.csv changed!")
 })

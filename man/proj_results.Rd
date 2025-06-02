@@ -31,9 +31,8 @@ proj_results_save(proj_dir)
   }
 }
 \value{
-  \code{proj_results} returns a data table, whereas
-  \code{proj_results_save} returns nothing (side effect: save result
-  files).
+  \code{proj_results} returns a data table with all columns, whereas
+  \code{proj_results_save} returns the same table with only atomic columns.
 }
 \author{
 Toby Dylan Hocking
