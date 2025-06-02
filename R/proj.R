@@ -84,50 +84,49 @@ proj_compute <- function(proj_dir, verbose=FALSE){
     fwrite(grid_jobs_dt, grid_jobs.csv)
   }
   filelock::unlock(before.lock)
-  if(!is.null(grid_job_i)){
-    if(verbose)cat(sprintf(
-      "Starting ML job %4d / %4d\n", grid_job_i, nrow(grid_jobs_dt)))
-    start.time <- Sys.time()
-    grid_job_row <- grid_jobs_dt[grid_job_i]
-    grid.rds <- file.path(proj_dir, "grid.rds")
-    proj.grid <- readRDS(grid.rds)
-    this.task <- proj.grid$tasks[[grid_job_row$task.i]]
-    this.learner <- proj.grid$learners[[grid_job_row$learner.i]]
-    this.resampling <- proj.grid$resamplings[[grid_job_row$resampling.i]]
-    this.resampling$instantiate(this.task)
-    set_rows <- function(train_or_test){
-      train_or_test_set <- paste0(train_or_test, "_set")
-      set_fun <- this.resampling[[train_or_test_set]]
-      set_fun(grid_job_row$iteration)
-    }
-    this.learner$train(this.task, set_rows("train"))
-    pred <- this.learner$predict(this.task, set_rows("test"))
-    result.row <- data.table(
-      grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
-      start.time, end.time=Sys.time(),
-      process=Sys.getenv("SLURM_ARRAY_TASK_ID", Sys.getpid()),
-      learner=list(proj.grid$save_learner(this.learner)),
-      pred=list(proj.grid$save_pred(pred)))
-    if(is.list(proj.grid$score_args)){
-      score_res <- pred$score(proj.grid$score_args)
-      set(result.row, j=names(score_res), value=as.list(score_res))
-    }
-    result.rds <- file.path(proj_dir, "grid_jobs", paste0(grid_job_i, ".rds"))
-    dir.create(dirname(result.rds), showWarnings = FALSE)
-    saveRDS(result.row, result.rds)
-    ## update status.
-    after.lock <- filelock::lock(grid_jobs.csv.lock)
-    grid_jobs_dt <- fread(grid_jobs.csv)
-    grid_jobs_dt[grid_job_i, status := "done"]
-    fwrite(grid_jobs_dt, grid_jobs.csv)
-    filelock::unlock(after.lock)
-    ## check if all done.
-    if(verbose)print(grid_jobs_dt[, table(status)])
-    if(all(grid_jobs_dt$status=="done")){
-      proj_results_save(proj_dir)
-    }
-    result.row
+  if(is.null(grid_job_i))return(NULL)
+  if(verbose)cat(sprintf(
+    "Starting ML job %4d / %4d\n", grid_job_i, nrow(grid_jobs_dt)))
+  start.time <- Sys.time()
+  grid_job_row <- grid_jobs_dt[grid_job_i]
+  grid.rds <- file.path(proj_dir, "grid.rds")
+  proj.grid <- readRDS(grid.rds)
+  this.task <- proj.grid$tasks[[grid_job_row$task.i]]
+  this.learner <- proj.grid$learners[[grid_job_row$learner.i]]
+  this.resampling <- proj.grid$resamplings[[grid_job_row$resampling.i]]
+  this.resampling$instantiate(this.task)
+  set_rows <- function(train_or_test){
+    train_or_test_set <- paste0(train_or_test, "_set")
+    set_fun <- this.resampling[[train_or_test_set]]
+    set_fun(grid_job_row$iteration)
   }
+  this.learner$train(this.task, set_rows("train"))
+  pred <- this.learner$predict(this.task, set_rows("test"))
+  result.row <- data.table(
+    grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
+    start.time, end.time=Sys.time(),
+    process=Sys.getenv("SLURM_ARRAY_TASK_ID", Sys.getpid()),
+    learner=list(proj.grid$save_learner(this.learner)),
+    pred=list(proj.grid$save_pred(pred)))
+  if(is.list(proj.grid$score_args)){
+    score_res <- pred$score(proj.grid$score_args)
+    set(result.row, j=names(score_res), value=as.list(score_res))
+  }
+  result.rds <- file.path(proj_dir, "grid_jobs", paste0(grid_job_i, ".rds"))
+  dir.create(dirname(result.rds), showWarnings = FALSE)
+  saveRDS(result.row, result.rds)
+  ## update status.
+  after.lock <- filelock::lock(grid_jobs.csv.lock)
+  grid_jobs_dt <- fread(grid_jobs.csv)
+  grid_jobs_dt[grid_job_i, status := "done"]
+  fwrite(grid_jobs_dt, grid_jobs.csv)
+  filelock::unlock(after.lock)
+  ## check if all done.
+  if(verbose)print(grid_jobs_dt[, table(status)])
+  if(all(grid_jobs_dt$status=="done")){
+    proj_results_save(proj_dir)
+  }
+  result.row
 }
 
 proj_compute_until_done <- function(proj_dir, verbose=FALSE){
