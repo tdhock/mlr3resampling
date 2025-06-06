@@ -41,9 +41,9 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
       for(learner.i in seq_along(proj.grid$learners)){
         ml_job_dt_list[[paste(task.i, learner.i, resampling.i)]] <- data.table(
           task.i, learner.i, resampling.i,
-          task.id=task.obj$id,
-          learner.id=proj.grid$learners[[learner.i]]$id,
-          resampling.id=resampling.obj$id,
+          task_id=task.obj$id,
+          learner_id=proj.grid$learners[[learner.i]]$id,
+          resampling_id=resampling.obj$id,
           iteration)
       }
     }
@@ -182,7 +182,7 @@ proj_results_save <- function(proj_dir){
   join_dt <- proj_results(proj_dir)
   saveRDS(join_dt, file.path(proj_dir, "results.rds"))
   potential.cols <- c(
-    "task.id", "learner.id", "resampling.id", "test.subset",
+    "task_id", "learner_id", "resampling_id", "test.subset",
     "test.fold", "train.subsets", "groups", "n.train.groups", "seed")
   by.vec <- intersect(potential.cols, names(join_dt))
   learner_dt <- join_dt[, {

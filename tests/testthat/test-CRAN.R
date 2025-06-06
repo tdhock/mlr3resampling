@@ -609,7 +609,8 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
     impossible=function(x, person)(x^2)*(-1)^as.integer(person))
   kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   kfold$param_set$values$folds <- 2
-  kfold$param_set$values$subsets <- "S"
+  subsets <- "SO"
+  kfold$param_set$values$subsets <- subsets
   reg.task.list <- list()
   for(pattern in names(reg.pattern.list)){
     f <- reg.pattern.list[[pattern]]
@@ -658,7 +659,9 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
     save_learner = get_history)
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
   expect_true(all(grid_jobs$status=="not started"))
-  (expected_jobs <- length(reg.learner.list)*length(reg.task.list)*kfold$param_set$values$folds*length(people))
+  expected_base <- length(reg.task.list)*kfold$param_set$values$folds*length(people)*nchar(subsets)
+  expected_epochs <- n.epochs*expected_base
+  expected_jobs <- length(reg.learner.list)*expected_base
   expect_equal(nrow(grid_jobs), expected_jobs)
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
@@ -675,11 +678,13 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
   mlr3resampling::proj_compute_until_done(pkg.proj.dir)
   model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
   expected_cols <- c(
-    "task.id", "learner.id", "resampling.id", "test.subset", "test.fold",
+    "task_id", "learner_id", "resampling_id", "test.subset", "test.fold",
     "train.subsets", "groups", "n.train.groups", "seed",
     expected_model_cols)
   expect_identical(names(model_dt), expected_cols)
-  expected_epochs <- length(reg.task.list)*kfold$param_set$values$folds*length(people)*n.epochs
   expect_equal(nrow(model_dt), expected_epochs)
+  results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
+  pval_list <- mlr3resampling::pvalue(results_dt)
+  expect_is(pval_list, "pvalue")
+  if(interactive())plot(pval_list)
 })
-  
