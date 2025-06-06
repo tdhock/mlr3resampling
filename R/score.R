@@ -1,3 +1,9 @@
+add_algorithm <- function(DT){
+  if(is.null(DT[["algorithm"]]) && !is.null(DT[["learner_id"]]))
+    DT[, algorithm := sub(".*[.]", "", learner_id)]
+  DT
+}
+
 score <- function(bench.result, ...){
   algorithm <- learner_id <- NULL
   ## Above to avoid CRAN NOTE.
@@ -6,11 +12,9 @@ score <- function(bench.result, ...){
   for(score.i in 1:nrow(bench.score)){
     bench.row <- bench.score[score.i]
     it.dt <- bench.row$resampling[[1]]$instance$iteration.dt
-    out.dt.list[[score.i]] <- it.dt[
-      bench.row, on="iteration"
-    ][, algorithm := sub(".*[.]", "", learner_id)]
+    out.dt.list[[score.i]] <- it.dt[bench.row, on="iteration"]
   }
-  out <- rbindlist(out.dt.list)
+  out <- add_algorithm(rbindlist(out.dt.list))
   class(out) <- c("score", class(out))
   out
 }
