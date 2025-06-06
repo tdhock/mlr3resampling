@@ -72,6 +72,7 @@ Suggests:
     markdown,
     nc,
     rpart,
-    directlabels
+    directlabels,
+    mlr3torch
 VignetteBuilder: knitr
 Remotes: mlr-org/mlr3
