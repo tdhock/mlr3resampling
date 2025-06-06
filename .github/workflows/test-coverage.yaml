@@ -26,6 +26,10 @@ jobs:
           extra-packages: any::covr
           needs: coverage
 
+      - name: Install torch
+        run: |
+          Rscript -e 'torch::install_torch()'
+
       - name: slurm config
         shell: bash
         run: sudo bash slurm-config.sh
