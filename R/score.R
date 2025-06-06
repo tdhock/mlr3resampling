@@ -1,6 +1,7 @@
 add_algorithm <- function(DT){
   if(is.null(DT[["algorithm"]]) && !is.null(DT[["learner_id"]]))
     DT[, algorithm := sub(".*[.]", "", learner_id)]
+  DT
 }
 
 score <- function(bench.result, ...){
