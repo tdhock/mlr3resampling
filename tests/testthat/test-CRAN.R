@@ -686,5 +686,6 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
   results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
   pval_list <- mlr3resampling::pvalue(results_dt)
   expect_is(pval_list, "pvalue")
+  expect_true(all(pval_list$pvalues$Train_subsets=="other-same"))
   if(interactive())plot(pval_list)
 })
