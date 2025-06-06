@@ -505,6 +505,7 @@ test_that("regular K fold CV works in proj", {
     easy=function(x, person)x^2,
     impossible=function(x, person)(x^2)*(-1)^as.integer(person))
   kfold <- mlr3::ResamplingCV$new()
+  kfold$param_set$values$folds <- 2
   reg.task.list <- list()
   for(pattern in names(reg.pattern.list)){
     f <- reg.pattern.list[[pattern]]
@@ -556,7 +557,8 @@ test_that("regular K fold CV works in proj", {
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
   expect_true(all(grid_jobs$status=="not started"))
-  expect_equal(nrow(grid_jobs), 40)
+  expected_jobs <- length(reg.learner.list)*length(reg.task.list)*kfold$param_set$values$folds
+  expect_equal(nrow(grid_jobs), expected_jobs)
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
   row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
@@ -568,14 +570,15 @@ test_that("regular K fold CV works in proj", {
     kfold,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
-  expect_identical(grid_jobs$status, c("done", rep("not started", 39)))
+  expect_identical(grid_jobs$status, c("done", rep("not started", expected_jobs-1)))
   row2 <- mlr3resampling::proj_compute(pkg.proj.dir)
   expect_equal(nrow(row2), 1)
   two_rows <- mlr3resampling::proj_results(pkg.proj.dir)
   expect_equal(nrow(two_rows), 2)
   mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  expect_false(file.exists(file.path(pkg.proj.dir, "learners.csv")))
   results_dt <- fread(results.csv)
-  expect_equal(nrow(results_dt), 40)
+  expect_equal(nrow(results_dt), expected_jobs)
   expect_warning({
     mlr3resampling::proj_grid(
       pkg.proj.dir,
@@ -597,13 +600,16 @@ test_that("regular K fold CV works in proj", {
 if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
   N <- 80
   set.seed(1)
+  people <- c("Alice","Bob")
   reg.dt <- data.table(
     x=runif(N, -2, 2),
-    person=factor(rep(c("Alice","Bob"), each=0.5*N)))
+    person=factor(rep(people, each=0.5*N)))
   reg.pattern.list <- list(
     easy=function(x, person)x^2,
     impossible=function(x, person)(x^2)*(-1)^as.integer(person))
-  kfold <- mlr3::ResamplingCV$new()
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  kfold$param_set$values$folds <- 2
+  kfold$param_set$values$subsets <- "S"
   reg.task.list <- list()
   for(pattern in names(reg.pattern.list)){
     f <- reg.pattern.list[[pattern]]
@@ -619,45 +625,61 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch", {
   }
   Tlrn <- mlr3torch::LearnerTorchMLP$new(task_type="regr")
   mlr3::set_validate(Tlrn, validate = 0.5)
-  n.epochs <- 2
+  n.epochs <- 3
   Tlrn$callbacks <- mlr3torch::t_clbk("history")
   Tlrn$param_set$values$patience <- n.epochs
   Tlrn$param_set$values$batch_size <- 10
   Tlrn$param_set$values$epochs <- paradox::to_tune(upper = n.epochs, internal = TRUE)
   Tlrn$param_set$values[c("measures_train","measures_valid")] <- mlr3::msrs(c("regr.rmse"))
-  reg.learner.list <- list(mlr3tuning::auto_tuner(
-    learner = Tlrn,
-    tuner = mlr3tuning::tnr("internal"),
-    resampling = mlr3::rsmp("insample"),
-    measure = mlr3::msr("internal_valid_score", minimize = TRUE),
-    term_evals = 1,
-    id="torch_linear",
-    store_models = TRUE))
+  reg.learner.list <- list(
+    mlr3tuning::auto_tuner(
+      learner = Tlrn,
+      tuner = mlr3tuning::tnr("internal"),
+      resampling = mlr3::rsmp("insample"),
+      measure = mlr3::msr("internal_valid_score", minimize = TRUE),
+      term_evals = 1,
+      id="torch_linear",
+      store_models = TRUE),
+    mlr3::LearnerRegrFeatureless$new())
   pkg.proj.dir <- tempfile()
+  get_history <- function(L){
+    if(grepl("torch", L$id)){
+      V <- L$tuning_result$internal_tuned_values[[1]]
+      M <- L$archive$learners(1)[[1]]$model
+      M$callbacks$history
+    }
+  }
   mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
     reg.learner.list,
     kfold,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")),
-    save_learner = TRUE)
+    save_learner = get_history)
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
   expect_true(all(grid_jobs$status=="not started"))
-  expect_equal(nrow(grid_jobs), 20)
+  (expected_jobs <- length(reg.learner.list)*length(reg.task.list)*kfold$param_set$values$folds*length(people))
+  expect_equal(nrow(grid_jobs), expected_jobs)
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
   row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
-  expect_model <- function(R){
-    expect_equal(nrow(R), 1)
-    L <- R$learner[[1]]
-    V <- L$tuning_result$internal_tuned_values[[1]]
-    expect_equal(V$epochs, n.epochs)
-    M <- L$archive$learners(1)[[1]]$model
-    expect_equal(nrow(M$callbacks$history), n.epochs)
-    weight.bias <- sapply(M$network$parameters, torch::as_array)
-    expect_equal(length(weight.bias), 2)
+  expected_model_cols <- c("epoch","train.regr.rmse","valid.regr.rmse")
+  expect_train_valid <- function(R){
+    train_valid_rows <- R$learner[[1]]
+    expect_equal(nrow(train_valid_rows), n.epochs)
+    expect_identical(names(train_valid_rows), expected_model_cols)
   }
-  expect_model(row1)
+  expect_train_valid(row1)
   from.disk <- mlr3resampling::proj_results(pkg.proj.dir)
-  expect_model(from.disk)
+  expect_train_valid(from.disk)
+  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
+  expected_cols <- c(
+    "task.id", "learner.id", "resampling.id", "test.subset", "test.fold",
+    "train.subsets", "groups", "n.train.groups", "seed",
+    expected_model_cols)
+  expect_identical(names(model_dt), expected_cols)
+  expected_epochs <- length(reg.task.list)*kfold$param_set$values$folds*length(people)*n.epochs
+  expect_equal(nrow(model_dt), expected_epochs)
 })
+  

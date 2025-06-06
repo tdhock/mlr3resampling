@@ -20,7 +20,7 @@ proj_results_save(proj_dir)
 \details{
   This is Step 3 out of the typical 3 step pipeline (init grid, submit, read results).
   Actually, if step 2 worked as intended, the last \code{\link{proj_compute}}
-  calls \code{\link{proj_results_save}}, which saves two result files to disk
+  calls \code{\link{proj_results_save}}, which saves up to three result files to disk
   that you can read directly:
   \describe{
     \item{\code{results.csv}}{contains test measures for each split, and
@@ -28,6 +28,9 @@ proj_results_save(proj_dir)
     \item{\code{results.rds}}{contains additional list columns for \code{learner}
       and \code{pred} (useful for model interpretation), and can be read via
       \code{readRDS()}}
+    \item{\code{learners.csv}}{only exists if \code{learner} column is a
+      data frame, in which case it contains the atomic columns, along
+      with meta-data describing each split.}
   }
 }
 \value{

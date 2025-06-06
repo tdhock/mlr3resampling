@@ -17,11 +17,13 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   proj.grid$score_args <- score_args
   for(fun_name in paste0("save_",c("learner","pred"))){
     fun <- get(fun_name)
-    fun <- if(identical(fun, FALSE)){
-      function(L)NULL
+    if(identical(fun, FALSE)){
+      fun <- function(L)NULL
     }else if(identical(fun, TRUE)){
-      function(L)L
-    }else if(!is.function(fun))stop(fun_name, " should be a function")
+      fun <- function(L)L
+    }else if(!is.function(fun)){
+      stop(fun_name, " should be a function")
+    }
     proj.grid[[fun_name]] <- fun
   }
   dir.create(proj_dir, showWarnings = FALSE)
@@ -175,10 +177,26 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE, 
 }
 
 proj_results_save <- function(proj_dir){
+  learner <- NULL
+  ## above for CRAN check.
   join_dt <- proj_results(proj_dir)
   saveRDS(join_dt, file.path(proj_dir, "results.rds"))
-  keep_vec <- sapply(join_dt, is.atomic)
-  atomic_dt <- join_dt[, keep_vec, with=FALSE]
-  fwrite(atomic_dt, file.path(proj_dir, "results.csv"))
-  atomic_dt
+  potential.cols <- c(
+    "task.id", "learner.id", "resampling.id", "test.subset",
+    "test.fold", "train.subsets", "groups", "n.train.groups", "seed")
+  by.vec <- intersect(potential.cols, names(join_dt))
+  learner_dt <- join_dt[, {
+    L <- learner[[1]]
+    if(is.data.frame(L)){
+      L
+    }
+  }, by=by.vec]
+  fwrite_atomic <- function(in_dt, pre){
+    keep_vec <- sapply(in_dt, is.atomic)
+    out_dt <- in_dt[, keep_vec, with=FALSE]
+    fwrite(out_dt, file.path(proj_dir, paste0(pre, ".csv")))
+    out_dt
+  }
+  if(nrow(learner_dt))fwrite_atomic(learner_dt, "learners")
+  fwrite_atomic(join_dt, "results")
 }
