@@ -43,6 +43,10 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+  
+      - name: Install torch
+        run: |
+          Rscript -e 'torch::install_torch()'
 
       - name: rm actions test file
         shell: bash
