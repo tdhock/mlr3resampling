@@ -1,4 +1,4 @@
-Changes in version 2025.5.31
+Changes in version 2025.6.23
 
 - proj_* functions for SLURM load balancing (PR#32).
 

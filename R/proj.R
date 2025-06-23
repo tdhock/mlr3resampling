@@ -49,8 +49,13 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     }
   }
   ml_job_dt <- rbindlist(ml_job_dt_list)
+  if(is.null(order_jobs))order_jobs <- function(DT){
+    if("n.train.groups" %in% names(DT))DT[, order(-n.train.groups)]
+    else 1:nrow(DT)
+  }
   if(is.function(order_jobs)){
     ord_vec <- order_jobs(ml_job_dt)
+    if(!is.integer(ord_vec))stop("order_jobs should return integer")
     ml_job_dt <- ml_job_dt[ord_vec]
   }
   grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
@@ -179,24 +184,41 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE, 
 proj_results_save <- function(proj_dir){
   learner <- NULL
   ## above for CRAN check.
+  only_atomic <- function(in_dt){
+    keep_vec <- sapply(in_dt, is.atomic)
+    in_dt[, keep_vec, with=FALSE]
+  }
+  fwrite_atomic <- function(in_dt, pre){
+    fwrite(only_atomic(in_dt), file.path(proj_dir, paste0(pre, ".csv")))
+  }
+  save_df <- function(suffix, out.df){
+    pre <- paste0("learners", suffix)
+    learner_out_list[[pre]][[paste(row.i)]] <<- data.table(atomic_row, out.df)
+  }
   join_dt <- proj_results(proj_dir)
   saveRDS(join_dt, file.path(proj_dir, "results.rds"))
-  potential.cols <- c(
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "test.fold", "train.subsets", "groups", "n.train.groups", "seed")
-  by.vec <- intersect(potential.cols, names(join_dt))
-  learner_dt <- join_dt[, {
-    L <- learner[[1]]
+  learner_out_list <- list()
+  for(row.i in 1:nrow(join_dt)){
+    join_row <- join_dt[row.i]
+    atomic_row <- only_atomic(join_row)
+    L <- join_row$learner[[1]]
+    suffix <- NULL
     if(is.data.frame(L)){
-      L
+      save_df("", L)
     }
-  }, by=by.vec]
-  fwrite_atomic <- function(in_dt, pre){
-    keep_vec <- sapply(in_dt, is.atomic)
-    out_dt <- in_dt[, keep_vec, with=FALSE]
-    fwrite(out_dt, file.path(proj_dir, paste0(pre, ".csv")))
-    out_dt
+    if(is.list(L) && is.character(names(L))){
+      for(out.i in seq_along(L)){
+        out.name <- names(L)[[out.i]]
+        out.df <- L[[out.i]]
+        if(out.name != "" && is.data.frame(out.df)){
+          save_df(paste0("_",out.name), out.df)
+        }
+      }
+    }
   }
-  if(nrow(learner_dt))fwrite_atomic(learner_dt, "learners")
+  for(pre in names(learner_out_list)){
+    learner_dt <- rbindlist(learner_out_list[[pre]])
+    if(nrow(learner_dt))fwrite_atomic(learner_dt, pre)
+  }
   fwrite_atomic(join_dt, "results")
 }
