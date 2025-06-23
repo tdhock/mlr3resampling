@@ -597,7 +597,8 @@ test_that("regular K fold CV works in proj", {
   }, "grid_jobs.csv changed!")
 })
 
-if(requireNamespace("mlr3torch"))test_that("mlr3torch history saved", {
+mlr3torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
+if(mlr3torch_available)test_that("mlr3torch history saved", {
   N <- 80
   set.seed(1)
   people <- c("Alice","Bob")
@@ -695,7 +696,7 @@ if(requireNamespace("mlr3torch"))test_that("mlr3torch history saved", {
   if(interactive())plot(pval_list)
 })
 
-if(requireNamespace("mlr3torch"))test_that("mlr3torch history and weights saved", {
+if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
   N <- 80
   set.seed(1)
   people <- c("Alice","Bob","Bob","Bob")
