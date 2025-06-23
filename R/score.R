@@ -1,4 +1,6 @@
 add_algorithm <- function(DT){
+  algorithm <- learner_id <- NULL
+  ## Above to avoid CRAN NOTE.
   if(is.null(DT[["algorithm"]]) && !is.null(DT[["learner_id"]]))
     DT[, algorithm := sub(".*[.]", "", learner_id)]
   DT

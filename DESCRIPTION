@@ -73,6 +73,6 @@ Suggests:
     nc,
     rpart,
     directlabels,
-    mlr3torch
+    mlr3torch, torch
 VignetteBuilder: knitr
 Remotes: mlr-org/mlr3

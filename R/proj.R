@@ -1,5 +1,5 @@
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
-  . <- NULL
+  . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
   if(is.null(score_args) && isFALSE(save_learner) && isFALSE(save_pred)){
     warning("no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
