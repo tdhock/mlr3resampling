@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2025.5.21
+Version: 2025.6.23
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -58,7 +58,9 @@ Imports:
     checkmate,
     paradox,
     mlr3 (>= 0.21.1),
-    mlr3misc
+    mlr3misc,
+    batchtools,
+    filelock
 Suggests:
     ggplot2,
     animint2,
@@ -70,6 +72,7 @@ Suggests:
     markdown,
     nc,
     rpart,
-    directlabels
+    directlabels,
+    mlr3torch, torch
 VignetteBuilder: knitr
 Remotes: mlr-org/mlr3

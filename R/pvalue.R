@@ -30,11 +30,10 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   levs <- c(
     levs.possible[levs.possible %in% levs.present],
     "")#for space above.
-  score_dt <- data.table(score_in)[
-  , Train_subsets := factor(train.subsets, levs)
-  ][
-  , value := get(value.var)
-  ][]
+  score_dt <- add_algorithm(data.table(score_in))[, let(
+    Train_subsets = factor(train.subsets, levs),
+    value = get(value.var)
+  )]
   score_wide <- dcast(
     score_dt,
     task_id + test.subset + algorithm + test.fold ~ train.subsets)
