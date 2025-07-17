@@ -19,6 +19,13 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10){
     ]$..row.id
     this.task$filter(some.ids)
   }
+  for(learner.i in seq_along(proj.grid$learners)){
+    L <- proj.grid$learners[[learner.i]]
+    if(inherits(L, "AutoTuner") && inherits(L$learner, "LearnerTorch")){
+      L$learner$param_set$set_values(patience=2)
+      L$learner$param_set$set_values(epochs=paradox::to_tune(upper=2, internal=TRUE))
+    }
+  }
   proj.grid$proj_dir <- file.path(proj_dir, "test")
   proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
   grid_dt <- do.call(proj_grid, proj.grid)
