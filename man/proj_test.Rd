@@ -11,7 +11,7 @@
   test project, and then reads any CSV result files.
 }
 \usage{
-proj_test(proj_dir, min_samples_per_stratum = 10)
+proj_test(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default)
 }
 \arguments{
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}
