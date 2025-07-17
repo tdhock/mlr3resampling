@@ -644,6 +644,10 @@ test_that("proj_test down-samples proportionally", {
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   out_list <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_identical(names(out_list), c("grid_jobs.csv", "learners_rpart.csv", "results.csv"))
+  expect_identical(out_list$grid_jobs.csv$iteration, rep(1L, 4))
+  test.grid <- readRDS(file.path(pkg.proj.dir, "test", "grid.rds"))
+  count.tab <- table(test.grid$tasks$easy$data(cols="person"))
+  expect_equal(as.numeric(count.tab), c(10, 90))
 })
 
 mlr3torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
