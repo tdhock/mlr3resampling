@@ -1,4 +1,6 @@
 proj_test <- function(proj_dir, min_samples_per_stratum = 10){
+  . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
+  ## Above to avoid CRAN NOTE.
   proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
   for(task.i in seq_along(proj.grid$tasks)){
     this.task <- proj.grid$tasks[[task.i]]
