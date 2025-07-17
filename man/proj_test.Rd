@@ -15,10 +15,12 @@ proj_test(proj_dir, min_samples_per_stratum = 10)
 }
 \arguments{
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}
-  \item{min_samples_per_stratum}{
-Minimum number of samples to include in the smallest stratum. Other
-strata will be down-sampled proportionally.
-}
+  \item{min_samples_per_stratum}{Minimum number of samples to include in
+    the smallest stratum. Other strata will be down-sampled proportionally.}
+  \item{edit_learner}{Function which inputs a learner object, and
+    changes it to take less time for testing. Default works for
+    \code{AutoTuner} based on \code{LearnerTorch}, reducing
+    max \code{epochs} and \code{patience} to 2.}
 }
 \value{
 List with names corresponding to CSV files in the test directory, and

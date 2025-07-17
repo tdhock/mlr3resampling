@@ -1,4 +1,12 @@
-proj_test <- function(proj_dir, min_samples_per_stratum = 10){
+edit_learner_default <- function(L){
+  if(inherits(L, "AutoTuner") && inherits(L$learner, "LearnerTorch")){
+    L$learner$param_set$set_values(patience=2)
+    L$learner$param_set$set_values(
+      epochs=paradox::to_tune(upper=2, internal=TRUE))
+  }
+}
+
+proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default){
   . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
   ## Above to avoid CRAN NOTE.
   proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
@@ -19,13 +27,7 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10){
     ]$..row.id
     this.task$filter(some.ids)
   }
-  for(learner.i in seq_along(proj.grid$learners)){
-    L <- proj.grid$learners[[learner.i]]
-    if(inherits(L, "AutoTuner") && inherits(L$learner, "LearnerTorch")){
-      L$learner$param_set$set_values(patience=2)
-      L$learner$param_set$set_values(epochs=paradox::to_tune(upper=2, internal=TRUE))
-    }
-  }
+  lapply(proj.grid$learners, edit_learner)
   proj.grid$proj_dir <- file.path(proj_dir, "test")
   proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
   grid_dt <- do.call(proj_grid, proj.grid)
