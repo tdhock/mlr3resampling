@@ -844,4 +844,6 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
     "0.weight.V1", "0.bias")
   expect_identical(names(weights_dt), expected_cols)
   expect_equal(nrow(weights_dt), expected_base)
+  test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+  expect_equal(max(test_out$learners_history.csv$epoch), 2)
 })
