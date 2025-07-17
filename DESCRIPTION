@@ -57,7 +57,7 @@ Imports:
     R6,
     checkmate,
     paradox,
-    mlr3 (>= 0.21.1),
+    mlr3 (>= 1.0.0),
     mlr3misc,
     batchtools,
     filelock
