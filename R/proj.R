@@ -19,8 +19,8 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10){
   }
   proj.grid$proj_dir <- file.path(proj_dir, "test")
   proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
-  grid_dt <- do.call(mlr3resampling::proj_grid, proj.grid)
-  mlr3resampling::proj_compute_until_done(proj.grid$proj_dir)
+  grid_dt <- do.call(proj_grid, proj.grid)
+  proj_compute_until_done(proj.grid$proj_dir)
   csv_list <- Sys.glob(file.path(proj.grid$proj_dir, "*.csv"))
   out_list <- list()
   for(csv_i in seq_along(csv_list)){

@@ -1,3 +1,7 @@
+Changes in version 2025.7.17
+
+- proj_test() for running one CV iteration with down-sampling (PR#35).
+
 Changes in version 2025.6.23
 
 - proj_* functions for SLURM load balancing (PR#32).
