@@ -1,3 +1,35 @@
+proj_test <- function(proj_dir, min_samples_per_stratum = 10){
+  proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
+  for(task.i in seq_along(proj.grid$tasks)){
+    this.task <- proj.grid$tasks[[task.i]]
+    stratum <- this.task$col_roles$stratum
+    strat_dt <- this.task$data(cols=stratum)[
+    , ..strat.i := 1:.N, by=stratum
+    ][
+    , ..row.id := 1:.N
+    ][]
+    count_dt <- strat_dt[, .(max.i=max(..strat.i)), by=stratum][order(max.i)]
+    count_min <- count_dt$max.i[1]
+    some.ids <- strat_dt[
+    , ..batch.i := ..strat.i/max(..strat.i)*count_min, by=stratum
+    ][
+      ..batch.i <= min_samples_per_stratum
+    ]$..row.id
+    this.task$filter(some.ids)
+  }
+  proj.grid$proj_dir <- file.path(proj_dir, "test")
+  proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
+  grid_dt <- do.call(mlr3resampling::proj_grid, proj.grid)
+  mlr3resampling::proj_compute_until_done(proj.grid$proj_dir)
+  csv_list <- Sys.glob(file.path(proj.grid$proj_dir, "*.csv"))
+  out_list <- list()
+  for(csv_i in seq_along(csv_list)){
+    out_csv <- csv_list[[csv_i]]
+    out_list[[basename(out_csv)]] <- fread(out_csv)
+  }
+  out_list
+}
+
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
