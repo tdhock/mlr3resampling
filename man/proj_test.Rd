@@ -11,7 +11,8 @@
   test project, and then reads any CSV result files.
 }
 \usage{
-proj_test(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default)
+proj_test(proj_dir, min_samples_per_stratum = 10,
+ edit_learner=edit_learner_default, max_jobs=Inf)
 }
 \arguments{
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}
@@ -21,6 +22,7 @@ proj_test(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_defa
     changes it to take less time for testing. Default works for
     \code{AutoTuner} based on \code{LearnerTorch}, reducing
     max \code{epochs} and \code{patience} to 2.}
+  \item{max_jobs}{Numeric, max number of jobs to test (default Inf).}
 }
 \value{
   Same value as \code{\link{proj_fread}} on test project (list of data tables).
