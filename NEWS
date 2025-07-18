@@ -2,6 +2,7 @@ Changes in version 2025.7.17 (PR#35)
 
 - proj_test() for running one CV iteration with down-sampling.
 - proj_fread() for reading all CSV results.
+- New Learners AutoTunerTorch_epochs, LearnerRegrCVGlmnetSave, LearnerClassifCVGlmnetSave, with special methods for proj_* functions: save_learner and edit_learner.
 
 Changes in version 2025.6.23
 
