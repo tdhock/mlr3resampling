@@ -586,7 +586,7 @@ test_that("regular K fold CV works in proj", {
       reg.task.list,
       reg.learner.list,
       kfold)
-  }, "no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
+  }, "no score_args nor save_pred, so there will no test error results")
   kfold$param_set$values$folds <- 5
   expect_warning({
     mlr3resampling::proj_grid(
@@ -1033,18 +1033,41 @@ test_that("torch and glmnet testing and interpretation", {
   stask$col_roles$stratum <- "Class"
   kfold <- mlr3::ResamplingCV$new()
   kfold$param_set$values$folds <- 2
+  gen_linear <- torch::nn_module(
+    "my_linear",
+    initialize = function(task) {
+      self$weight = torch::nn_linear(task$n_features, 1)
+    },
+    forward = function(x) {
+      self$weight(x)
+    }
+  )
   learner_list <- list(
-    mlr3resampling::LearnerClassifCVGlmnetSave$new())
+    mlr3resampling::AutoTunerTorch_epochs$new(
+      "torch_linear",
+      module_generator=gen_linear,
+      max_epochs=3,
+      batch_size=10,
+      measure_list=mlr3::msrs("classif.auc")
+    ),
+    mlr3resampling::LearnerClassifCVGlmnetSave$new()
+  )
   pkg.proj.dir <- tempfile()
   mlr3resampling::proj_grid(
     pkg.proj.dir,
     stask,    
     learner_list,
+    score_args=mlr3::msrs(c("classif.auc","classif.acc")),
     kfold)
   N_minor <- 30
   ctab <- table(stask$data(cols="Class"))
   etab <- floor(ctab/ctab[["R"]]*N_minor)
-  mlr3resampling::proj_test(pkg.proj.dir, min_samples_per_stratum = N_minor)
+  test_out <- mlr3resampling::proj_test(
+    pkg.proj.dir, min_samples_per_stratum = N_minor)
+  expect_equal(nrow(test_out$learners_weights.csv), 60)
+  expect_equal(nrow(test_out$learners_history.csv), 2)
+  expect_identical(test_out$results.csv$learner_id, c("torch_linear", "classif.cv_glmnet"))
+  expect_equal(sum(is.finite(test_out$results.csv$classif.auc)), 2)
   grid_list <- readRDS(file.path(pkg.proj.dir, "test", "grid.rds"))
   test_task <- grid_list$tasks[[1]]
   Class_dt <- test_task$data(cols="Class")

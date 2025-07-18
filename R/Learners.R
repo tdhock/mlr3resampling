@@ -19,6 +19,7 @@ AutoTunerTorch_epochs = R6::R6Class(
         measures_valid=measure_list,
         measures_train=measure_list,
         callbacks = mlr3torch::t_clbk("history"))
+      if(task_type=="classif")self$module_learner$predict_type <- "prob"
       mlr3::set_validate(self$module_learner, validate = validate)
       terminator <- mlr3tuning::mlr_terminators$get("evals")
       terminator$param_set$set_values(n_evals=1)
@@ -32,7 +33,7 @@ AutoTunerTorch_epochs = R6::R6Class(
         store_models = TRUE)
     },
     save_learner=function(){
-      self$archive$learners(1)[[1]]$model$callbacks$history
+      list(history=self$archive$learners(1)[[1]]$model$callbacks$history)
     },
     edit_learner=function(){
       self$learner$param_set$set_values(
@@ -45,14 +46,14 @@ AutoTunerTorch_epochs = R6::R6Class(
 
 save_learner_glmnet <- function(){
   weight <- as.matrix(coef(self$model))[-1,]
-  data.table(feature=names(weight), weight)
+  list(weights=data.table(feature=names(weight), weight))
 }
 
 LearnerRegrCVGlmnetSave = R6::R6Class(
   "LearnerRegrCVGlmnetSave",
   inherit = mlr3learners::LearnerRegrCVGlmnet,
   public = list(
-    save_learner=save_learner_glmnet
+    save_learner = save_learner_glmnet
   )
 )
 
@@ -60,6 +61,10 @@ LearnerClassifCVGlmnetSave = R6::R6Class(
   "LearnerClassifCVGlmnetSave",
   inherit = mlr3learners::LearnerClassifCVGlmnet,
   public = list(
-    save_learner=save_learner_glmnet
+    initialize = function(...){
+      super$initialize(...)
+      self$predict_type <- "prob"
+    },
+    save_learner = save_learner_glmnet
   )
 )

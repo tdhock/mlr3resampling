@@ -68,8 +68,8 @@ proj_fread <- function(proj_dir){
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
-  if(is.null(score_args) && isFALSE(save_learner) && isFALSE(save_pred)){
-    warning("no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
+  if(is.null(score_args) && isFALSE(save_pred)){
+    warning("no score_args nor save_pred, so there will no test error results")
   }
   proj.grid <- list()
   for(arg in c("tasks", "learners", "resamplings")){
