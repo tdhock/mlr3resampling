@@ -800,9 +800,10 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
     if(grepl("torch", L$id)){
       V <- L$tuning_result$internal_tuned_values[[1]]
       M <- L$archive$learners(1)[[1]]$model
+      arr_list <- lapply(M$network$parameters, torch::as_array)
       list(
         history=M$callbacks$history,
-        weights=do.call(data.table, lapply(M$network$parameters, torch::as_array)))
+        weights=do.call(data.table, arr_list))
     }
   }
   mlr3resampling::proj_grid(
@@ -846,4 +847,180 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
   expect_equal(nrow(weights_dt), expected_base)
   test_out <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_equal(max(test_out$learners_history.csv$epoch), 2)
+})
+
+if(mlr3torch_available)test_that("mlr3torch graph learner", {
+  N <- 80
+  set.seed(1)
+  people <- c("Alice","Bob")
+  reg.dt <- data.table(
+    x=runif(N, -2, 2),
+    person=factor(rep(people, each=0.5*N)))
+  reg.pattern.list <- list(
+    easy=function(x, person)x^2,
+    impossible=function(x, person)(x^2)*(-1)^as.integer(person))
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  kfold$param_set$values$folds <- 2
+  subsets <- "SA"
+  kfold$param_set$values$subsets <- subsets
+  reg.task.list <- list()
+  for(pattern in names(reg.pattern.list)){
+    f <- reg.pattern.list[[pattern]]
+    task.dt <- data.table(reg.dt)[
+    , y := f(x,person)+rnorm(N, sd=0.5)
+    ][]
+    task.obj <- mlr3::TaskRegr$new(
+      pattern, task.dt, target="y")
+    task.obj$col_roles$feature <- "x"
+    task.obj$col_roles$stratum <- "person"
+    task.obj$col_roles$subset <- "person"
+    reg.task.list[[pattern]] <- task.obj
+  }
+  n.epochs <- 3
+  measure_list <- mlr3::msrs(c("regr.rmse", "regr.mae"))
+  po_list <- list(
+    mlr3pipelines::po(
+      "select",
+      selector = mlr3pipelines::selector_type(c("numeric", "integer"))),
+    mlr3torch::PipeOpTorchIngressNumeric$new(),
+    mlr3torch::nn("linear", out_features=1),
+    ## mlr3pipelines::po(
+    ##   "torch_loss",
+    ##   loss_fun),
+    mlr3pipelines::po(
+      "torch_optimizer",
+      mlr3torch::t_opt("sgd", lr=0.1)),
+    mlr3pipelines::po(
+      "torch_callbacks",
+      mlr3torch::t_clbk("history")),
+    mlr3pipelines::po(
+      "torch_model_regr",
+      batch_size = 100000,
+      patience=n.epochs,
+      measures_valid=measure_list,
+      measures_train=measure_list,
+      epochs = paradox::to_tune(upper = n.epochs, internal = TRUE)))
+  graph <- Reduce(mlr3pipelines::concat_graphs, po_list)
+  glearner <- mlr3::as_learner(graph)
+  mlr3::set_validate(glearner, validate = 0.5)
+  reg.learner.list <- list(mlr3tuning::auto_tuner(
+    learner = glearner,
+    tuner = mlr3tuning::tnr("internal"),
+    resampling = mlr3::rsmp("insample"),
+    measure = mlr3::msr("internal_valid_score", minimize = TRUE),
+    term_evals = 1,
+    id="torch_linear",
+    store_models = TRUE))
+  get_history_graph_classif <- function(x){
+    learners <- x$learner_state$model$marshaled$tuning_instance$archive$learners
+    if(is.function(learners)){
+      L <- learners(1)[[1]]
+      L$model$torch_model_classif$model$callbacks$history
+    }
+  }
+  pkg.proj.dir <- tempfile()
+  mlr3resampling::proj_grid(
+    pkg.proj.dir,
+    reg.task.list,
+    reg.learner.list,
+    kfold,
+    score_args=measure_list,
+    save_learner = get_history_graph_classif)
+  mlr3resampling::proj_test(pkg.proj.dir)
+  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
+  expected_cols <- c(
+    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
+    "process", "regr.rmse", "regr.mae",
+    "task_id", "learner_id", "resampling_id", "test.subset",
+    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
+    "TODO")
+  expect_identical(names(model_dt), expected_cols)
+})
+
+
+if(mlr3torch_available)test_that("mlr3torch module learner", {
+  N <- 80
+  set.seed(1)
+  people <- c("Alice","Bob")
+  reg.dt <- data.table(
+    x=runif(N, -2, 2),
+    person=factor(rep(people, each=0.5*N)))
+  reg.pattern.list <- list(
+    easy=function(x, person)x^2,
+    impossible=function(x, person)(x^2)*(-1)^as.integer(person))
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  kfold$param_set$values$folds <- 2
+  subsets <- "SA"
+  kfold$param_set$values$subsets <- subsets
+  reg.task.list <- list()
+  for(pattern in names(reg.pattern.list)){
+    f <- reg.pattern.list[[pattern]]
+    task.dt <- data.table(reg.dt)[
+    , y := f(x,person)+rnorm(N, sd=0.5)
+    ][]
+    task.obj <- mlr3::TaskRegr$new(
+      pattern, task.dt, target="y")
+    task.obj$col_roles$feature <- "x"
+    task.obj$col_roles$stratum <- "person"
+    task.obj$col_roles$subset <- "person"
+    reg.task.list[[pattern]] <- task.obj
+  }
+  n.epochs <- 3
+  measure_list <- mlr3::msrs(c("regr.rmse", "regr.mae"))
+  nn_one_layer = torch::nn_module(
+    "nn_one_layer",
+    initialize = function(task, size_hidden) {
+      self$first = torch::nn_linear(task$n_features, size_hidden)
+      self$second = torch::nn_linear(size_hidden, length(task$class_names))
+    },
+    # argument x corresponds to the ingress token x
+    forward = function(x) {
+      x = self$first(x)
+      x = nnf_relu(x)
+      self$second(x)
+    }
+  )
+  learner = mlr3::lrn(
+    "regr.module",
+    module_generator = nn_one_layer,
+    ingress_tokens = list(x = mlr3torch::ingress_num()),
+    epochs = 3,
+    size_hidden = 20,
+    batch_size = 16
+  )
+  mlr3::set_validate(learner, validate = 0.5)
+  reg.learner.list <- list(mlr3tuning::auto_tuner(
+    learner = learner,
+    tuner = mlr3tuning::tnr("internal"),
+    resampling = mlr3::rsmp("insample"),
+    measure = mlr3::msr("internal_valid_score", minimize = TRUE),
+    term_evals = 1,
+    id="torch_dense",
+    store_models = TRUE))
+  get_history_module_classif <- function(x){
+    learners <- x$learner_state$model$marshaled$tuning_instance$archive$learners
+    if(is.function(learners)){
+      L <- learners(1)[[1]]
+      L$model$torch_model_classif$model$callbacks$history
+    }
+  }
+  pkg.proj.dir <- tempfile()
+  mlr3resampling::proj_grid(
+    pkg.proj.dir,
+    reg.task.list,
+    reg.learner.list,
+    kfold,
+    score_args=measure_list,
+    save_learner = get_history_module_classif)
+  mlr3resampling::proj_test(pkg.proj.dir)
+  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
+  expected_cols <- c(
+    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
+    "process", "regr.rmse", "regr.mae",
+    "task_id", "learner_id", "resampling_id", "test.subset",
+    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
+    "TODO")
+  expect_identical(names(model_dt), expected_cols)
 })
