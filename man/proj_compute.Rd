@@ -30,7 +30,9 @@ proj_compute_until_done(proj_dir, verbose = FALSE)
   \item{verbose}{Logical: print messages?}
 }
 \value{
-  Data table with one row of results.
+  \code{proj_compute} returns a data table with one row of results, and
+  \code{proj_compute_until_done} returns same result as
+  \code{\link{proj_fread}}.
 }
 \author{
   Toby Dylan Hocking

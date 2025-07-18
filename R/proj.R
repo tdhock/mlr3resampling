@@ -1,8 +1,75 @@
-proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
+edit_learner_default <- function(L){
+  if(is.function(L$edit_learner))return(L$edit_learner())
+  if(inherits(L, "AutoTuner")){
+    learner <- L$learner
+    if(inherits(learner, "GraphLearner")){
+      learner <- learner$base_learner()
+    }
+    if(inherits(learner, "LearnerTorch")){
+      learner$param_set$set_values(
+        patience=2,
+        epochs=paradox::to_tune(upper=2, internal=TRUE)
+      )
+    }
+  }
+}
+
+save_learner_default <- function(L){
+  if(is.function(L$save_learner))return(L$save_learner())
+}
+
+proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default, max_jobs=Inf){
+  . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
+  ## Above to avoid CRAN NOTE.
+  proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
+  for(task.i in seq_along(proj.grid$tasks)){
+    this.task <- proj.grid$tasks[[task.i]]
+    stratum <- this.task$col_roles$stratum
+    strat_dt <- if(length(stratum)){
+      this.task$data(cols=stratum)
+    }else{
+      data.table(stratum=rep(1L, this.task$nrow))
+    }
+    strat_dt[
+    , ..strat.i := 1:.N, by=stratum
+    ][
+    , ..row.id := this.task$row_ids
+    ][]
+    count_dt <- strat_dt[, .(max.i=max(..strat.i)), by=stratum][order(max.i)]
+    count_min <- count_dt$max.i[1]
+    some.ids <- strat_dt[
+    , ..batch.i := ..strat.i/max(..strat.i)*count_min, by=stratum
+    ][
+      ..batch.i <= min_samples_per_stratum
+    ]$..row.id
+    this.task$filter(some.ids)
+  }
+  lapply(proj.grid$learners, edit_learner)
+  proj.grid$proj_dir <- file.path(proj_dir, "test")
+  unlink(proj.grid$proj_dir, recursive = TRUE)
+  proj.grid$order_jobs <- function(DT){
+    indices <- which(DT$iteration==1)
+    indices[seq(1, min(length(indices), max_jobs))]
+  }
+  grid_dt <- do.call(proj_grid, proj.grid)
+  proj_compute_until_done(proj.grid$proj_dir)
+}
+
+proj_fread <- function(proj_dir){
+  csv_list <- Sys.glob(file.path(proj_dir, "*.csv"))
+  out_list <- list()
+  for(csv_i in seq_along(csv_list)){
+    out_csv <- csv_list[[csv_i]]
+    out_list[[basename(out_csv)]] <- fread(out_csv)
+  }
+  out_list
+}  
+
+proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
-  if(is.null(score_args) && isFALSE(save_learner) && isFALSE(save_pred)){
-    warning("no score_args, nor save_learner, nor save_pred, so there will no results other than computation times")
+  if(is.null(score_args) && isFALSE(save_pred)){
+    warning("no score_args nor save_pred, so there will no test error results")
   }
   proj.grid <- list()
   for(arg in c("tasks", "learners", "resamplings")){
@@ -146,6 +213,7 @@ proj_compute_until_done <- function(proj_dir, verbose=FALSE){
       if(verbose)print(result)
     }
   }
+  proj_fread(proj_dir)
 }
 
 proj_results <- function(proj_dir){
