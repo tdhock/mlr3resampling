@@ -24,7 +24,6 @@
 \usage{
 proj_compute(proj_dir, verbose = FALSE)
 proj_compute_until_done(proj_dir, verbose = FALSE)
-proj_fread(proj_dir)
 }
 \arguments{
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}

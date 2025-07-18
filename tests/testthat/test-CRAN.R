@@ -849,7 +849,7 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
   expect_equal(max(test_out$learners_history.csv$epoch), 2)
 })
 
-if(mlr3torch_available)test_that("mlr3torch graph learner", {
+if(mlr3torch_available && requireNamespace("mlr3pipelines"))test_that("mlr3torch graph learner", {
   N <- 80
   set.seed(1)
   people <- c("Alice","Bob")
@@ -924,12 +924,12 @@ if(mlr3torch_available)test_that("mlr3torch graph learner", {
     kfold,
     score_args=measure_list,
     save_learner = get_history_graph)
-  test_list <- mlr3resampling::proj_test(pkg.proj.dir)
-  expect_identical(names(test_list), c("grid_jobs.csv", "learners.csv", "results.csv"))
-  expect_equal(max(test_list$learners.csv$epoch), 2)
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
-  expect_identical(names(test_list), c("grid_jobs.csv", "learners.csv", "results.csv"))
-  expect_equal(max(test_list$learners.csv$epoch), 3)
+  test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+  expect_identical(names(test_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(test_out$learners.csv$epoch), 2)
+  full_out <- mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  expect_identical(names(full_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(full_out$learners.csv$epoch), 3)
 })
 
 if(mlr3torch_available)test_that("mlr3torch module learner", {
@@ -959,18 +959,17 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
     task.obj$col_roles$subset <- "person"
     reg.task.list[[pattern]] <- task.obj
   }
-  n.epochs <- 3
   measure_list <- mlr3::msrs(c("regr.rmse", "regr.mae"))
   nn_one_layer = torch::nn_module(
     "nn_one_layer",
     initialize = function(task, size_hidden) {
       self$first = torch::nn_linear(task$n_features, size_hidden)
-      self$second = torch::nn_linear(size_hidden, length(task$class_names))
+      self$second = torch::nn_linear(size_hidden, 1)
     },
     # argument x corresponds to the ingress token x
     forward = function(x) {
       x = self$first(x)
-      x = nnf_relu(x)
+      x = torch::nnf_relu(x)
       self$second(x)
     }
   )
@@ -980,8 +979,11 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
     ingress_tokens = list(x = mlr3torch::ingress_num()),
     epochs = 3,
     size_hidden = 20,
-    batch_size = 16
-  )
+    batch_size = 16)
+  learner$param_set$values[
+    paste0("measures_",c("train","valid"))
+  ] <- mlr3::msrs("regr.rmse")
+  learner$callbacks <- mlr3torch::t_clbk("history")
   mlr3::set_validate(learner, validate = 0.5)
   reg.learner.list <- list(mlr3tuning::auto_tuner(
     learner = learner,
@@ -991,12 +993,8 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
     term_evals = 1,
     id="torch_dense",
     store_models = TRUE))
-  get_history_module_classif <- function(x){
-    learners <- x$learner_state$model$marshaled$tuning_instance$archive$learners
-    if(is.function(learners)){
-      L <- learners(1)[[1]]
-      L$model$torch_model_classif$model$callbacks$history
-    }
+  get_history_module <- function(x){
+    x$archive$learners(1)[[1]]$model$callbacks$history
   }
   pkg.proj.dir <- tempfile()
   mlr3resampling::proj_grid(
@@ -1005,15 +1003,11 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
     reg.learner.list,
     kfold,
     score_args=measure_list,
-    save_learner = get_history_module_classif)
-  mlr3resampling::proj_test(pkg.proj.dir)
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
-  model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
-  expected_cols <- c(
-    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
-    "process", "regr.rmse", "regr.mae",
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
-    "TODO")
-  expect_identical(names(model_dt), expected_cols)
+    save_learner = get_history_module)
+  test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+  expect_identical(names(test_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(test_out$learners.csv$epoch), 2)
+  full_out <- mlr3resampling::proj_compute_until_done(pkg.proj.dir, verbose=TRUE)
+  expect_identical(names(full_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(full_out$learners.csv$epoch), 3)
 })

@@ -1,6 +1,7 @@
 \name{proj_results}
 \alias{proj_results}
 \alias{proj_results_save}
+\alias{proj_fread}
 \title{
   Combine and save results in a project
 }
