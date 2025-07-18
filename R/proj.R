@@ -1,15 +1,21 @@
 edit_learner_default <- function(L){
+  if(is.function(L$edit_learner))return(L$edit_learner())
   if(inherits(L, "AutoTuner")){
     learner <- L$learner
     if(inherits(learner, "GraphLearner")){
       learner <- learner$base_learner()
     }
     if(inherits(learner, "LearnerTorch")){
-      learner$param_set$set_values(patience=2)
       learner$param_set$set_values(
-        epochs=paradox::to_tune(upper=2, internal=TRUE))
+        patience=2,
+        epochs=paradox::to_tune(upper=2, internal=TRUE)
+      )
     }
   }
+}
+
+save_learner_default <- function(L){
+  if(is.function(L$save_learner))return(L$save_learner())
 }
 
 proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default, max_jobs=Inf){
@@ -19,10 +25,15 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   for(task.i in seq_along(proj.grid$tasks)){
     this.task <- proj.grid$tasks[[task.i]]
     stratum <- this.task$col_roles$stratum
-    strat_dt <- this.task$data(cols=stratum)[
+    strat_dt <- if(length(stratum)){
+      this.task$data(cols=stratum)
+    }else{
+      data.table(stratum=rep(1L, this.task$nrow))
+    }
+    strat_dt[
     , ..strat.i := 1:.N, by=stratum
     ][
-    , ..row.id := 1:.N
+    , ..row.id := this.task$row_ids
     ][]
     count_dt <- strat_dt[, .(max.i=max(..strat.i)), by=stratum][order(max.i)]
     count_min <- count_dt$max.i[1]
@@ -54,7 +65,7 @@ proj_fread <- function(proj_dir){
   out_list
 }  
 
-proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
+proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
   if(is.null(score_args) && isFALSE(save_learner) && isFALSE(save_pred)){

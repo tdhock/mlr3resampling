@@ -19,8 +19,9 @@ proj_test(proj_dir, min_samples_per_stratum = 10,
   \item{min_samples_per_stratum}{Minimum number of samples to include in
     the smallest stratum. Other strata will be down-sampled proportionally.}
   \item{edit_learner}{Function which inputs a learner object, and
-    changes it to take less time for testing. Default works for
-    \code{AutoTuner} based on \code{LearnerTorch}, reducing
+    changes it to take less time for testing. Default calls
+    \code{edit_learner} method if it exists, or for
+    \code{AutoTuner} based on \code{LearnerTorch}, reduces
     max \code{epochs} and \code{patience} to 2.}
   \item{max_jobs}{Numeric, max number of jobs to test (default Inf).}
 }
