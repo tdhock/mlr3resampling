@@ -1,12 +1,18 @@
 edit_learner_default <- function(L){
-  if(inherits(L, "AutoTuner") && inherits(L$learner, "LearnerTorch")){
-    L$learner$param_set$set_values(patience=2)
-    L$learner$param_set$set_values(
-      epochs=paradox::to_tune(upper=2, internal=TRUE))
+  if(inherits(L, "AutoTuner")){
+    learner <- L$learner
+    if(inherits(learner, "GraphLearner")){
+      learner <- learner$base_learner()
+    }
+    if(inherits(learner, "LearnerTorch")){
+      learner$param_set$set_values(patience=2)
+      learner$param_set$set_values(
+        epochs=paradox::to_tune(upper=2, internal=TRUE))
+    }
   }
 }
 
-proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default){
+proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default, max_jobs=Inf){
   . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
   ## Above to avoid CRAN NOTE.
   proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
@@ -29,7 +35,11 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   }
   lapply(proj.grid$learners, edit_learner)
   proj.grid$proj_dir <- file.path(proj_dir, "test")
-  proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
+  unlink(proj.grid$proj_dir, recursive = TRUE)
+  proj.grid$order_jobs <- function(DT){
+    indices <- which(DT$iteration==1)
+    indices[seq(1, min(length(indices), max_jobs))]
+  }
   grid_dt <- do.call(proj_grid, proj.grid)
   proj_compute_until_done(proj.grid$proj_dir)
 }

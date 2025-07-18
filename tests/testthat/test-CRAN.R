@@ -924,9 +924,23 @@ if(mlr3torch_available && requireNamespace("mlr3pipelines"))test_that("mlr3torch
     kfold,
     score_args=measure_list,
     save_learner = get_history_graph)
-  test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+  test_out_max <- mlr3resampling::proj_test(
+    pkg.proj.dir,
+    max_jobs = 1)
+  expect_identical(names(test_out_max), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(test_out_max$learners.csv$epoch), 2)
+  expect_equal(nrow(test_out_max$results.csv), 1)
+  edit_learner_graph <- function(L){
+    L$learner$base_learner()$param_set$set_values(
+      patience=1,
+      epochs=paradox::to_tune(upper=1, internal=TRUE))
+  }
+  test_out <- mlr3resampling::proj_test(
+    pkg.proj.dir,
+    edit_learner = edit_learner_graph)
   expect_identical(names(test_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
-  expect_equal(max(test_out$learners.csv$epoch), 2)
+  expect_equal(max(test_out$learners.csv$epoch), 1)
+  expect_equal(nrow(test_out$results.csv), 2)
   full_out <- mlr3resampling::proj_compute_until_done(pkg.proj.dir)
   expect_identical(names(full_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(full_out$learners.csv$epoch), 3)
@@ -973,11 +987,13 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
       self$second(x)
     }
   )
+  n.epochs <- 3
   learner = mlr3::lrn(
     "regr.module",
     module_generator = nn_one_layer,
     ingress_tokens = list(x = mlr3torch::ingress_num()),
-    epochs = 3,
+    epochs = paradox::to_tune(upper=n.epochs, internal=TRUE),
+    patience = n.epochs,
     size_hidden = 20,
     batch_size = 16)
   learner$param_set$values[
