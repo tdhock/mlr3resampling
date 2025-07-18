@@ -44,8 +44,8 @@ AutoTunerTorch_epochs = R6::R6Class(
   )
 )
 
-save_learner_glmnet <- function(){
-  weight <- as.matrix(coef(self$model))[-1,]
+save_learner_glmnet <- function(x){
+  weight <- as.matrix(coef(x$model))[-1,]
   list(weights=data.table(feature=names(weight), weight))
 }
 
@@ -53,7 +53,7 @@ LearnerRegrCVGlmnetSave = R6::R6Class(
   "LearnerRegrCVGlmnetSave",
   inherit = mlr3learners::LearnerRegrCVGlmnet,
   public = list(
-    save_learner = save_learner_glmnet
+    save_learner = function()save_learner_glmnet(self)
   )
 )
 
@@ -65,6 +65,6 @@ LearnerClassifCVGlmnetSave = R6::R6Class(
       super$initialize(...)
       self$predict_type <- "prob"
     },
-    save_learner = save_learner_glmnet
+    save_learner = function()save_learner_glmnet(self)
   )
 )

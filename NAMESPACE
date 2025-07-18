@@ -1,6 +1,6 @@
 import(R6, checkmate, data.table, mlr3, mlr3misc, paradox)
 importFrom("utils", "str")
-importFrom("stats", "sd", "t.test")
+importFrom("stats", "sd", "t.test", "coef")
 export(ResamplingSameOtherCV, score, ResamplingVariableSizeTrainCV, ResamplingSameOtherSizesCV, pvalue)
 S3method("plot", "score")
 S3method("plot", "pvalue")

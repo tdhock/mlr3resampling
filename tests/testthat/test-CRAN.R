@@ -1028,7 +1028,7 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
   expect_equal(max(full_out$learners.csv$epoch), 3)
 })
 
-test_that("torch and glmnet testing and interpretation", {
+if(mlr3torch_available && requireNamespace("glmnet"))test_that("torch and glmnet testing and interpretation", {
   stask <- mlr3::tsk("sonar")
   stask$col_roles$stratum <- "Class"
   kfold <- mlr3::ResamplingCV$new()
