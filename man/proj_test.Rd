@@ -23,8 +23,7 @@ proj_test(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_defa
     max \code{epochs} and \code{patience} to 2.}
 }
 \value{
-List with names corresponding to CSV files in the test directory, and
-values are the data tables that result from \code{fread}.
+  Same value as \code{\link{proj_fread}} on test project (list of data tables).
 }
 \author{
 Toby Dylan Hocking

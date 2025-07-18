@@ -884,9 +884,9 @@ if(mlr3torch_available)test_that("mlr3torch graph learner", {
       selector = mlr3pipelines::selector_type(c("numeric", "integer"))),
     mlr3torch::PipeOpTorchIngressNumeric$new(),
     mlr3torch::nn("linear", out_features=1),
-    ## mlr3pipelines::po(
-    ##   "torch_loss",
-    ##   loss_fun),
+    mlr3pipelines::po(
+      "torch_loss",
+      mlr3torch::t_loss("mse")),
     mlr3pipelines::po(
       "torch_optimizer",
       mlr3torch::t_opt("sgd", lr=0.1)),
@@ -911,12 +911,10 @@ if(mlr3torch_available)test_that("mlr3torch graph learner", {
     term_evals = 1,
     id="torch_linear",
     store_models = TRUE))
-  get_history_graph_classif <- function(x){
-    learners <- x$learner_state$model$marshaled$tuning_instance$archive$learners
-    if(is.function(learners)){
-      L <- learners(1)[[1]]
-      L$model$torch_model_classif$model$callbacks$history
-    }
+  get_history_graph <- function(x){
+    M <- x$archive$learners(1)[[1]]$model
+    at <- grep("torch_model", ls(M), value=TRUE)
+    M[[at]]$model$callbacks$history
   }
   pkg.proj.dir <- tempfile()
   mlr3resampling::proj_grid(
@@ -925,19 +923,14 @@ if(mlr3torch_available)test_that("mlr3torch graph learner", {
     reg.learner.list,
     kfold,
     score_args=measure_list,
-    save_learner = get_history_graph_classif)
-  mlr3resampling::proj_test(pkg.proj.dir)
+    save_learner = get_history_graph)
+  test_list <- mlr3resampling::proj_test(pkg.proj.dir)
+  expect_identical(names(test_list), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(test_list$learners.csv$epoch), 2)
   mlr3resampling::proj_compute_until_done(pkg.proj.dir)
-  model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
-  expected_cols <- c(
-    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
-    "process", "regr.rmse", "regr.mae",
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
-    "TODO")
-  expect_identical(names(model_dt), expected_cols)
+  expect_identical(names(test_list), c("grid_jobs.csv", "learners.csv", "results.csv"))
+  expect_equal(max(test_list$learners.csv$epoch), 3)
 })
-
 
 if(mlr3torch_available)test_that("mlr3torch module learner", {
   N <- 80

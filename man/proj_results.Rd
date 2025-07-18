@@ -13,6 +13,7 @@
 \usage{
 proj_results(proj_dir)
 proj_results_save(proj_dir)
+proj_fread(proj_dir)
 }
 \arguments{
   \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
@@ -20,7 +21,7 @@ proj_results_save(proj_dir)
 \details{
   This is Step 3 out of the typical 3 step pipeline (init grid, submit, read results).
   Actually, if step 2 worked as intended, the last \code{\link{proj_compute}}
-  calls \code{\link{proj_results_save}}, which saves up to three result files to disk
+  calls \code{\link{proj_results_save}}, which saves result files to disk
   that you can read directly:
   \describe{
     \item{\code{results.csv}}{contains test measures for each split, and
@@ -31,11 +32,17 @@ proj_results_save(proj_dir)
     \item{\code{learners.csv}}{only exists if \code{learner} column is a
       data frame, in which case it contains the atomic columns, along
       with meta-data describing each split.}
+    \item{\code{learners_*.csv}}{only exists if \code{learner} column is
+      a named list of data frames: star in file name is expanded using
+      list names, with values taken from atomic columns.}
   }
 }
 \value{
   \code{proj_results} returns a data table with all columns, whereas
   \code{proj_results_save} returns the same table with only atomic columns.
+  \code{proj_fread} returns a list
+  with names corresponding to CSV files in the test directory, and
+  values are the data tables that result from \code{fread}.
 }
 \author{
 Toby Dylan Hocking
@@ -80,6 +87,6 @@ mlr3resampling::proj_grid(
   order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
 mlr3resampling::proj_compute_until_done(pkg.proj.dir)
-fread(file.path(pkg.proj.dir, "results.csv"))
+mlr3resampling::proj_results(pkg.proj.dir)
 
 }

@@ -1,6 +1,7 @@
-Changes in version 2025.7.17
+Changes in version 2025.7.17 (PR#35)
 
-- proj_test() for running one CV iteration with down-sampling (PR#35).
+- proj_test() for running one CV iteration with down-sampling.
+- proj_fread() for reading all CSV results.
 
 Changes in version 2025.6.23
 

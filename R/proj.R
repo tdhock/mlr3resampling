@@ -32,14 +32,17 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   proj.grid$order_jobs <- function(DT)which(DT$iteration==1)
   grid_dt <- do.call(proj_grid, proj.grid)
   proj_compute_until_done(proj.grid$proj_dir)
-  csv_list <- Sys.glob(file.path(proj.grid$proj_dir, "*.csv"))
+}
+
+proj_fread <- function(proj_dir){
+  csv_list <- Sys.glob(file.path(proj_dir, "*.csv"))
   out_list <- list()
   for(csv_i in seq_along(csv_list)){
     out_csv <- csv_list[[csv_i]]
     out_list[[basename(out_csv)]] <- fread(out_csv)
   }
   out_list
-}
+}  
 
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=FALSE, save_pred=FALSE){
   . <- n.train.groups <- NULL
@@ -189,6 +192,7 @@ proj_compute_until_done <- function(proj_dir, verbose=FALSE){
       if(verbose)print(result)
     }
   }
+  proj_fread(proj_dir)
 }
 
 proj_results <- function(proj_dir){
