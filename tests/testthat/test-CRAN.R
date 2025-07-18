@@ -1030,6 +1030,7 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
 
 test_that("torch and glmnet testing and interpretation", {
   stask <- mlr3::tsk("sonar")
+  stask$col_roles$stratum <- "Class"
   kfold <- mlr3::ResamplingCV$new()
   kfold$param_set$values$folds <- 2
   learner_list <- list(
@@ -1040,7 +1041,7 @@ test_that("torch and glmnet testing and interpretation", {
     stask,    
     learner_list,
     kfold)
-  N_minor <- 5
+  N_minor <- 30
   ctab <- table(stask$data(cols="Class"))
   etab <- floor(ctab/ctab[["R"]]*N_minor)
   mlr3resampling::proj_test(pkg.proj.dir, min_samples_per_stratum = N_minor)
@@ -1048,6 +1049,5 @@ test_that("torch and glmnet testing and interpretation", {
   test_task <- grid_list$tasks[[1]]
   Class_dt <- test_task$data(cols="Class")
   Class_tab <- table(Class_dt$Class)
-  Class_int <- as.integer(Class_tab)
-  expect_equal(Class_int, c(5,5))
+  expect_equal(as.numeric(Class_tab), as.numeric(etab))
 })
