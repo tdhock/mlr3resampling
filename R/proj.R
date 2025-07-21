@@ -232,6 +232,8 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE, 
   reg <- batchtools::makeRegistry(reg.dir)
   if(!is.null(cluster.functions))reg$cluster.functions <- cluster.functions
   bm.jobs <- batchtools::batchMap(function(i){
+    wait.seconds <- Sys.getenv("SLURM_ARRAY_TASK_ID", 0)
+    Sys.sleep(wait.seconds)
     mlr3resampling::proj_compute_until_done(proj_dir, verbose=verbose)
   }, seq_len(tasks))
   if(identical(reg$cluster.functions$name, "Slurm")){
