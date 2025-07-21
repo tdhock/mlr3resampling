@@ -930,6 +930,8 @@ if(mlr3torch_available && requireNamespace("mlr3pipelines"))test_that("mlr3torch
   expect_identical(names(test_out_max), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(test_out_max$learners.csv$epoch), 2)
   expect_equal(nrow(test_out_max$results.csv), 1)
+  proj.grid <- readRDS(file.path(pkg.proj.dir,"test","grid.rds"))
+  expect_equal(length(proj.grid$tasks), 1)
   edit_learner_graph <- function(L){
     L$learner$base_learner()$param_set$set_values(
       patience=1,
