@@ -93,11 +93,9 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     }
     proj.grid[[fun_name]] <- fun
   }
-  dir.create(proj_dir, showWarnings = FALSE)
-  saveRDS(proj.grid, file.path(proj_dir, "grid.rds"))
   ml_job_dt_list <- list()
   for(resampling.i in seq_along(proj.grid$resamplings)){
-    resampling.obj <- proj.grid$resamplings[[resampling.i]]
+    resampling.obj <- proj.grid$resamplings[[resampling.i]]$clone()
     for(task.i in seq_along(proj.grid$tasks)){
       task.obj <- proj.grid$tasks[[task.i]]
       resampling.obj$instantiate(task.obj)
@@ -125,6 +123,10 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     if(!is.integer(ord_vec))stop("order_jobs should return integer")
     ml_job_dt <- ml_job_dt[ord_vec]
   }
+  task.i.max <- max(ml_job_dt$task.i)
+  proj.grid$tasks <- proj.grid$tasks[seq(1, task.i.max)]
+  dir.create(proj_dir, showWarnings = FALSE)
+  saveRDS(proj.grid, file.path(proj_dir, "grid.rds"))
   grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
   saveRDS(ml_job_dt, grid_jobs.rds)
   grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
