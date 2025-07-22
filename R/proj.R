@@ -142,6 +142,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     }
   }
   fwrite(out_dt, grid_jobs.csv)
+  message(sprintf('grid with %d jobs created! Test one job with the following code in a new R session:\nmlr3resampling::proj_test("%s", max_jobs=1)', nrow(ml_job_dt), proj_dir))
   ml_job_dt
 }
 
