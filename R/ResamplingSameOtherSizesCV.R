@@ -91,7 +91,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         )[, stratum := .GRP, by=c(task$col_roles$stratum)][]
       }
       group.row.dt <- data.table(
-        subset.dt, strata.dt, group=avec, row_id=seq_along(avec))
+        subset.dt, strata.dt, group=avec, row_id=task$row_ids)
       sample.dt <- group.row.dt[
       , private$.sample(unique(group), task=task)
       , by=stratum]
