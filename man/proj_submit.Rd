@@ -4,11 +4,7 @@
   Submit resampling split jobs in parallel
 }
 \description{
-  Before running this function, you should define
-  \code{cluster.functions} in your \code{~/.batchtools.conf.R} file.
-  It makes a batchtools registry, then runs
-  \code{batchtools::batchMap()} and \code{batchtools::submitJobs()};
-  each iteration runs \code{\link{proj_compute_until_done}}.
+  Runs jobs in parallel using MPI.
 }
 \usage{
 proj_submit(
@@ -17,20 +13,18 @@ proj_submit(
 }
 \arguments{
   \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
-  \item{tasks}{Positive integer: number of batchtools jobs, translated
-    into one SLURM job array with this number of tasks.}
+  \item{tasks}{Positive integer: \code{ntasks} parameter for SLURM scheduler, one for
+    manager, others are workers.}
   \item{hours}{Hours of walltime to ask the SLURM scheduler.}
   \item{gigabytes}{Gigabytes of memory to ask the SLURM scheduler.}
   \item{verbose}{Logical: print messages?}
-  \item{cluster.functions}{Cluster functions from \code{batchtools},
-    useful for testing.}
 }
 \details{
   This is Step 2 out of the
   typical 3 step pipeline (init grid, submit, read results).
 }
 \value{
-  The batchtools registry.
+  Nothing.
 }
 \author{
 Toby Dylan Hocking

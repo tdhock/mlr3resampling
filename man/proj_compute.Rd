@@ -1,6 +1,5 @@
 \name{proj_compute}
 \alias{proj_compute}
-\alias{proj_compute_until_done}
 \title{
   Compute resampling results in a project
 }
@@ -11,7 +10,6 @@
   After having run \code{train()} and \code{predict()}, a data table
   with one row is saved to an RDS file in the \code{grid_jobs}
   directory, and \code{status="done"} is updated.
-  \code{proj_compute_until_done()} keeps doing that in a while loop.
 }
 \details{
   If everything goes well, the user should not need to run this
@@ -22,17 +20,15 @@
   since it runs one split at a time.
 }
 \usage{
-proj_compute(proj_dir, verbose = FALSE)
-proj_compute_until_done(proj_dir, verbose = FALSE)
+proj_compute(grid_job_i, proj_dir, verbose = FALSE)
 }
 \arguments{
+  \item{grid_job_i}{integer from 1 to number of jobs.}
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}
   \item{verbose}{Logical: print messages?}
 }
 \value{
-  \code{proj_compute} returns a data table with one row of results, and
-  \code{proj_compute_until_done} returns same result as
-  \code{\link{proj_fread}}.
+  \code{proj_compute} returns a data table with one row of results.
 }
 \author{
   Toby Dylan Hocking

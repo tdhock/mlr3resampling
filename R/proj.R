@@ -146,22 +146,17 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   ml_job_dt
 }
 
-proj_compute <- function(proj_dir, verbose=FALSE){
+proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   status <- . <- task.i <- learner.i <- resampling.i <- iteration <- NULL
   ## Above to avoid CRAN NOTE.
   grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
-  grid_jobs.csv.lock <- paste0(grid_jobs.csv, ".lock")
-  before.lock <- filelock::lock(grid_jobs.csv.lock)
   grid_jobs_dt <- fread(grid_jobs.csv)
-  not.started <- grid_jobs_dt$status == "not started"
-  grid_job_i <- NULL
-  if(any(not.started)){
-    grid_job_i <- which(not.started)[1]
-    grid_jobs_dt[grid_job_i, status := "started"]
-    fwrite(grid_jobs_dt, grid_jobs.csv)
+  if(!(
+    is.integer(grid_job_i) && length(grid_job_i)==1 && is.finite(grid_job_i) &&
+      1 <= grid_job_i && grid_job_i <= nrow(grid_jobs_dt)
+  )){
+    stop("grid_job_i must be integer from 1 to ", nrow(grid_jobs_dt))
   }
-  filelock::unlock(before.lock)
-  if(is.null(grid_job_i))return(NULL)
   if(verbose)cat(sprintf(
     "Starting ML job %4d / %4d\n", grid_job_i, nrow(grid_jobs_dt)))
   start.time <- Sys.time()
@@ -182,7 +177,7 @@ proj_compute <- function(proj_dir, verbose=FALSE){
   result.row <- data.table(
     grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
     start.time, end.time=Sys.time(),
-    process=Sys.getenv("SLURM_ARRAY_TASK_ID", Sys.getpid()),
+    process=pbdMPI::comm.rank(),
     learner=list(proj.grid$save_learner(this.learner)),
     pred=list(proj.grid$save_pred(pred)))
   if(is.list(proj.grid$score_args)){
@@ -192,36 +187,22 @@ proj_compute <- function(proj_dir, verbose=FALSE){
   result.rds <- file.path(proj_dir, "grid_jobs", paste0(grid_job_i, ".rds"))
   dir.create(dirname(result.rds), showWarnings = FALSE)
   saveRDS(result.row, result.rds)
-  ## update status.
-  after.lock <- filelock::lock(grid_jobs.csv.lock)
-  grid_jobs_dt <- fread(grid_jobs.csv)
-  grid_jobs_dt[grid_job_i, status := "done"]
-  fwrite(grid_jobs_dt, grid_jobs.csv)
-  filelock::unlock(after.lock)
-  ## check if all done.
-  if(verbose)print(grid_jobs_dt[, table(status)])
-  if(all(grid_jobs_dt$status=="done")){
-    proj_results_save(proj_dir)
-  }
-  result.row
 }
 
-proj_compute_until_done <- function(proj_dir, verbose=FALSE){
-  done <- FALSE
-  while(!done){
-    result <- proj_compute(proj_dir, verbose=verbose)
-    if(is.null(result)){
-      done <- TRUE
-    }else{
-      if(verbose)print(result)
-    }
-  }
-  proj_fread(proj_dir)
-}
-
-proj_results <- function(proj_dir){
+proj_results <- function(proj_dir, verbose=FALSE){
   rds.vec <- Sys.glob(file.path(proj_dir, "grid_jobs", "*.rds"))
-  res_dt <- rbindlist(lapply(rds.vec, readRDS))
+  res_dt_list <- list()
+  for(job.i in seq_along(rds.vec)){
+    job.rds <- rds.vec[[job.i]]
+    state <- tryCatch({
+      res_dt_list[[job.rds]] <- readRDS(job.rds)
+      "OK"
+    }, error=function(e){
+      sprintf("%s: %s", class(e)[1], e[["message"]])
+    })
+    if(verbose)cat(sprintf("%4d / %4d %s %s\n", job.i, length(rds.vec), job.rds, state))
+  }
+  res_dt <- rbindlist(res_dt_list)
   grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
   ml_job_dt <- readRDS(grid_jobs.rds)
   res_dt[
@@ -230,31 +211,38 @@ proj_results <- function(proj_dir){
     nomatch=0L]
 }
 
-proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE, cluster.functions=NULL){
-  reg.dir <- file.path(proj_dir, "registry")
-  reg <- batchtools::makeRegistry(reg.dir)
-  if(!is.null(cluster.functions))reg$cluster.functions <- cluster.functions
-  bm.jobs <- batchtools::batchMap(function(i){
-    wait.seconds <- Sys.getenv("SLURM_ARRAY_TASK_ID", 0)
-    Sys.sleep(wait.seconds)
-    mlr3resampling::proj_compute_until_done(proj_dir, verbose=verbose)
-  }, seq_len(tasks))
-  if(identical(reg$cluster.functions$name, "Slurm")){
-    bm.jobs$chunk <- 1
-    resources <- list(
-      walltime = 60*60*hours,#seconds
-      memory = 1024*gigabytes,#megabytes per cpu
-      ncpus=1,  #>1 for multicore/parallel jobs.
-      ntasks=1, #>1 for MPI jobs.
-      chunks.as.arrayjobs=TRUE)
-  }else{
-    resources <- list()
+proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
+  param <- function(name, ...){
+    paste0("#SBATCH --", name, "=", ...)
   }
-  batchtools::submitJobs(bm.jobs, resources)
-  reg
+  MPI.out <- file.path(proj_dir, "MPI.out")
+  sh_code <- paste(c(
+    "#!/bin/bash",
+    param("ntasks", tasks),
+    param("time", hours*60),
+    param("mem-per-cpu", gigabytes, "G"),
+    param("cpus-per-task", 1),
+    param("output", MPI.out),
+    param("error", MPI.out),
+    paste("srun Rscript", MPI.R)
+  ), collapse="\n")
+  MPI.sh <- file.path(proj_dir, "MPI.sh")
+  cat(sh_code, file=MPI.sh)
+  grid_jobs_dt <- file.path(proj_dir, "grid_jobs.csv")
+  R_code <- paste(c(
+    sprintf('proj_dir <- "%s"', normalizePath(proj_dir)),
+    sprintf(
+      'pbdMPI::task.pull(1:%d, mlr3resampling::proj_compute, proj_dir)'
+      nrow(grid_jobs_dt)),
+    'if(pbdMPI::comm.rank()==0)mlr3resampling::proj_results_save(proj_dir)',
+    'pbdMPI::finalize()'
+  ), collapse="\n")
+  MPI.R <- file.path(proj_dir, "MPI.R")
+  cat(R_code, file=MPI.R)
+  system(paste("sbatch", MPI.sh))
 }
 
-proj_results_save <- function(proj_dir){
+proj_results_save <- function(proj_dir, verbose=FALSE){
   learner <- NULL
   ## above for CRAN check.
   only_atomic <- function(in_dt){
@@ -268,7 +256,7 @@ proj_results_save <- function(proj_dir){
     pre <- paste0("learners", suffix)
     learner_out_list[[pre]][[paste(row.i)]] <<- data.table(atomic_row, out.df)
   }
-  join_dt <- proj_results(proj_dir)
+  join_dt <- proj_results(proj_dir, verbose=verbose)
   saveRDS(join_dt, file.path(proj_dir, "results.rds"))
   learner_out_list <- list()
   for(row.i in 1:nrow(join_dt)){

@@ -59,8 +59,7 @@ Imports:
     paradox,
     mlr3 (>= 1.0.0),
     mlr3misc,
-    batchtools,
-    filelock
+    pbdMPI
 Suggests:
     ggplot2,
     animint2,

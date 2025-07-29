@@ -12,12 +12,14 @@
   and \code{results.csv}.
 }
 \usage{
-proj_results(proj_dir)
-proj_results_save(proj_dir)
+proj_results(proj_dir, verbose=FALSE)
+proj_results_save(proj_dir, verbose=FALSE)
 proj_fread(proj_dir)
 }
 \arguments{
-  \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
+  \item{proj_dir}{Project directory created via
+    \code{\link{proj_grid}}.}
+  \item{verbose}{logical: cat progress? (default FALSE)}
 }
 \details{
   This is Step 3 out of the typical 3 step pipeline (init grid, submit, read results).
