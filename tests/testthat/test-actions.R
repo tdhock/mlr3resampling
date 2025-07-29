@@ -29,48 +29,23 @@ if(requireNamespace("rpart")){
   reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
 }
 
-test_that("proj_compute_until_done", {
-  pkg.proj.dir <- tempfile()
+test_that("submit works", {
+  pkg.proj.dir <- if(interactive())"~/mlr3resampling-test" else tempfile()
+  unlink(pkg.proj.dir, recursive = TRUE)
   mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
     reg.learner.list,
     SOAK,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir, verbose=TRUE)    
-  result_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
-  expect_equal(nrow(result_dt), 72)
-})
-
-test_submit <- function(cluster.functions){
-  pkg.proj.dir <- tempfile()
-  mlr3resampling::proj_grid(
-    pkg.proj.dir,
-    reg.task.list,
-    reg.learner.list,
-    SOAK,
-    score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  mlr3resampling::proj_submit(
-    pkg.proj.dir,
-    cluster.functions=cluster.functions,
-    verbose=TRUE)    
-  batchtools::waitForJobs(timeout=60)
-  system(paste("cat", file.path(pkg.proj.dir, "registry", "logs", "*")))
-  fread(file.path(pkg.proj.dir, "results.csv"))
-}
-
-test_that("proj_submit Interactive", {
-  result_dt <- test_submit(batchtools::makeClusterFunctionsInteractive())
-  expect_equal(nrow(result_dt), 72)
-})
-
-test_that("proj_submit Multicore", {
-  result_dt <- test_submit(batchtools::makeClusterFunctionsMulticore())
-  expect_equal(nrow(result_dt), 72)
-})
-
-test_that("proj_submit SLURM", {
-  tmpl <- system.file("slurm-afterok.tmpl", package="mlr3resampling")
-  result_dt <- test_submit(batchtools::makeClusterFunctionsSlurm(tmpl))
+  results.csv <- file.path(pkg.proj.dir, "results.csv")
+  expect_false(file.exists(results.csv))
+  job.id <- mlr3resampling::proj_submit(pkg.proj.dir, verbose=TRUE)
+  squeue.cmd <- paste0("squeue -h -j", job.id)
+  while(length(system(squeue.cmd, intern=TRUE))){
+    cat("waiting for SLURM job", job.id, "\n")
+    Sys.sleep(1)
+  }
+  result_dt <- fread(results.csv)
   expect_equal(nrow(result_dt), 72)
 })

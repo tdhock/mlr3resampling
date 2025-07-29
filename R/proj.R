@@ -230,17 +230,18 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   ), collapse="\n")
   MPI.sh <- file.path(proj_dir, "MPI.sh")
   cat(sh_code, file=MPI.sh)
-  grid_jobs_dt <- file.path(proj_dir, "grid_jobs.csv")
+  grid_jobs_dt <- fread(file.path(proj_dir, "grid_jobs.csv"))
   R_code <- paste(c(
     sprintf('proj_dir <- "%s"', proj_dir),
     sprintf(
-      'pbdMPI::task.pull(1:%d, mlr3resampling::proj_compute, proj_dir)'
+      'pbdMPI::task.pull(1:%d, mlr3resampling::proj_compute, proj_dir)',
       nrow(grid_jobs_dt)),
     'if(pbdMPI::comm.rank()==0)mlr3resampling::proj_results_save(proj_dir)',
     'pbdMPI::finalize()'
   ), collapse="\n")
   cat(R_code, file=MPI.R)
-  system(paste("sbatch", MPI.sh))
+  out <- system(paste("sbatch", MPI.sh), intern=TRUE)
+  gsub("[^0-9]", "", out)
 }
 
 proj_results_save <- function(proj_dir, verbose=FALSE){
