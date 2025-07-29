@@ -212,10 +212,12 @@ proj_results <- function(proj_dir, verbose=FALSE){
 }
 
 proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
+  proj_dir <- normalizePath(proj_dir, mustWork=TRUE)
   param <- function(name, ...){
     paste0("#SBATCH --", name, "=", ...)
   }
   MPI.out <- file.path(proj_dir, "MPI.out")
+  MPI.R <- file.path(proj_dir, "MPI.R")
   sh_code <- paste(c(
     "#!/bin/bash",
     param("ntasks", tasks),
@@ -230,14 +232,13 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   cat(sh_code, file=MPI.sh)
   grid_jobs_dt <- file.path(proj_dir, "grid_jobs.csv")
   R_code <- paste(c(
-    sprintf('proj_dir <- "%s"', normalizePath(proj_dir)),
+    sprintf('proj_dir <- "%s"', proj_dir),
     sprintf(
       'pbdMPI::task.pull(1:%d, mlr3resampling::proj_compute, proj_dir)'
       nrow(grid_jobs_dt)),
     'if(pbdMPI::comm.rank()==0)mlr3resampling::proj_results_save(proj_dir)',
     'pbdMPI::finalize()'
   ), collapse="\n")
-  MPI.R <- file.path(proj_dir, "MPI.R")
   cat(R_code, file=MPI.R)
   system(paste("sbatch", MPI.sh))
 }
