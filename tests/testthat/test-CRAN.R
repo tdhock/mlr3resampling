@@ -1,5 +1,7 @@
 library(testthat)
 library(data.table)
+if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
+
 test_that("resampling error if no group", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
@@ -549,37 +551,35 @@ test_that("regular K fold CV works in proj", {
       list(),
       score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   }, "resamplings is empty, but need at least one")
-  mlr3resampling::proj_grid(
-    pkg.proj.dir,
-    reg.task.list,
-    reg.learner.list,
-    kfold,
-    score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
-  expect_true(all(grid_jobs$status=="not started"))
-  expected_jobs <- length(reg.learner.list)*length(reg.task.list)*kfold$param_set$values$folds
-  expect_equal(nrow(grid_jobs), expected_jobs)
-  results.csv <- file.path(pkg.proj.dir, "results.csv")
-  expect_false(file.exists(results.csv))
-  row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
-  expect_equal(nrow(row1), 1)
-  mlr3resampling::proj_grid(
+  grid_dt <- mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
     reg.learner.list,
     kfold,
     save_learner = TRUE,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
-  expect_identical(grid_jobs$status, c("done", rep("not started", expected_jobs-1)))
-  row2 <- mlr3resampling::proj_compute(pkg.proj.dir)
+  todo.i <- mlr3resampling:::proj_todo(pkg.proj.dir)
+  todo.expected <- 1:nrow(grid_dt)
+  expect_identical(todo.i, todo.expected)
+  row2 <- mlr3resampling::proj_compute(2, pkg.proj.dir)
   expect_equal(nrow(row2), 1)
+  todo.i <- mlr3resampling:::proj_todo(pkg.proj.dir)
+  expect_identical(todo.i, todo.expected[-2])
+  row3 <- mlr3resampling::proj_compute(3, pkg.proj.dir)
   two_rows <- mlr3resampling::proj_results(pkg.proj.dir)
   expect_equal(nrow(two_rows), 2)
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  mlr3resampling::proj_compute_all(pkg.proj.dir)
   expect_false(file.exists(file.path(pkg.proj.dir, "learners.csv")))
-  results_dt <- fread(results.csv)
-  expect_equal(nrow(results_dt), expected_jobs)
+  results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
+  expect_equal(nrow(results_dt), 8)
+  expect_error({
+    mlr3resampling::proj_grid(
+      pkg.proj.dir,
+      reg.task.list,
+      reg.learner.list,
+      kfold)
+  }, "already exists, so not over-writing")
+  pkg.proj.dir <- tempfile()
   expect_warning({
     mlr3resampling::proj_grid(
       pkg.proj.dir,
@@ -587,18 +587,6 @@ test_that("regular K fold CV works in proj", {
       reg.learner.list,
       kfold)
   }, "no score_args nor save_pred, so there will no test error results")
-  kfold$param_set$values$folds <- 5
-  expect_warning({
-    mlr3resampling::proj_grid(
-      pkg.proj.dir,
-      reg.task.list,
-      reg.learner.list,
-      kfold,
-      score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  }, "grid_jobs.csv changed!")
-  results_dt <- readRDS(file.path(pkg.proj.dir, "results.rds"))
-  expect_null(results_dt$learner[[1]])
-  expect_is(results_dt$learner[[2]], "Learner")
 })
 
 test_that("proj_test down-samples proportionally", {
@@ -641,13 +629,16 @@ test_that("proj_test down-samples proportionally", {
         list(rpart=L$model$frame)
       }
     },
+    save_pred = TRUE,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   out_list <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_identical(names(out_list), c("grid_jobs.csv", "learners_rpart.csv", "results.csv"))
   expect_identical(out_list$grid_jobs.csv$iteration, rep(1L, 4))
-  test.grid <- readRDS(file.path(pkg.proj.dir, "test", "grid.rds"))
-  count.tab <- table(test.grid$tasks$easy$data(cols="person"))
+  test.task <- readRDS(file.path(pkg.proj.dir, "test", "tasks", "1.rds"))
+  count.tab <- table(test.task$data(cols="person"))
   expect_equal(as.numeric(count.tab), c(10, 90))
+  test_res_dt <- readRDS(file.path(pkg.proj.dir, "test/results.rds"))
+  expect_equal(length(test_res_dt$pred[[1]]$row_ids), 50)
 })
 
 mlr3torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
@@ -711,10 +702,9 @@ if(mlr3torch_available)test_that("mlr3torch history saved", {
     kfold,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")),
     save_learner = get_history)
-  from_rds <- readRDS(file.path(pkg.proj.dir, "grid_jobs.rds"))
-  expect_equal(from_rds[test.fold==1 & test.subset=="Bob" & train.subsets=="all" & task_id=="easy", unique(learner_id)], c("torch_linear", "regr.featureless"))
-  expect_equal(from_rds[learner.i==1, unique(n.train.groups)], c(40, 20))
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+  expect_equal(grid_jobs[test.fold==1 & test.subset=="Bob" & train.subsets=="all" & task_id=="easy", unique(learner_id)], c("torch_linear", "regr.featureless"))
+  expect_equal(grid_jobs[learner.i==1, unique(n.train.groups)], c(40, 20))
   expect_true(all(grid_jobs$status=="not started"))
   expected_base <- length(reg.task.list)*kfold$param_set$values$folds*length(people)*nchar(subsets)
   expected_epochs <- n.epochs*expected_base
@@ -722,7 +712,7 @@ if(mlr3torch_available)test_that("mlr3torch history saved", {
   expect_equal(nrow(grid_jobs), expected_jobs)
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
-  row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
+  row1 <- mlr3resampling::proj_compute(1, pkg.proj.dir)
   expected_model_cols <- c("epoch","train.regr.rmse","valid.regr.rmse")
   expect_train_valid <- function(R){
     train_valid_rows <- R$learner[[1]]
@@ -732,7 +722,7 @@ if(mlr3torch_available)test_that("mlr3torch history saved", {
   expect_train_valid(row1)
   from.disk <- mlr3resampling::proj_results(pkg.proj.dir)
   expect_train_valid(from.disk)
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
   model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
   expected_cols <- c(
     "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
@@ -813,10 +803,9 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
     kfold,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")),
     save_learner = get_history_weights)
-  from_rds <- readRDS(file.path(pkg.proj.dir, "grid_jobs.rds"))
-  one_test_N <- from_rds[test.fold==1 & learner.i==1 & task.i==1, .(test.subset, n.train.groups)]
-  expect_equal(one_test_N$n.train.groups, c(30, 15, 10, 5))
   grid_jobs <- fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+  one_test_N <- grid_jobs[test.fold==1 & learner.i==1 & task.i==1, .(test.subset, n.train.groups)]
+  expect_equal(one_test_N$n.train.groups, c(30, 15, 10, 5))
   expect_true(all(grid_jobs$status=="not started"))
   expected_base <- length(reg.task.list)*kfold$param_set$values$folds*length(people)*nchar(subsets)
   expected_epochs <- n.epochs*expected_base
@@ -824,9 +813,9 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
   expect_equal(nrow(grid_jobs), expected_jobs)
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
-  row1 <- mlr3resampling::proj_compute(pkg.proj.dir)
+  row1 <- mlr3resampling::proj_compute(1, pkg.proj.dir)
   expect_null(row1$learner[[1]])
-  mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
   history_dt <- fread(file.path(pkg.proj.dir, "learners_history.csv"))
   expected_cols <- c(
     "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
@@ -930,8 +919,8 @@ if(mlr3torch_available && requireNamespace("mlr3pipelines"))test_that("mlr3torch
   expect_identical(names(test_out_max), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(test_out_max$learners.csv$epoch), 2)
   expect_equal(nrow(test_out_max$results.csv), 1)
-  proj.grid <- readRDS(file.path(pkg.proj.dir,"test","grid.rds"))
-  expect_equal(length(proj.grid$tasks), 1)
+  task.rds.vec <- Sys.glob(file.path(pkg.proj.dir,"test","tasks", "*.rds"))
+  expect_identical(basename(task.rds.vec), "1.rds")
   edit_learner_graph <- function(L){
     L$learner$base_learner()$param_set$set_values(
       patience=1,
@@ -943,7 +932,8 @@ if(mlr3torch_available && requireNamespace("mlr3pipelines"))test_that("mlr3torch
   expect_identical(names(test_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(test_out$learners.csv$epoch), 1)
   expect_equal(nrow(test_out$results.csv), 2)
-  full_out <- mlr3resampling::proj_compute_until_done(pkg.proj.dir)
+  computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
+  full_out <- mlr3resampling::proj_fread(pkg.proj.dir)
   expect_identical(names(full_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(full_out$learners.csv$epoch), 3)
 })
@@ -1025,7 +1015,8 @@ if(mlr3torch_available)test_that("mlr3torch module learner", {
   test_out <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_identical(names(test_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(test_out$learners.csv$epoch), 2)
-  full_out <- mlr3resampling::proj_compute_until_done(pkg.proj.dir, verbose=TRUE)
+  computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
+  full_out <- mlr3resampling::proj_fread(pkg.proj.dir)
   expect_identical(names(full_out), c("grid_jobs.csv", "learners.csv", "results.csv"))
   expect_equal(max(full_out$learners.csv$epoch), 3)
 })
@@ -1070,8 +1061,7 @@ if(mlr3torch_available && requireNamespace("glmnet"))test_that("torch and glmnet
   expect_equal(nrow(test_out$learners_history.csv), 2)
   expect_identical(test_out$results.csv$learner_id, c("torch_linear", "classif.cv_glmnet"))
   expect_equal(sum(is.finite(test_out$results.csv$classif.auc)), 2)
-  grid_list <- readRDS(file.path(pkg.proj.dir, "test", "grid.rds"))
-  test_task <- grid_list$tasks[[1]]
+  test_task <- readRDS(file.path(pkg.proj.dir, "test", "tasks", "1.rds"))
   Class_dt <- test_task$data(cols="Class")
   Class_tab <- table(Class_dt$Class)
   expect_equal(as.numeric(Class_tab), as.numeric(etab))

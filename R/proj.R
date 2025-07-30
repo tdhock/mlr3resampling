@@ -1,3 +1,14 @@
+proj_jobs_read <- function(proj_dir){
+  fread(file.path(proj_dir, "grid_jobs.csv"))
+}
+
+proj_todo <- function(proj_dir){
+  ml_job_dt <- proj_jobs_read(proj_dir)
+  expected.rds <- file.path(
+    proj_dir, "grid_jobs", paste0(1:nrow(ml_job_dt), ".rds"))
+  which(!file.exists(expected.rds))
+}
+
 edit_learner_default <- function(L){
   if(is.function(L$edit_learner))return(L$edit_learner())
   if(inherits(L, "AutoTuner")){
@@ -22,8 +33,15 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
   ## Above to avoid CRAN NOTE.
   proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
-  for(task.i in seq_along(proj.grid$tasks)){
-    this.task <- proj.grid$tasks[[task.i]]
+  proj.grid$order_jobs <- function(DT){
+    indices <- which(DT$iteration==1)
+    indices[seq(1, min(length(indices), max_jobs))]
+  }
+  ml_job_dt <- proj_jobs_read(proj_dir)
+  ml_ord_dt <- ml_job_dt[proj.grid$order_jobs(ml_job_dt)]
+  for(task.i in unique(ml_ord_dt$task.i)){
+    task.rds <- file.path(proj_dir, "tasks", paste0(task.i, ".rds"))
+    this.task <- readRDS(task.rds)
     stratum <- this.task$col_roles$stratum
     strat_dt <- if(length(stratum)){
       this.task$data(cols=stratum)
@@ -43,16 +61,14 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
       ..batch.i <= min_samples_per_stratum
     ]$..row.id
     this.task$filter(some.ids)
+    proj.grid$tasks[[task.i]] <- this.task
   }
   lapply(proj.grid$learners, edit_learner)
   proj.grid$proj_dir <- file.path(proj_dir, "test")
   unlink(proj.grid$proj_dir, recursive = TRUE)
-  proj.grid$order_jobs <- function(DT){
-    indices <- which(DT$iteration==1)
-    indices[seq(1, min(length(indices), max_jobs))]
-  }
   grid_dt <- do.call(proj_grid, proj.grid)
-  proj_compute_until_done(proj.grid$proj_dir)
+  proj_compute_all(proj.grid$proj_dir)
+  proj_fread(proj.grid$proj_dir)
 }
 
 proj_fread <- function(proj_dir){
@@ -68,6 +84,11 @@ proj_fread <- function(proj_dir){
 proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
+  if(file.exists(proj_dir)){
+    stop(proj_dir, " already exists, so not over-writing")
+  }
+  dir.create(proj_dir, showWarnings = FALSE)
+  on.exit(unlink(proj_dir, recursive=TRUE))
   if(is.null(score_args) && isFALSE(save_pred)){
     warning("no score_args nor save_pred, so there will no test error results")
   }
@@ -94,17 +115,37 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     proj.grid[[fun_name]] <- fun
   }
   ml_job_dt_list <- list()
-  for(resampling.i in seq_along(proj.grid$resamplings)){
-    resampling.obj <- proj.grid$resamplings[[resampling.i]]$clone()
-    for(task.i in seq_along(proj.grid$tasks)){
-      task.obj <- proj.grid$tasks[[task.i]]
+  for(task.i in seq_along(proj.grid$tasks)){
+    task.obj <- proj.grid$tasks[[task.i]]
+    tasks.dir <- file.path(proj_dir, "tasks")
+    dir.create(tasks.dir, showWarnings = FALSE)
+    task.rds <- file.path(tasks.dir, paste0(task.i, ".rds"))
+    saveRDS(task.obj, task.rds)
+    for(resampling.i in seq_along(proj.grid$resamplings)){
+      resampling.obj <- proj.grid$resamplings[[resampling.i]]$clone()
       resampling.obj$instantiate(task.obj)
       iteration <- resampling.obj$instance$iteration.dt
       if(is.null(iteration)){
         iteration <- seq_len(resampling.obj$iters)
       }
+      it_dt <- data.table(iteration)
+      for(it in 1:nrow(it_dt)){
+        resampling_list <- list()
+        for(train_or_test in c("train","test")){
+          train_or_test_set <- paste0(train_or_test, "_set")
+          set_fun <- resampling.obj[[train_or_test_set]]
+          resampling_list[[train_or_test]] <- set_fun(it)
+        }
+        resampling.rds <- file.path(
+          proj_dir, "resamplings", task.i, paste0(it, ".rds"))
+        parent.dir <- dirname(resampling.rds)
+        dir.create(parent.dir, recursive = TRUE, showWarnings = FALSE)
+        saveRDS(resampling_list, resampling.rds)
+      }
       for(learner.i in seq_along(proj.grid$learners)){
-        ml_job_dt_list[[paste(task.i, learner.i, resampling.i)]] <- data.table(
+        ml_job_dt_list[[paste(
+          task.i, resampling.i, learner.i
+        )]] <- data.table(
           task.i, learner.i, resampling.i,
           task_id=task.obj$id,
           learner_id=proj.grid$learners[[learner.i]]$id,
@@ -125,32 +166,21 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   }
   task.i.max <- max(ml_job_dt$task.i)
   proj.grid$tasks <- proj.grid$tasks[seq(1, task.i.max)]
-  dir.create(proj_dir, showWarnings = FALSE)
+  proj.grid$tasks <- NULL
   saveRDS(proj.grid, file.path(proj_dir, "grid.rds"))
-  grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
-  saveRDS(ml_job_dt, grid_jobs.rds)
-  grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
-  expected.rds <- file.path(proj_dir, "grid_jobs", paste0(1:nrow(ml_job_dt), ".rds"))
-  out_dt <- ml_job_dt[, .(
-    task.i, learner.i, resampling.i, iteration,
-    status=ifelse(file.exists(expected.rds), "done", "not started")
-  )]
-  if(file.exists(grid_jobs.csv)){
-    old_jobs_dt <- fread(grid_jobs.csv)
-    if(!identical(out_dt, old_jobs_dt)){
-      warning("grid_jobs.csv changed!")
-    }
-  }
-  fwrite(out_dt, grid_jobs.csv)
-  message(sprintf('grid with %d jobs created! Test one job with the following code in a new R session:\nmlr3resampling::proj_test("%s", max_jobs=1)', nrow(ml_job_dt), normalizePath(proj_dir)))
-  ml_job_dt
+  keep <- sapply(ml_job_dt, is.atomic)
+  out_dt <- ml_job_dt[, keep, with=FALSE]
+  fwrite(out_dt, file.path(proj_dir, "grid_jobs.csv"))
+  if(basename(proj_dir)!="test")message(sprintf('grid with %d jobs created! Test one job with the following code in a new R session:\nmlr3resampling::proj_test("%s", max_jobs=1)', nrow(out_dt), normalizePath(proj_dir)))
+  on.exit()
+  out_dt
 }
 
 proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   status <- . <- task.i <- learner.i <- resampling.i <- iteration <- NULL
   ## Above to avoid CRAN NOTE.
-  grid_jobs.csv <- file.path(proj_dir, "grid_jobs.csv")
-  grid_jobs_dt <- fread(grid_jobs.csv)
+  grid_jobs_dt <- proj_jobs_read(proj_dir)
+  if(is.numeric(grid_job_i))grid_job_i <- as.integer(grid_job_i)
   if(!(
     is.integer(grid_job_i) && length(grid_job_i)==1 && is.finite(grid_job_i) &&
       1 <= grid_job_i && grid_job_i <= nrow(grid_jobs_dt)
@@ -163,17 +193,13 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   grid_job_row <- grid_jobs_dt[grid_job_i]
   grid.rds <- file.path(proj_dir, "grid.rds")
   proj.grid <- readRDS(grid.rds)
-  this.task <- proj.grid$tasks[[grid_job_row$task.i]]
+  task.rds <- file.path(proj_dir, "tasks", paste0(grid_job_row$task.i, ".rds"))
+  this.task <- readRDS(task.rds)
   this.learner <- proj.grid$learners[[grid_job_row$learner.i]]
-  this.resampling <- proj.grid$resamplings[[grid_job_row$resampling.i]]
-  this.resampling$instantiate(this.task)
-  set_rows <- function(train_or_test){
-    train_or_test_set <- paste0(train_or_test, "_set")
-    set_fun <- this.resampling[[train_or_test_set]]
-    set_fun(grid_job_row$iteration)
-  }
-  this.learner$train(this.task, set_rows("train"))
-  pred <- this.learner$predict(this.task, set_rows("test"))
+  resampling_list <- readRDS(grid_job_row[, file.path(
+    proj_dir, "resamplings", task.i, paste0(resampling.i, ".rds"))])
+  this.learner$train(this.task, resampling_list$train)
+  pred <- this.learner$predict(this.task, resampling_list$test)
   result.row <- data.table(
     grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
     start.time, end.time=Sys.time(),
@@ -187,6 +213,7 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   result.rds <- file.path(proj_dir, "grid_jobs", paste0(grid_job_i, ".rds"))
   dir.create(dirname(result.rds), showWarnings = FALSE)
   saveRDS(result.row, result.rds)
+  result.row
 }
 
 proj_results <- function(proj_dir, verbose=FALSE){
@@ -203,8 +230,7 @@ proj_results <- function(proj_dir, verbose=FALSE){
     if(verbose)cat(sprintf("%4d / %4d %s %s\n", job.i, length(rds.vec), job.rds, state))
   }
   res_dt <- rbindlist(res_dt_list)
-  grid_jobs.rds <- file.path(proj_dir, "grid_jobs.rds")
-  ml_job_dt <- readRDS(grid_jobs.rds)
+  ml_job_dt <- proj_jobs_read(proj_dir)
   res_dt[
     ml_job_dt,
     on=c("task.i", "learner.i", "resampling.i", "iteration"),
@@ -230,18 +256,25 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   ), collapse="\n")
   MPI.sh <- file.path(proj_dir, "MPI.sh")
   cat(sh_code, file=MPI.sh)
-  grid_jobs_dt <- fread(file.path(proj_dir, "grid_jobs.csv"))
-  R_code <- paste(c(
-    sprintf('proj_dir <- "%s"', proj_dir),
-    sprintf(
-      'pbdMPI::task.pull(1:%d, mlr3resampling::proj_compute, proj_dir)',
-      nrow(grid_jobs_dt)),
-    'if(pbdMPI::comm.rank()==0)mlr3resampling::proj_results_save(proj_dir)',
-    'pbdMPI::finalize()'
-  ), collapse="\n")
+  R_code <- sprintf('mlr3resampling::proj_compute_mpi("%s")', proj_dir)
   cat(R_code, file=MPI.R)
   out <- system(paste("sbatch", MPI.sh), intern=TRUE)
   gsub("[^0-9]", "", out)
+}
+
+proj_compute_mpi <- function(proj_dir){
+  todo.i.vec <- proj_todo(proj_dir)
+  dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir)
+  if(pbdMPI::comm.rank()==0) proj_results_save(proj_dir)
+  pbdMPI::finalize()
+  rbindlist(dt_list)
+}
+
+proj_compute_all <- function(proj_dir){
+  todo.i.vec <- proj_todo(proj_dir)
+  dt_list <- lapply(todo.i.vec, proj_compute, proj_dir)
+  proj_results_save(proj_dir)
+  rbindlist(dt_list)
 }
 
 proj_results_save <- function(proj_dir, verbose=FALSE){
