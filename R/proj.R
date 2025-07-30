@@ -61,7 +61,7 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
       ..batch.i <= min_samples_per_stratum
     ]$..row.id
     this.task$filter(some.ids)
-    proj.grid$tasks[[task.i]] <- this.task
+    proj.grid$tasks[[paste(task.i)]] <- this.task
   }
   lapply(proj.grid$learners, edit_learner)
   proj.grid$proj_dir <- file.path(proj_dir, "test")
