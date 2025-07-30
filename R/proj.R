@@ -203,7 +203,7 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   result.row <- data.table(
     grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
     start.time, end.time=Sys.time(),
-    process=pbdMPI::comm.rank(),
+    process=tryCatch(pbdMPI::comm.rank(), error=function(e)NA_integer_),
     learner=list(proj.grid$save_learner(this.learner)),
     pred=list(proj.grid$save_pred(pred)))
   if(is.list(proj.grid$score_args)){
