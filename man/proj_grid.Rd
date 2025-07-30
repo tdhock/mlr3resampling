@@ -90,7 +90,6 @@ mlr3resampling::proj_grid(
   reg.learner.list,
   SOAK,
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-mlr3resampling::proj_compute(pkg.proj.dir)
-fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+mlr3resampling::proj_compute(2, pkg.proj.dir)
 
 }

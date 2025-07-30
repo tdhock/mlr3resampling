@@ -137,7 +137,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
           resampling_list[[train_or_test]] <- set_fun(it)
         }
         resampling.rds <- file.path(
-          proj_dir, "resamplings", task.i, paste0(it, ".rds"))
+          proj_dir, "resamplings", task.i, resampling.i, paste0(it, ".rds"))
         parent.dir <- dirname(resampling.rds)
         dir.create(parent.dir, recursive = TRUE, showWarnings = FALSE)
         saveRDS(resampling_list, resampling.rds)
@@ -197,7 +197,7 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   this.task <- readRDS(task.rds)
   this.learner <- proj.grid$learners[[grid_job_row$learner.i]]
   resampling_list <- readRDS(grid_job_row[, file.path(
-    proj_dir, "resamplings", task.i, paste0(resampling.i, ".rds"))])
+    proj_dir, "resamplings", task.i, resampling.i, paste0(iteration, ".rds"))])
   this.learner$train(this.task, resampling_list$train)
   pred <- this.learner$predict(this.task, resampling_list$test)
   result.row <- data.table(

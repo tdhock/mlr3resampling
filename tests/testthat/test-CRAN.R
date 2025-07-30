@@ -571,6 +571,7 @@ test_that("regular K fold CV works in proj", {
   mlr3resampling::proj_compute_all(pkg.proj.dir)
   expect_false(file.exists(file.path(pkg.proj.dir, "learners.csv")))
   results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
+  expect_false(identical(results_dt$regr.mae[1], results_dt$regr.mae[2]))
   expect_equal(nrow(results_dt), 8)
   expect_error({
     mlr3resampling::proj_grid(
