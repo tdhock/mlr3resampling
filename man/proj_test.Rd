@@ -7,7 +7,7 @@
   Runs \code{\link{proj_grid}} to create a new project in the
   \code{test} sub-directory, with a smaller
   number of samples in each task, and with only one iteration
-  per Resampling. Runs \code{\link{proj_compute_until_done}} on this new
+  per Resampling. Runs \code{\link{proj_compute_all}} on this new
   test project, and then reads any CSV result files.
 }
 \usage{

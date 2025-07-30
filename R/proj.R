@@ -262,7 +262,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   gsub("[^0-9]", "", out)
 }
 
-proj_compute_mpi <- function(proj_dir){
+proj_compute_mpi <- function(proj_dir, verbose=FALSE){
   todo.i.vec <- proj_todo(proj_dir)
   dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir)
   if(pbdMPI::comm.rank()==0) proj_results_save(proj_dir)
@@ -270,7 +270,7 @@ proj_compute_mpi <- function(proj_dir){
   rbindlist(dt_list)
 }
 
-proj_compute_all <- function(proj_dir){
+proj_compute_all <- function(proj_dir, verbose=FALSE){
   todo.i.vec <- proj_todo(proj_dir)
   dt_list <- lapply(todo.i.vec, proj_compute, proj_dir)
   proj_results_save(proj_dir)

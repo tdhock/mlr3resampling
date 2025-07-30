@@ -1,15 +1,26 @@
 \name{proj_submit}
 \alias{proj_submit}
+\alias{proj_compute_mpi}
+\alias{proj_compute_all}
+\alias{proj_todo}
 \title{
-  Submit resampling split jobs in parallel
+  Compute several resampling jobs
 }
 \description{
-  Runs jobs in parallel using MPI.
+  \code{proj_todo} determines which jobs remain to be computed.
+  \code{proj_compute_all} computes all remaining jobs sequentially,
+  whereas \code{proj_compute_mpi} computes them in parallel using MPI (should
+  be run in an R session activated by \code{mpirun} or \code{srun}).
+  \code{proj_submit} is a non-blocking call to SLURM \code{sbatch},
+  asking for a single job with several tasks that run \code{proj_compute_mpi}.
 }
 \usage{
+proj_todo(proj_dir)
+proj_compute_mpi(proj_dir, verbose=FALSE)
+proj_compute_all(proj_dir, verbose=FALSE)
 proj_submit(
   proj_dir, tasks = 2, hours = 1, gigabytes = 1,
-  verbose = FALSE, cluster.functions = NULL)
+  verbose = FALSE)
 }
 \arguments{
   \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
@@ -24,7 +35,10 @@ proj_submit(
   typical 3 step pipeline (init grid, submit, read results).
 }
 \value{
-  Nothing.
+  \code{proj_submit} returns the ID of the submitted SLURM job.
+  \code{proj_compute_all} and \code{proj_compute_mpi} return a data
+  table of results computed.
+  \code{proj_todo} returns a vector of job IDs not yet computed.
 }
 \author{
 Toby Dylan Hocking
@@ -68,8 +82,6 @@ mlr3resampling::proj_grid(
   SOAK,
   order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-mlr3resampling::proj_submit(pkg.proj.dir)
-batchtools::waitForJobs()
-fread(file.path(pkg.proj.dir, "results.csv"))
+mlr3resampling::proj_compute_all(pkg.proj.dir)
 
 }
