@@ -650,8 +650,9 @@ test_that("proj_test down-samples proportionally", {
     expected_csv_cols,
     "task_id", "learner_id", "resampling_id", "iteration")
   expect_identical(names(out_dt_list$learners_rpart.csv), expected_join_cols)
-  rpart.job.i <- which(pgrid$learner_id=="regr.rpart")[1]
-  mlr3resampling::proj_compute(rpart.job.i, pkg.proj.dir)
+  rpart.job.i.vec <- which(pgrid$learner_id=="regr.rpart")
+  mlr3resampling::proj_compute(rpart.job.i.vec[1], pkg.proj.dir)
+  mlr3resampling::proj_compute(rpart.job.i.vec[length(rpart.job.i.vec)], pkg.proj.dir)
   mlr3resampling::proj_results_save(pkg.proj.dir)
   csv_dt_list <- mlr3resampling::proj_fread(pkg.proj.dir)
   rpart_dt <- csv_dt_list[["learners_rpart.csv"]]

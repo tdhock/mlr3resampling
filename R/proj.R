@@ -71,20 +71,16 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   proj_fread(proj.grid$proj_dir)
 }
 
-meta_cols_default <- c(
-  "task_id", "learner_id", "resampling_id", "iteration", "test.subset",
-  "train.subsets", "groups", "test.fold", "seed", "n.train.groups")
-
-proj_fread <- function(proj_dir, meta_cols=meta_cols_default){
+proj_fread <- function(proj_dir){
   csv_list <- Sys.glob(file.path(proj_dir, "*.csv"))
   out_list <- list()
   for(csv_i in seq_along(csv_list)){
     out_csv <- csv_list[[csv_i]]
     out_list[[basename(out_csv)]] <- fread(out_csv)
   }
-  res_dt <- out_list[["results.csv"]]
-  join_cols <- intersect(names(res_dt), meta_cols)
-  join_dt <- res_dt[, join_cols, with=FALSE]
+  job_dt <- out_list[["grid_jobs.csv"]]
+  join_cols <- setdiff(names(job_dt), c("task.i", "learner.i", "resampling.i"))
+  join_dt <- job_dt[, join_cols, with=FALSE]
   learner_name_vec <- grep("^learners", names(out_list), value=TRUE)
   for(out_csv in learner_name_vec){
     out_dt <- out_list[[out_csv]]

@@ -17,15 +17,12 @@
 \usage{
 proj_results(proj_dir, verbose=FALSE)
 proj_results_save(proj_dir, verbose=FALSE)
-proj_fread(proj_dir, meta_cols=meta_cols_default)
+proj_fread(proj_dir)
 }
 \arguments{
   \item{proj_dir}{Project directory created via
     \code{\link{proj_grid}}.}
   \item{verbose}{logical: cat progress? (default FALSE)}
-  \item{meta_cols}{character vector of column names from
-    \code{results.csv} to add to \code{learners*.csv} during
-    \code{proj_fread}.
 }
 \details{
   This is Step 3 out of the typical 3 step pipeline (init grid, submit, read results).
