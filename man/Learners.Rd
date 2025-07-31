@@ -52,6 +52,7 @@ for(pattern in names(reg.pattern.list)){
 }
 reg.task.list # two regression tasks.
 
+## Create a list of learners.
 reg.learner.list <- list(
   featureless=mlr3::LearnerRegrFeatureless$new())
 if(requireNamespace("mlr3torch") && torch::torch_is_installed()){
@@ -84,16 +85,19 @@ kfold$param_set$values$folds <- 2
 
 # Create project grid.
 pkg.proj.dir <- tempfile()
-mlr3resampling::proj_grid(
+pgrid <- mlr3resampling::proj_grid(
   pkg.proj.dir,
   reg.task.list,    
   reg.learner.list,
   score_args=mlr3::msrs("regr.rmse"),
   kfold)
 
-# test the first CV iteration (fast because of special Learner methods).
-test_out <- mlr3resampling::proj_test(pkg.proj.dir, max_jobs=3)
-test_out$learners_history.csv # from AutoTunerTorch_epochs
+\dontrun{
+test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+test_out$learners_history.csv # from AutoTunerTorch_epochs, 2 epochs for testing.
 test_out$learners_weights.csv # from LearnerRegrCVGlmnetSave
+torch.job.i <- which(pgrid$learner_id=="torch_linear")[1]
+mlr3resampling::proj_compute(torch.job.i, pkg.proj.dir)
+}
 
 }

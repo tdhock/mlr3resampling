@@ -621,7 +621,7 @@ test_that("proj_test down-samples proportionally", {
   }
   pkg.proj.dir <- tempfile()
   keep_cols <- c("var","dev","n")
-  mlr3resampling::proj_grid(
+  pgrid <- mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
     reg.learner.list,
@@ -650,6 +650,16 @@ test_that("proj_test down-samples proportionally", {
     expected_csv_cols,
     "task_id", "learner_id", "resampling_id", "iteration")
   expect_identical(names(out_dt_list$learners_rpart.csv), expected_join_cols)
+  rpart.job.i <- which(pgrid$learner_id=="regr.rpart")[1]
+  mlr3resampling::proj_compute(rpart.job.i, pkg.proj.dir)
+  mlr3resampling::proj_results_save(pkg.proj.dir)
+  csv_dt_list <- mlr3resampling::proj_fread(pkg.proj.dir)
+  rpart_dt <- csv_dt_list[["learners_rpart.csv"]]
+  expect_identical(names(rpart_dt), expected_join_cols)
+  expect_equal(sum(is.na(rpart_dt[["task_id"]])), 0)
+  expect_equal(sum(is.na(rpart_dt[["learner_id"]])), 0)
+  expect_equal(sum(is.na(rpart_dt[["resampling_id"]])), 0)
+  expect_equal(sum(is.na(rpart_dt[["iteration"]])), 0)
 })
 
 mlr3torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
