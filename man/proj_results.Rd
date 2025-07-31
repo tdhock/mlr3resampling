@@ -9,26 +9,31 @@
   \code{proj_results} globs the RDS result files in the project
   directory, and combines them into a result table via \code{rbindlist()}.
   \code{proj_results_save} saves that result table to \code{results.rds}
-  and \code{results.csv}.
+  and one or more CSV files (redundant with RDS data, but more
+  convenient).
+  \code{proj_fread} reads the CSV files, adding columns from
+  \code{results.csv} to \code{learners*.csv}.
 }
 \usage{
 proj_results(proj_dir, verbose=FALSE)
 proj_results_save(proj_dir, verbose=FALSE)
-proj_fread(proj_dir)
+proj_fread(proj_dir, meta_cols=meta_cols_default)
 }
 \arguments{
   \item{proj_dir}{Project directory created via
     \code{\link{proj_grid}}.}
   \item{verbose}{logical: cat progress? (default FALSE)}
+  \item{meta_cols}{character vector of column names from
+    \code{results.csv} to add to \code{learners*.csv} during
+    \code{proj_fread}.
 }
 \details{
   This is Step 3 out of the typical 3 step pipeline (init grid, submit, read results).
-  Actually, if step 2 worked as intended, the last \code{\link{proj_compute}}
-  calls \code{\link{proj_results_save}}, which saves result files to disk
-  that you can read directly:
+  Actually, if step 2 worked as intended, then
+  \code{\link{proj_results_save}} is called at the end of step 2,
+  which saves result files to disk that you can read directly:
   \describe{
-    \item{\code{results.csv}}{contains test measures for each split, and
-      can be read via \code{fread()}}
+    \item{\code{results.csv}}{contains test measures for each split.}
     \item{\code{results.rds}}{contains additional list columns for \code{learner}
       and \code{pred} (useful for model interpretation), and can be read via
       \code{readRDS()}}
@@ -37,7 +42,7 @@ proj_fread(proj_dir)
       with meta-data describing each split.}
     \item{\code{learners_*.csv}}{only exists if \code{learner} column is
       a named list of data frames: star in file name is expanded using
-      list names, with values taken from atomic columns.}
+      list names, with CSV data taken from atomic columns.}
   }
 }
 \value{
@@ -45,7 +50,7 @@ proj_fread(proj_dir)
   \code{proj_results_save} returns the same table with only atomic columns.
   \code{proj_fread} returns a list
   with names corresponding to CSV files in the test directory, and
-  values are the data tables that result from \code{fread}.
+  values are the data tables that result from \code{\link[data.table:fread]{fread}}.
 }
 \author{
 Toby Dylan Hocking

@@ -71,7 +71,11 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   proj_fread(proj.grid$proj_dir)
 }
 
-proj_fread <- function(proj_dir, meta_cols=c("task_id", "learner_id", "resampling_id", "iteration", "test.subset", "train.subsets", "groups", "test.fold", "seed", "n.train.groups")){
+meta_cols_default <- c(
+  "task_id", "learner_id", "resampling_id", "iteration", "test.subset",
+  "train.subsets", "groups", "test.fold", "seed", "n.train.groups")
+
+proj_fread <- function(proj_dir, meta_cols=meta_cols_default)){
   csv_list <- Sys.glob(file.path(proj_dir, "*.csv"))
   out_list <- list()
   for(csv_i in seq_along(csv_list)){
@@ -289,7 +293,7 @@ proj_compute_all <- function(proj_dir, verbose=FALSE){
 }
 
 proj_results_save <- function(proj_dir, verbose=FALSE){
-  learner <- NULL
+  learner <- . <- grid_job_i <- NULL
   ## above for CRAN check.
   fwrite_atomic <- function(in_dt, pre){
     fwrite(only_atomic(in_dt), file.path(proj_dir, paste0(pre, ".csv")))
