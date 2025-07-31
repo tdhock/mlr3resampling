@@ -48,4 +48,5 @@ test_that("submit works", {
   }
   result_dt <- fread(results.csv)
   expect_equal(nrow(result_dt), 72)
+  expect_true(file.exists(file.path(pkg.proj.dir, "MPI.logs", "0.log")))
 })

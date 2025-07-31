@@ -73,7 +73,7 @@ Suggests:
     rpart,
     directlabels,
     mlr3pipelines,
-    glmnet,
+    glmnet, mlr3learners,
     mlr3torch, torch
 VignetteBuilder: knitr
 Remotes: mlr-org/mlr3
