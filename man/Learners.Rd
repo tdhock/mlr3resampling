@@ -98,6 +98,9 @@ test_out$learners_history.csv # from AutoTunerTorch_epochs, 2 epochs for testing
 test_out$learners_weights.csv # from LearnerRegrCVGlmnetSave
 torch.job.i <- which(pgrid$learner_id=="torch_linear")[1]
 mlr3resampling::proj_compute(torch.job.i, pkg.proj.dir)
+mlr3resampling::proj_results_save(pkg.proj.dir)
+full_out <- mlr3resampling::proj_fread(pkg.proj.dir)
+full_out$learners_history.csv # from AutoTunerTorch_epochs, 3 epochs.
 }
 
 }
