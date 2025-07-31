@@ -88,7 +88,6 @@ proj_fread <- function(proj_dir, meta_cols=meta_cols_default){
   learner_name_vec <- grep("^learners", names(out_list), value=TRUE)
   for(out_csv in learner_name_vec){
     out_dt <- out_list[[out_csv]]
-    browser()
     set(out_dt, j=join_cols, value=join_dt[out_dt$grid_job_i])
   }
   out_list
