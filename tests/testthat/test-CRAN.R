@@ -558,7 +558,7 @@ test_that("regular K fold CV works in proj", {
     kfold,
     save_learner = TRUE,
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-  todo.i <- mlr3resampling:::proj_todo(pkg.proj.dir)
+  todo.i <- mlr3resampling::proj_todo(pkg.proj.dir)
   todo.expected <- 1:nrow(grid_dt)
   expect_identical(todo.i, todo.expected)
   row2 <- mlr3resampling::proj_compute(2, pkg.proj.dir)
@@ -620,6 +620,7 @@ test_that("proj_test down-samples proportionally", {
     reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
   }
   pkg.proj.dir <- tempfile()
+  keep_cols <- c("var","dev","n")
   mlr3resampling::proj_grid(
     pkg.proj.dir,
     reg.task.list,
@@ -627,7 +628,7 @@ test_that("proj_test down-samples proportionally", {
     kfold,
     save_learner=function(L){
       if(inherits(L, "LearnerRegrRpart")){
-        list(rpart=L$model$frame)
+        list(rpart=L$model$frame[,keep_cols])
       }
     },
     save_pred = TRUE,
@@ -635,11 +636,20 @@ test_that("proj_test down-samples proportionally", {
   out_list <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_identical(names(out_list), c("grid_jobs.csv", "learners_rpart.csv", "results.csv"))
   expect_identical(out_list$grid_jobs.csv$iteration, rep(1L, 4))
-  test.task <- readRDS(file.path(pkg.proj.dir, "test", "tasks", "1.rds"))
+  test_dir <- file.path(pkg.proj.dir, "test")
+  test.task <- readRDS(file.path(test_dir, "tasks", "1.rds"))
   count.tab <- table(test.task$data(cols="person"))
   expect_equal(as.numeric(count.tab), c(10, 90))
-  test_res_dt <- readRDS(file.path(pkg.proj.dir, "test/results.rds"))
+  test_res_dt <- readRDS(file.path(test_dir, "results.rds"))
   expect_equal(length(test_res_dt$pred[[1]]$row_ids), 50)
+  learners_dt <- fread(file.path(test_dir, "learners_rpart.csv"))
+  expected_csv_cols <- c("grid_job_i", "var", "dev", "n")
+  expect_identical(names(learners_dt), expected_csv_cols)
+  out_dt_list <- mlr3resampling::proj_fread(test_dir)
+  expected_join_cols <- c(
+    expected_csv_cols,
+    "task_id", "learner_id", "resampling_id", "iteration")
+  expect_identical(names(out_dt_list$learners_rpart.csv), expected_join_cols)
 })
 
 mlr3torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
@@ -714,30 +724,31 @@ if(mlr3torch_available)test_that("mlr3torch history saved", {
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
   row1 <- mlr3resampling::proj_compute(1, pkg.proj.dir)
-  expected_model_cols <- c("epoch","train.regr.rmse","valid.regr.rmse")
+  expected_learner_cols <- c("epoch","train.regr.rmse","valid.regr.rmse")
   expect_train_valid <- function(R){
     train_valid_rows <- R$learner[[1]]
     expect_equal(nrow(train_valid_rows), n.epochs)
-    expect_identical(names(train_valid_rows), expected_model_cols)
+    expect_identical(names(train_valid_rows), expected_learner_cols)
   }
   expect_train_valid(row1)
   from.disk <- mlr3resampling::proj_results(pkg.proj.dir)
   expect_train_valid(from.disk)
   computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
   model_dt <- fread(file.path(pkg.proj.dir, "learners.csv"))
-  expected_cols <- c(
-    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
-    "process", "regr.rmse", "regr.mae",
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
-    expected_model_cols)
-  expect_identical(names(model_dt), expected_cols)
+  expected_csv_cols <- c("grid_job_i", expected_learner_cols)
+  expect_identical(names(model_dt), expected_csv_cols)
   expect_equal(nrow(model_dt), expected_epochs)
   results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
   pval_list <- mlr3resampling::pvalue(results_dt)
   expect_is(pval_list, "pvalue")
   expect_true(all(pval_list$pvalues$Train_subsets=="all-same"))
   if(interactive())plot(pval_list)
+  csv_data_list <- mlr3resampling::proj_fread(pkg.proj.dir)
+  expected_join_cols <- c(
+    expected_csv_cols,
+    "task_id", "learner_id", "resampling_id", "test.subset", "train.subsets",
+    "groups", "test.fold", "seed", "n.train.groups", "iteration")
+  expect_identical(names(csv_data_list$learners.csv), expected_join_cols)
 })
 
 if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
@@ -818,22 +829,14 @@ if(mlr3torch_available)test_that("mlr3torch history and weights saved", {
   expect_null(row1$learner[[1]])
   computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
   history_dt <- fread(file.path(pkg.proj.dir, "learners_history.csv"))
-  expected_cols <- c(
-    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
-    "process", "regr.rmse", "regr.mae",
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
-    "epoch","train.regr.rmse","valid.regr.rmse")
-  expect_identical(names(history_dt), expected_cols)
+  expected_history_cols <- c(
+    "grid_job_i", "epoch", "train.regr.rmse", "valid.regr.rmse")
+  expect_identical(names(history_dt), expected_history_cols)
   expect_equal(nrow(history_dt), expected_epochs)
   weights_dt <- fread(file.path(pkg.proj.dir, "learners_weights.csv"))
-  expected_cols <- c(
-    "task.i", "learner.i", "resampling.i", "iteration", "start.time", "end.time",
-    "process", "regr.rmse", "regr.mae",
-    "task_id", "learner_id", "resampling_id", "test.subset",
-    "train.subsets", "groups", "test.fold", "seed", "n.train.groups",
-    "0.weight.V1", "0.bias")
-  expect_identical(names(weights_dt), expected_cols)
+  expected_weights_cols <- c(
+    "grid_job_i", "0.weight.V1", "0.bias")
+  expect_identical(names(weights_dt), expected_weights_cols)
   expect_equal(nrow(weights_dt), expected_base)
   test_out <- mlr3resampling::proj_test(pkg.proj.dir)
   expect_equal(max(test_out$learners_history.csv$epoch), 2)

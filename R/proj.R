@@ -71,12 +71,20 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   proj_fread(proj.grid$proj_dir)
 }
 
-proj_fread <- function(proj_dir){
+proj_fread <- function(proj_dir, meta_cols=c("task_id", "learner_id", "resampling_id", "iteration", "test.subset", "train.subsets", "groups", "test.fold", "seed", "n.train.groups")){
   csv_list <- Sys.glob(file.path(proj_dir, "*.csv"))
   out_list <- list()
   for(csv_i in seq_along(csv_list)){
     out_csv <- csv_list[[csv_i]]
     out_list[[basename(out_csv)]] <- fread(out_csv)
+  }
+  res_dt <- out_list[["results.csv"]]
+  join_cols <- intersect(names(res_dt), meta_cols)
+  join_dt <- res_dt[, join_cols, with=FALSE]
+  learner_name_vec <- grep("^learners", names(out_list), value=TRUE)
+  for(out_csv in learner_name_vec){
+    out_dt <- out_list[[out_csv]]
+    set(out_dt, j=join_cols, value=join_dt[out_dt$grid_job_i])
   }
   out_list
 }  
@@ -168,12 +176,16 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   proj.grid$tasks <- proj.grid$tasks[seq(1, task.i.max)]
   proj.grid$tasks <- NULL
   saveRDS(proj.grid, file.path(proj_dir, "grid.rds"))
-  keep <- sapply(ml_job_dt, is.atomic)
-  out_dt <- ml_job_dt[, keep, with=FALSE]
+  out_dt <- only_atomic(ml_job_dt)
   fwrite(out_dt, file.path(proj_dir, "grid_jobs.csv"))
   if(basename(proj_dir)!="test")message(sprintf('grid with %d jobs created! Test one job with the following code in a new R session:\nmlr3resampling::proj_test("%s", max_jobs=1)', nrow(out_dt), normalizePath(proj_dir)))
   on.exit()
   out_dt
+}
+
+only_atomic <- function(in_dt){
+  keep_vec <- sapply(in_dt, is.atomic)
+  in_dt[, keep_vec, with=FALSE]
 }
 
 proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
@@ -201,7 +213,7 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   this.learner$train(this.task, resampling_list$train)
   pred <- this.learner$predict(this.task, resampling_list$test)
   result.row <- data.table(
-    grid_job_row[, .(task.i, learner.i, resampling.i, iteration)],
+    grid_job_row,
     start.time, end.time=Sys.time(),
     process=tryCatch(pbdMPI::comm.rank(), error=function(e)NA_integer_),
     learner=list(proj.grid$save_learner(this.learner)),
@@ -218,23 +230,20 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
 
 proj_results <- function(proj_dir, verbose=FALSE){
   rds.vec <- Sys.glob(file.path(proj_dir, "grid_jobs", "*.rds"))
+  grid_job_i.vec <- as.integer(sub(".rds$", "", basename(rds.vec)))
   res_dt_list <- list()
-  for(job.i in seq_along(rds.vec)){
-    job.rds <- rds.vec[[job.i]]
+  for(rds.i in seq_along(rds.vec)){
+    job.rds <- rds.vec[[rds.i]]
+    grid_job_i <- grid_job_i.vec[[rds.i]]
     state <- tryCatch({
-      res_dt_list[[job.rds]] <- readRDS(job.rds)
+      res_dt_list[[job.rds]] <- data.table(grid_job_i, readRDS(job.rds))
       "OK"
     }, error=function(e){
       sprintf("%s: %s", class(e)[1], e[["message"]])
     })
-    if(verbose)cat(sprintf("%4d / %4d %s %s\n", job.i, length(rds.vec), job.rds, state))
+    if(verbose)cat(sprintf("%4d / %4d %s %s\n", rds.i, length(rds.vec), job.rds, state))
   }
-  res_dt <- rbindlist(res_dt_list)
-  ml_job_dt <- proj_jobs_read(proj_dir)
-  res_dt[
-    ml_job_dt,
-    on=c("task.i", "learner.i", "resampling.i", "iteration"),
-    nomatch=0L]
+  rbindlist(res_dt_list)
 }
 
 proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
@@ -282,23 +291,19 @@ proj_compute_all <- function(proj_dir, verbose=FALSE){
 proj_results_save <- function(proj_dir, verbose=FALSE){
   learner <- NULL
   ## above for CRAN check.
-  only_atomic <- function(in_dt){
-    keep_vec <- sapply(in_dt, is.atomic)
-    in_dt[, keep_vec, with=FALSE]
-  }
   fwrite_atomic <- function(in_dt, pre){
     fwrite(only_atomic(in_dt), file.path(proj_dir, paste0(pre, ".csv")))
   }
   save_df <- function(suffix, out.df){
     pre <- paste0("learners", suffix)
-    learner_out_list[[pre]][[paste(row.i)]] <<- data.table(atomic_row, out.df)
+    learner_out_list[[pre]][[paste(row.i)]] <<- data.table(meta_row, out.df)
   }
   join_dt <- proj_results(proj_dir, verbose=verbose)
   saveRDS(join_dt, file.path(proj_dir, "results.rds"))
   learner_out_list <- list()
   for(row.i in 1:nrow(join_dt)){
     join_row <- join_dt[row.i]
-    atomic_row <- only_atomic(join_row)
+    meta_row <- join_row[, .(grid_job_i)]
     L <- join_row$learner[[1]]
     suffix <- NULL
     if(is.data.frame(L)){
