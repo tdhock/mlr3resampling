@@ -242,7 +242,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   param <- function(name, ...){
     paste0("#SBATCH --", name, "=", ...)
   }
-  MPI.out <- file.path(proj_dir, "MPI.out")
+  MPI.out <- file.path(proj_dir, "MPI.logs/%t.log")
   MPI.R <- file.path(proj_dir, "MPI.R")
   sh_code <- paste(c(
     "#!/bin/bash",
@@ -256,7 +256,9 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
   ), collapse="\n")
   MPI.sh <- file.path(proj_dir, "MPI.sh")
   cat(sh_code, file=MPI.sh)
-  R_code <- sprintf('mlr3resampling::proj_compute_mpi("%s")', proj_dir)
+  R_code <- sprintf(
+    'mlr3resampling::proj_compute_mpi("%s",verbose=%s)',
+    proj_dir, verbose)
   cat(R_code, file=MPI.R)
   out <- system(paste("sbatch", MPI.sh), intern=TRUE)
   gsub("[^0-9]", "", out)
@@ -264,7 +266,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
 
 proj_compute_mpi <- function(proj_dir, verbose=FALSE){
   todo.i.vec <- proj_todo(proj_dir)
-  dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir)
+  dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir, verbose)
   if(pbdMPI::comm.rank()==0) proj_results_save(proj_dir)
   pbdMPI::finalize()
   rbindlist(dt_list)
@@ -272,8 +274,8 @@ proj_compute_mpi <- function(proj_dir, verbose=FALSE){
 
 proj_compute_all <- function(proj_dir, verbose=FALSE){
   todo.i.vec <- proj_todo(proj_dir)
-  dt_list <- lapply(todo.i.vec, proj_compute, proj_dir)
-  proj_results_save(proj_dir)
+  dt_list <- lapply(todo.i.vec, proj_compute, proj_dir, verbose)
+  proj_results_save(proj_dir, verbose)
   rbindlist(dt_list)
 }
 

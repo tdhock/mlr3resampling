@@ -40,7 +40,7 @@ test_that("submit works", {
     score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
   results.csv <- file.path(pkg.proj.dir, "results.csv")
   expect_false(file.exists(results.csv))
-  job.id <- mlr3resampling::proj_submit(pkg.proj.dir, verbose=TRUE)
+  job.id <- mlr3resampling::proj_submit(pkg.proj.dir, tasks = 2, verbose=TRUE)
   squeue.cmd <- paste0("squeue -h -j", job.id)
   while(length(system(squeue.cmd, intern=TRUE))){
     cat("waiting for SLURM job", job.id, "\n")
