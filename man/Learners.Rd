@@ -20,11 +20,6 @@
   method).
   \code{LearnerClassifCVGlmnetSave} is similar.
 }
-\usage{
-LearnerRegrCVGlmnetSave$new()
-LearnerClassifCVGlmnetSave$new()
-AutoTunerTorch_epochs$new()
-}
 \author{
   Toby Dylan Hocking
 }

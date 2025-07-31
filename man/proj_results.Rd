@@ -57,6 +57,7 @@ library(data.table)
 set.seed(1)
 reg.dt <- data.table(
   x=runif(N, -2, 2),
+  noise=runif(N, -2, 2),
   person=factor(rep(c("Alice","Bob"), each=0.5*N)))
 reg.pattern.list <- list(
   easy=function(x, person)x^2,
@@ -70,7 +71,7 @@ for(pattern in names(reg.pattern.list)){
   ][]
   task.obj <- mlr3::TaskRegr$new(
     pattern, task.dt, target="y")
-  task.obj$col_roles$feature <- "x"
+  task.obj$col_roles$feature <- c("x","noise")
   task.obj$col_roles$stratum <- "person"
   task.obj$col_roles$subset <- "person"
   reg.task.list[[pattern]] <- task.obj
@@ -87,9 +88,16 @@ mlr3resampling::proj_grid(
   reg.task.list,
   reg.learner.list,
   SOAK,
-  order_jobs = function(DT)1:2, # for CRAN.
+  save_learner=function(L){
+    if(inherits(L, "LearnerRegrRpart")){
+      list(rpart=L$model$frame)
+    }
+  },
+  order_jobs = function(DT)which(DT$iteration==1)[1:2], # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-mlr3resampling::proj_compute_until_done(pkg.proj.dir)
-mlr3resampling::proj_results(pkg.proj.dir)
+computed <- mlr3resampling::proj_compute_all(pkg.proj.dir)
+result_list <- mlr3resampling::proj_fread(pkg.proj.dir)
+result_list$learners_rpart.csv # one row per node in decision tree.
+result_list$results.csv # test error in regr.* columns.
 
 }
