@@ -92,7 +92,7 @@ mlr3resampling::proj_grid(
   kfold)
 
 # test the first CV iteration (fast because of special Learner methods).
-test_out <- mlr3resampling::proj_test(pkg.proj.dir)
+test_out <- mlr3resampling::proj_test(pkg.proj.dir, max_jobs=3)
 test_out$learners_history.csv # from AutoTunerTorch_epochs
 test_out$learners_weights.csv # from LearnerRegrCVGlmnetSave
 
