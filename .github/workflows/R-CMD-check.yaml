@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: install mpi-dev on mac #https://github.com/mpi4py/setup-mpi
-        if: matrix.os == 'macos-latest'
+        if: matrix.config.os == 'macos-latest'
         uses: mpi4py/setup-mpi@v1
 
       - uses: r-lib/actions/setup-pandoc@v2
