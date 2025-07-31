@@ -34,6 +34,8 @@ jobs:
       - name: install mpi-dev on mac #https://github.com/mpi4py/setup-mpi
         if: matrix.config.os == 'macos-latest'
         uses: mpi4py/setup-mpi@v1
+	with:
+	  mpi: openmpi
 
       - uses: r-lib/actions/setup-pandoc@v2
 
