@@ -12,7 +12,7 @@
 proj_grid(
   proj_dir, tasks, learners, resamplings,
   order_jobs = NULL, score_args = NULL,
-  save_learner = FALSE, save_pred = FALSE)
+  save_learner = save_learner_default, save_pred = FALSE)
 }
 \arguments{
   \item{proj_dir}{Path to directory to create.}
@@ -30,9 +30,10 @@ proj_grid(
     For interpreting complex models, you should write a function that
     returns only the parts of the model that you need (and discards the
     other parts which would take up disk space for no reason).
-    Default \code{FALSE} means to not keep it (always returns
-    \code{NULL}).
-    \code{TRUE} means to keep it without any special processing.}
+    Default is to call \code{save_learner} method if it exists.
+    \code{FALSE} means to not keep it (always returns \code{NULL}).
+    \code{TRUE} means to keep it without any special processing.
+  }
   \item{save_pred}{Function to process Prediction before saving to disk.
     Default \code{FALSE} means to not keep it (always returns
     \code{NULL}).
@@ -89,7 +90,6 @@ mlr3resampling::proj_grid(
   reg.learner.list,
   SOAK,
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-mlr3resampling::proj_compute(pkg.proj.dir)
-fread(file.path(pkg.proj.dir, "grid_jobs.csv"))
+mlr3resampling::proj_compute(2, pkg.proj.dir)
 
 }

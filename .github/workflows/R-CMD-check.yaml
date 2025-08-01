@@ -18,11 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
+          - {os: macos-latest,   r: release}
+          - {os: windows-latest, r: release}
+          - {os: ubuntu-latest,   r: devel, http-user-agent: release}
+          - {os: ubuntu-latest,   r: release}
+          - {os: ubuntu-latest,   r: oldrel-1}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -30,6 +30,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: install mpi-dev on mac #https://github.com/mpi4py/setup-mpi
+        if: matrix.config.os == 'macos-latest'
+        uses: mpi4py/setup-mpi@v1
+        with:
+          mpi: openmpi
 
       - uses: r-lib/actions/setup-pandoc@v2
 

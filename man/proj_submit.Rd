@@ -1,36 +1,44 @@
 \name{proj_submit}
 \alias{proj_submit}
+\alias{proj_compute_mpi}
+\alias{proj_compute_all}
+\alias{proj_todo}
 \title{
-  Submit resampling split jobs in parallel
+  Compute several resampling jobs
 }
 \description{
-  Before running this function, you should define
-  \code{cluster.functions} in your \code{~/.batchtools.conf.R} file.
-  It makes a batchtools registry, then runs
-  \code{batchtools::batchMap()} and \code{batchtools::submitJobs()};
-  each iteration runs \code{\link{proj_compute_until_done}}.
+  \code{proj_todo} determines which jobs remain to be computed.
+  \code{proj_compute_all} computes all remaining jobs sequentially,
+  whereas \code{proj_compute_mpi} computes them in parallel using MPI (should
+  be run in an R session activated by \code{mpirun} or \code{srun}).
+  \code{proj_submit} is a non-blocking call to SLURM \code{sbatch},
+  asking for a single job with several tasks that run \code{proj_compute_mpi}.
 }
 \usage{
+proj_todo(proj_dir)
+proj_compute_mpi(proj_dir, verbose=FALSE)
+proj_compute_all(proj_dir, verbose=FALSE)
 proj_submit(
   proj_dir, tasks = 2, hours = 1, gigabytes = 1,
-  verbose = FALSE, cluster.functions = NULL)
+  verbose = FALSE)
 }
 \arguments{
   \item{proj_dir}{Project directory created via \code{\link{proj_grid}}.}
-  \item{tasks}{Positive integer: number of batchtools jobs, translated
-    into one SLURM job array with this number of tasks.}
+  \item{tasks}{Positive integer: \code{ntasks} parameter for SLURM scheduler, one for
+    manager, others are workers.}
   \item{hours}{Hours of walltime to ask the SLURM scheduler.}
   \item{gigabytes}{Gigabytes of memory to ask the SLURM scheduler.}
   \item{verbose}{Logical: print messages?}
-  \item{cluster.functions}{Cluster functions from \code{batchtools},
-    useful for testing.}
 }
 \details{
   This is Step 2 out of the
   typical 3 step pipeline (init grid, submit, read results).
 }
 \value{
-  The batchtools registry.
+  \code{proj_submit} returns the ID of the submitted SLURM job.
+  \code{proj_compute_all} and \code{proj_compute_mpi} return a data
+  table of results computed.
+  \code{proj_todo} returns a vector of job IDs not yet computed.
 }
 \author{
 Toby Dylan Hocking
@@ -74,8 +82,6 @@ mlr3resampling::proj_grid(
   SOAK,
   order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
-mlr3resampling::proj_submit(pkg.proj.dir)
-batchtools::waitForJobs()
-fread(file.path(pkg.proj.dir, "results.csv"))
+mlr3resampling::proj_compute_all(pkg.proj.dir)
 
 }
