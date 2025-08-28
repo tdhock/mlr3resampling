@@ -14,7 +14,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-mlr3resampling::ResamplingSameOtherCV$new()
 ```
 
 The goal of this vignette is to explain the older resamplers:
@@ -73,7 +72,7 @@ for(task_id in names(reg.pattern.list)){
   task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
   reg.task <- mlr3::TaskRegr$new(
     task_id, task.dt, target=yname)
-  reg.task$col_roles$subset <- "person"
+  if(requireNamespace("mlr3resampling"))reg.task$col_roles$subset <- "person"
   reg.task$col_roles$stratum <- "person"
   reg.task$col_roles$feature <- "x"
   reg.task.list[[task_id]] <- reg.task
@@ -258,12 +257,17 @@ make_person_subset(point.dt)
 make_person_subset(reg.bench.score)
 
 if(require(animint2)){
+  my_theme <- theme_bw()
+  theme_set(my_theme)
   viz <- animint(
     title="SOAK algorithm: train/predict on subsets, regression",
     video="https://vimeo.com/1053413000",
     pred=ggplot()+
       ggtitle("Predictions for selected train/test split")+
-      theme_animint(height=400)+
+      theme_animint(
+        rowspan=2,
+        width=600,
+        height=700)+
       scale_fill_manual(values=set.colors)+
       geom_point(aes(
         x, y, fill=set.name),
@@ -291,7 +295,10 @@ if(require(animint2)){
         breaks=seq(-100, 100, by=2)),
     err=ggplot()+
       ggtitle("Test error for each split")+
-      theme_animint(height=400, width=350)+
+      theme_animint(
+        height=350,
+        width=350,
+        last_in_row=TRUE)+
       guides(fill="none")+
       scale_y_log10(
         "Mean squared error on test set")+
@@ -315,7 +322,7 @@ if(require(animint2)){
         scales="free"),
     diagram=ggplot()+
       ggtitle("Select train/test split")+
-      theme_animint(height=400, width=300)+
+      theme_animint(height=350, width=300)+
       facet_grid(
         . ~ train.subsets,
         scales="free",
