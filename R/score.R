@@ -18,7 +18,7 @@ score <- function(bench.result, ...){
   }
   out <- add_algorithm(rbindlist(out.dt.list))
   class(out) <- c("score", class(out))
-  out
+  data.table(out)
 }
 
 plot.score <- function(x, ..., value.var=NULL){
