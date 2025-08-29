@@ -103,9 +103,9 @@ The table above is a more convenient form for the visualization which we create 
 
 ```{r fig.height=7}
 if(require(animint2)){
-  my_theme <- theme_bw(20)
-  theme_set(my_theme)
+  print_theme <- theme_bw(20)
   ggplot()+
+    print_theme+
     geom_point(aes(
       x, y),
       data=reg.tall)+
@@ -179,6 +179,7 @@ The code below visualizes the resulting test accuracy numbers.
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     scale_x_log10()+
     geom_point(aes(
       regr.mse, train.subsets, color=algorithm),
@@ -257,8 +258,6 @@ make_person_subset(point.dt)
 make_person_subset(reg.bench.score)
 
 if(require(animint2)){
-  my_theme <- theme_bw()
-  theme_set(my_theme)
   viz <- animint(
     title="SOAK algorithm: train/predict on subsets, regression",
     video="https://vimeo.com/1053413000",
@@ -296,8 +295,8 @@ if(require(animint2)){
     err=ggplot()+
       ggtitle("Test error for each split")+
       theme_animint(
-        height=350,
-        width=350,
+        height=400,
+        width=400,
         last_in_row=TRUE)+
       guides(fill="none")+
       scale_y_log10(
@@ -322,7 +321,7 @@ if(require(animint2)){
         scales="free"),
     diagram=ggplot()+
       ggtitle("Select train/test split")+
-      theme_animint(height=350, width=300)+
+      theme_animint(height=300, width=350)+
       facet_grid(
         . ~ train.subsets,
         scales="free",
@@ -446,6 +445,7 @@ Below we visualize the pattern for each person and feature type:
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     geom_point(aes(
       x1, x2, color=label),
       shape=1,
@@ -542,6 +542,7 @@ Finally we plot the test error values below.
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     geom_point(aes(
       classif.ce, train.subsets, color=algorithm),
       shape=1,
@@ -648,7 +649,7 @@ if(require(animint2)){
     video="https://vimeo.com/manage/videos/1053464329",
     pred=ggplot()+
       ggtitle("Predictions for selected train/test split")+
-      theme_animint(height=350, width=350)+
+      theme_animint(height=700, width=700, rowspan=2)+
       scale_fill_manual(values=set.colors)+
       scale_color_manual(values=c(spam="black","not spam"="white"))+
       geom_point(aes(
@@ -675,7 +676,7 @@ if(require(animint2)){
         breaks=seq(-100, 100, by=2)),
     err=ggplot()+
       ggtitle("Test error for each split")+
-      theme_animint(height=350, width=350)+
+      theme_animint(height=400, width=400, last_in_row=TRUE)+
       theme(panel.margin=grid::unit(1, "lines"))+
       scale_y_continuous(
         "Classification error on test set",
@@ -703,7 +704,7 @@ if(require(animint2)){
         labeller=label_both),
     diagram=ggplot()+
       ggtitle("Select train/test split")+
-      theme_animint(height=350, width=300)+
+      theme_animint(height=300, width=400)+
       facet_grid(
         . ~ train.subsets,
         scales="free",
@@ -820,6 +821,7 @@ visualize these data, with one task in each facet/panel:
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     geom_point(aes(
       x, y),
       data=reg.data)+
@@ -946,6 +948,7 @@ The code below visualizes the resulting test accuracy numbers.
 train_size_vec <- unique(reg.bench.score$train_size)
 if(require(animint2)){
   ggplot()+
+    print_theme+
     scale_x_log10(
       breaks=train_size_vec)+
     scale_y_log10()+
@@ -983,6 +986,7 @@ reg.mean.dt <- dcast(
   value.var="regr.mse")
 if(require(animint2)){
   ggplot()+
+    print_theme+
     scale_x_log10(
       breaks=train_size_vec)+
     scale_y_log10()+
@@ -1204,6 +1208,7 @@ baseline). Below we visualize the data in the feature space:
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     geom_point(aes(
       x1, x2, color=y),
       shape=1,
@@ -1264,6 +1269,7 @@ Finally we plot the test error values below.
 ```{r}
 if(require(animint2)){
   ggplot()+
+    print_theme+
     geom_line(aes(
       train_size, classif.ce,
       group=paste(algorithm, seed),
