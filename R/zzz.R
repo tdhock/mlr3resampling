@@ -10,7 +10,7 @@ register_mlr3 = function() {
     lg$set_threshold("warn") # nolint
   }
   x = utils::getFromNamespace("mlr_reflections", ns = "mlr3")
-  for(task_type in colnames(x$task_col_roles)){
+  for(task_type in names(x$task_col_roles)){
     x$task_col_roles[[task_type]] = unique(c(x$task_col_roles[[task_type]], "subset"))
   }
   x$loaded_packages = c(x$loaded_packages, "mlr3resampling")
