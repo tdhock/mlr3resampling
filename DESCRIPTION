@@ -76,4 +76,4 @@ Suggests:
     glmnet, mlr3learners,
     mlr3torch, torch
 VignetteBuilder: knitr
-Remotes: mlr-org/mlr3
+Remotes: animint/animint2
