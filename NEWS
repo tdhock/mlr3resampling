@@ -1,3 +1,8 @@
+Changes in version 2025.9.22 (PR#40)
+
+- Older resamplers vignette uses HTML grid layout.
+- score() uses setattr() instead of class()<- to set "score" class of data table output.
+
 Changes in version 2025.7.30 (PR#35)
 
 - proj_grid() outputs tasks and resamplings sub-directories, instead of saving these data to the grid.rds file.
