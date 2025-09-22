@@ -337,9 +337,10 @@ if(require(animint2)){
         fill=NA,
         data=inst$viz.rect.dt)+
       scale_fill_manual(values=set.colors)+
-      geom_text(aes(
+      geom_label_aligned(aes(
         x=ifelse(rows=="subset", Inf, -Inf),
         y=(display_row+display_end)/2,
+        color=rows,
         hjust=ifelse(rows=="subset", 1, 0),
         label=paste0(rows, "=", ifelse(rows=="subset", subset, fold))),
         help="Text labels indicate chunks of data with common fold (grey) and subset (gold).",
@@ -361,10 +362,11 @@ if(require(animint2)){
         breaks=c(1,6, 7,12, 13,18))+
       scale_y_continuous(
         "Row number"),
+    first=list(iteration=10),
     source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
 }
 if(FALSE){
-  animint2pages(viz, "2023-12-13-train-predict-subsets-regression")
+  animint2pages(viz, "2023-12-13-train-predict-subsets-regression", chromote_sleep_seconds = 5)
 }
 ```
 
@@ -720,9 +722,10 @@ if(require(animint2)){
         fill=NA,
         data=inst$viz.rect.dt)+
       scale_fill_manual(values=set.colors)+
-      geom_text(aes(
+      geom_label_aligned(aes(
         x=ifelse(rows=="subset", Inf, -Inf),
         y=(display_row+display_end)/2,
+        color=rows,
         hjust=ifelse(rows=="subset", 1, 0),
         label=paste0(rows, "=", ifelse(rows=="subset", subset, fold))),
         help="Text labels indicate chunks of data with common fold (grey) and subset (gold).",
@@ -744,10 +747,11 @@ if(require(animint2)){
         breaks=c(1,6, 7,12, 13,18))+
       scale_y_continuous(
         "Row number"),
+    first=list(iteration=10),
     source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
 }
 if(FALSE){
-  animint2pages(viz, "2023-12-13-train-predict-subsets-classification")
+  animint2pages(viz, "2023-12-13-train-predict-subsets-classification", chromote_sleep_seconds=5)
 }
 ```
 
@@ -1138,7 +1142,7 @@ if(require(animint2)){
     source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
 }
 if(FALSE){
-  animint2pages(viz, "2023-12-26-train-sizes-regression")
+  animint2pages(viz, "2023-12-26-train-sizes-regression", chromote_sleep_seconds = 5)
 }
 ```
 
@@ -1441,7 +1445,7 @@ if(require(animint2)){
     source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
 }
 if(FALSE){
-  animint2pages(viz, "2023-12-27-train-sizes-classification")
+  animint2pages(viz, "2023-12-27-train-sizes-classification", chromote_sleep_seconds = 5)
 }
 ```
 
