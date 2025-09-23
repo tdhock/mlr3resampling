@@ -21,8 +21,8 @@ jobs:
           - {os: macos-latest,   r: release, torch: true}
           - {os: ubuntu-latest,  r: release, torch: true}
           - {os: ubuntu-latest,  r: devel,   torch: true}
-          - {os: windows-latest, r: devel,   torch: true}
-          - {os: windows-latest, r: devel,   torch: false}
+          - {os: Windows-2022,   r: devel,   torch: true}
+          - {os: Windows-2022,   r: devel,   torch: false}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
