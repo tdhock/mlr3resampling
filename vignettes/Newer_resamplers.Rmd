@@ -469,7 +469,7 @@ In this section we show how `ResamplingSameOtherSizesCV` can be used on a task w
 str(reg.task$col_roles)
 ```
 
-We see in the output aove that the task has column roles for both
+We see in the output above that the task has column roles for both
 `stratum` and `group`, which normally errors when used with
 `ResamplingCV`:
 
