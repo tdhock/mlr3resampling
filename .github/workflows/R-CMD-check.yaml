@@ -18,11 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: release}
-          - {os: windows-latest, r: release}
-          - {os: ubuntu-latest,   r: devel, http-user-agent: release}
-          - {os: ubuntu-latest,   r: release}
-          - {os: ubuntu-latest,   r: oldrel-1}
+          - {os: macos-latest,   r: release, torch: true}
+          - {os: ubuntu-latest,  r: release, torch: true}
+          - {os: ubuntu-latest,  r: devel,   torch: true}
+          - {os: windows-latest, r: release, torch: true}
+          - {os: windows-latest, r: release, torch: false}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -42,7 +42,6 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
-          http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
@@ -51,6 +50,7 @@ jobs:
           needs: check
   
       - name: Install torch
+        if: ${{ matrix.config.torch }}
         run: |
           Rscript -e 'torch::install_torch()'
 
