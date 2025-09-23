@@ -17,7 +17,7 @@ score <- function(bench.result, ...){
     out.dt.list[[score.i]] <- it.dt[bench.row, on="iteration"]
   }
   out <- add_algorithm(rbindlist(out.dt.list))
-  class(out) <- c("score", class(out))
+  setattr(out, "class", c("score", class(out)))
   out
 }
 

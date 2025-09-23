@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2025.7.30
+Version: 2025.9.22
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -76,4 +76,3 @@ Suggests:
     glmnet, mlr3learners,
     mlr3torch, torch
 VignetteBuilder: knitr
-Remotes: mlr-org/mlr3
