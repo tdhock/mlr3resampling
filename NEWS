@@ -1,3 +1,7 @@
+Changes in version 2025.9.24
+
+- Newer resamplers vignette reproducibility section.
+
 Changes in version 2025.9.22 (PR#40)
 
 - Older resamplers vignette uses HTML grid layout.
