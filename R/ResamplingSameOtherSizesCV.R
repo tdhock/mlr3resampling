@@ -93,7 +93,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       group.row.dt <- data.table(
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
       sample.dt <- group.row.dt[
-      , private$.sample(unique(group), task=task)
+      , private$.sample(unique(group), task=task) #assigns fold.
       , by=stratum]
       fold.dt <- sample.dt[, .(
         group=row_id, fold
@@ -174,7 +174,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       list(
         iteration.dt=rbindlist(
           iteration.dt.list
-        )[, iteration := .I][])
+        )[, iteration := .I][],
+        fold.dt=fold.dt)
     }
   )
 )
