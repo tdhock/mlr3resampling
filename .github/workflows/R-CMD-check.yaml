@@ -58,6 +58,6 @@ jobs:
         shell: bash
         run: rm tests/testthat/test-actions.R
 
-      - uses: build and check
+      - name: build and check
         shell: bash
         run: bash build.sh
