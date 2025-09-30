@@ -49,4 +49,4 @@ jobs:
 
       - name: run tests
         shell: bash
-        run: R --vanilla < tests/testthat.R
+        run: R -e 'testthat::test_dir("tests/testthat")'
