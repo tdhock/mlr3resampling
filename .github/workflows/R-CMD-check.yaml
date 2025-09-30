@@ -54,10 +54,7 @@ jobs:
         run: |
           Rscript -e 'torch::install_torch()'
 
-      - name: rm actions test file
-        shell: bash
-        run: rm tests/testthat/test-actions.R
-
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
+

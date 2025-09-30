@@ -6,10 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
-name: Test SLURM
+name: All tests
 
 jobs:
-  test-SLURM:
+  all-tests:
     runs-on: ubuntu-latest
 
     strategy:
@@ -38,10 +38,15 @@ jobs:
         shell: bash
         run: sudo bash slurm-config.sh
 
+      - name: Install torch
+        if: ${{ matrix.config.torch }}
+        run: |
+          Rscript -e 'torch::install_torch()'
+
       - name: R CMD INSTALL
         shell: bash
         run: R CMD INSTALL .
 
       - name: run tests
         shell: bash
-        run: R --vanilla < tests/testthat/test-actions.R
+        run: R -e 'testthat::test_dir("tests/testthat")'
