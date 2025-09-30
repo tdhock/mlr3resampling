@@ -58,6 +58,6 @@ jobs:
         shell: bash
         run: rm tests/testthat/test-actions.R
 
-      - uses: r-lib/actions/check-r-package@v2
-        with:
-          upload-snapshots: true
+      - uses: build and check
+        shell: bash
+        run: bash build.sh
