@@ -648,7 +648,7 @@ make_person_subset(class.bench.score)
 if(require(animint2)){
   viz <- animint(
     title="SOAK algorithm: train/predict on subsets, classification",
-    video="https://vimeo.com/manage/videos/1053464329",
+    video="https://vimeo.com/1053464329",
     pred=ggplot()+
       ggtitle("Predictions for selected train/test split")+
       theme_animint(height=700, width=700, rowspan=2)+
@@ -1138,7 +1138,7 @@ if(require(animint2)){
         showSelected=c("algorithm","seed"),
         clickSelects="iteration",
         data=reg.bench.score),
-    video="https://vimeo.com/manage/videos/1053467310",
+    video="https://vimeo.com/1053467310",
     source="https://github.com/tdhock/mlr3resampling/blob/main/vignettes/Older_resamplers.Rmd")
 }
 if(FALSE){
