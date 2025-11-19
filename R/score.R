@@ -22,7 +22,7 @@ score <- function(bench.result, ...){
 }
 
 plot.score <- function(x, ..., value.var=NULL){
-  value <- train.subsets <- NULL
+  value <- Train_subsets <- NULL
   if(requireNamespace("ggplot2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
@@ -30,7 +30,7 @@ plot.score <- function(x, ..., value.var=NULL){
     dt <- data.table(x)[, value := get(value.var)][]
     ggplot2::ggplot()+
       ggplot2::geom_point(ggplot2::aes(
-        value, train.subsets),
+        value, Train_subsets),
         shape=1,
         data=dt)+
       ggplot2::facet_grid(

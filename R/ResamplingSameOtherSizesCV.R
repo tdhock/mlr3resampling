@@ -172,9 +172,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
       }
       list(
-        iteration.dt=rbindlist(
-          iteration.dt.list
-        )[, iteration := .I][],
+        iteration.dt=rbindlist(iteration.dt.list)[, let(
+          iteration = .I,
+          Train_subsets = factor(train.subsets, c("all","same","other"))
+        )][],
         fold.dt=fold.dt)
     }
   )
