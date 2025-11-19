@@ -1,3 +1,6 @@
+library(testthat)
+library(data.table)
+
 test_that("mlr3torch history saved", {
   N <- 80
   set.seed(1)
@@ -92,7 +95,7 @@ test_that("mlr3torch history saved", {
   expected_join_cols <- c(
     expected_csv_cols,
     "task_id", "learner_id", "resampling_id", "test.subset", "train.subsets",
-    "groups", "test.fold", "seed", "n.train.groups", "iteration")
+    "groups", "test.fold", "seed", "n.train.groups", "iteration", "Train_subsets")
   expect_identical(names(csv_data_list$learners.csv), expected_join_cols)
 })
 
