@@ -1,3 +1,7 @@
+Changes in version 2025.11.19 (PR#51)
+
+- plot() yields consistent Y axes (other on top) for score() and pvalue().
+
 Changes in version 2025.9.24
 
 - Newer resamplers vignette reproducibility section.
