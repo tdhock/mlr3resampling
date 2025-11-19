@@ -129,7 +129,7 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
         hi,
         Train_subsets,
         xend=lo, yend=Train_subsets),
-        size=sd.seg.size,
+        linewidth=sd.seg.size,
         data=x$stats)+
       ggplot2::geom_segment(ggplot2::aes(
         compare_mean, Train_subsets,
