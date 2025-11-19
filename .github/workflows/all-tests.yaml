@@ -39,7 +39,6 @@ jobs:
         run: sudo bash slurm-config.sh
 
       - name: Install torch
-        if: ${{ matrix.config.torch }}
         run: |
           Rscript -e 'torch::install_torch()'
 
