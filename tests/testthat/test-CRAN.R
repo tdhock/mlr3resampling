@@ -663,7 +663,7 @@ test_that("proj_test down-samples proportionally", {
   expect_equal(sum(is.na(rpart_dt[["iteration"]])), 0)
 })
 
-test_that("set works after score", {
+test_that("set works after score(), other is last Y level", {
   N <- 80
   set.seed(1)
   reg.dt <- data.table(
@@ -698,4 +698,11 @@ test_that("set works after score", {
   bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
   set(bench.score, j="foo", value=1)
   expect_is(bench.score, "score")
+  last_lev <- function(x){
+    levs <- levels(factor(x))
+    levs[length(levs)]
+  }
+  expect_identical(last_lev(bench.score$train.subsets), "other")
+  bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "other")
 })
