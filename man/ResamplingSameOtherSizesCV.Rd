@@ -127,15 +127,15 @@ same_other_sizes$param_set$values$folds <- 5
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-Resampling-new}{\code{Resampling$new()}}
-\item \href{#method-Resampling-train_set}{\code{Resampling$train_set()}}
-\item \href{#method-Resampling-test_set}{\code{Resampling$test_set()}}
+\item \href{#method-ResamplingSameOtherSizesCV-new}{\code{Resampling$new()}}
+\item \href{#method-ResamplingSameOtherSizesCV-train_set}{\code{Resampling$train_set()}}
+\item \href{#method-ResamplingSameOtherSizesCV-test_set}{\code{Resampling$test_set()}}
 }
 }
 
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Resampling-new"></a>}}
-\if{latex}{\out{\hypertarget{method-Resampling-new}{}}}
+\if{html}{\out{<a id="method-ResamplingSameOtherSizesCV-new"></a>}}
+\if{latex}{\out{\hypertarget{method-ResamplingSameOtherSizesCV-new}{}}}
 \subsection{Method \code{new()}}{
 Creates a new instance of this \link[R6:R6Class]{R6} class.
 \subsection{Usage}{
@@ -172,8 +172,8 @@ The referenced help package can be opened via method \verb{$help()}.}
 }
 
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Resampling-train_set"></a>}}
-\if{latex}{\out{\hypertarget{method-Resampling-train_set}{}}}
+\if{html}{\out{<a id="method-ResamplingSameOtherSizesCV-train_set"></a>}}
+\if{latex}{\out{\hypertarget{method-ResamplingSameOtherSizesCV-train_set}{}}}
 \subsection{Method \code{train_set()}}{
 Returns the row ids of the i-th training set.
 \subsection{Usage}{
@@ -193,8 +193,8 @@ Iteration.}
 }
 
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Resampling-test_set"></a>}}
-\if{latex}{\out{\hypertarget{method-Resampling-test_set}{}}}
+\if{html}{\out{<a id="method-ResamplingSameOtherSizesCV-test_set"></a>}}
+\if{latex}{\out{\hypertarget{method-ResamplingSameOtherSizesCV-test_set}{}}}
 \subsection{Method \code{test_set()}}{
 Returns the row ids of the i-th test set.
 \subsection{Usage}{
