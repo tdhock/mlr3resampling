@@ -35,13 +35,11 @@ test_that("proj_submit_crew exists and validates inputs", {
   skip_if_not_installed("crew.cluster")
 
   # Function exists
-
   expect_true(exists("proj_submit_crew", where=asNamespace("mlr3resampling")))
 
-  # Invalid proj_dir should error
+  # Invalid proj_dir should error (message differs on Windows vs Unix)
   expect_error(
-    mlr3resampling::proj_submit_crew("/nonexistent/path"),
-    "No such file or directory"
+    mlr3resampling::proj_submit_crew("/nonexistent/path")
   )
 })
 
@@ -51,10 +49,9 @@ test_that("proj_compute_crew exists and validates inputs", {
   # Function exists
   expect_true(exists("proj_compute_crew", where=asNamespace("mlr3resampling")))
 
-  # Invalid proj_dir should error
+  # Invalid proj_dir should error (message differs on Windows vs Unix)
   expect_error(
-    mlr3resampling::proj_compute_crew("/nonexistent/path"),
-    "No such file or directory"
+    mlr3resampling::proj_compute_crew("/nonexistent/path")
   )
 })
 
