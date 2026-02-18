@@ -424,7 +424,7 @@ plot.pvalue_downsample <- function(x, ...){
         NULL,
         labels=function(v)sprintf("%.3f", v))+
       ggplot2::scale_y_discrete(
-        "Train subsets",
+        NULL,
         drop=TRUE,
         limits=function(l)x$label_order[x$label_order %in% l])+
       ggplot2::labs(
