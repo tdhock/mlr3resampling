@@ -250,7 +250,7 @@ pvalue_downsample <- function(score_in, subset_name, model_name){
   }
   score_wide <- dcast(
     score_value,
-    formula=as.formula(paste(
+    formula=stats::as.formula(paste(
       paste(id.cols, collapse=" + "),
       "~ train.subsets"
     )),
