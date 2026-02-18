@@ -37,9 +37,28 @@ Length-1 character string; exact value to match in
 Daniel Agyapong
 }
 \examples{
-\dontrun{
-bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
-down.list <- mlr3resampling::pvalue_downsample(bench.score, "F", "rpart")
-plot(down.list)
-}
+set.seed(1)
+N <- 40L
+task.dt <- data.table::data.table(
+  x = runif(N, -2, 2),
+  subset_col = factor(rep(c("F", "M"), each = N/2))
+)[, y := x^2 + rnorm(.N, sd = 0.2)]
+task <- mlr3::TaskRegr$new("toy_soak", task.dt, target = "y")
+task$col_roles$feature <- "x"
+task$col_roles$subset <- "subset_col"
+task$col_roles$stratum <- "subset_col"
+soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+soak$param_set$values$folds <- 2L
+soak$param_set$values$seeds <- 1L
+soak$param_set$values$sizes <- 0L
+grid <- mlr3::benchmark_grid(
+  task,
+  list(mlr3::LearnerRegrFeatureless$new()),
+  soak
+)
+result <- mlr3::benchmark(grid)
+score.dt <- mlr3resampling::score(result, mlr3::msr("regr.rmse"))
+model_name <- unique(score.dt$algorithm)[1]
+down.list <- mlr3resampling::pvalue_downsample(score.dt, "F", model_name)
+if(requireNamespace("ggplot2", quietly = TRUE))plot(down.list)
 }
