@@ -123,7 +123,10 @@ test_that("pvalue_downsample supports value.var and digits arguments", {
     digits=2
   )
   expect_identical(down.list$value.var, "RMSE")
-  expect_true(all(grepl("^[0-9]+\\.[0-9]{2} \u00B1 [0-9]+\\.[0-9]{2}$", down.list$stats$text_label)))
+  expect_true(all(grepl(
+    "^[0-9]+\\.[0-9]{2} \u00B1 [0-9]+\\.[0-9]{2}(, N = [0-9]+)?$",
+    down.list$stats$text_label
+  )))
 })
 
 test_that("plot.pvalue_downsample returns ggplot", {

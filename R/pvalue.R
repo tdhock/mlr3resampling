@@ -258,11 +258,7 @@ pvalue_downsample <- function(
     fill=TRUE
   )[, sample_size := factor(sample_size, c("full", as.character(min.groups)))]
   score_value <- score_panels[, let(
-    Train_subsets = ifelse(
-      sample_size == "full",
-      paste0(train.subsets, ".", groups),
-      as.character(train.subsets)
-    ),
+    Train_subsets = as.character(train.subsets),
     value = get(value.var)
   )]
   id.cols <- c("sample_size", "test.fold")
@@ -284,30 +280,18 @@ pvalue_downsample <- function(
     variable.name="train.subsets"
   )[, Train_subsets := paste0(train.subsets, "-same")][]
   all.labels <- unique(c(score_value$Train_subsets, score_long$Train_subsets))
-  full.label <- function(name){
-    full.group.values <- unique(score.full[train.subsets == name, groups])
-    if(length(full.group.values))paste0(name, ".", full.group.values[1])
-  }
-  label.template <- c(
-    full.label("other"),
-    "other",
-    "other-same",
-    full.label("same"),
-    "same",
-    "all-same",
-    full.label("all"),
-    "all"
-  )
-  label_order <- unique(label.template[label.template %in% all.labels])
+  label_order <- c("other", "other-same", "same", "all-same", "all")
+  label_order <- label_order[label_order %in% all.labels]
   score_value[, Train_subsets := factor(Train_subsets, label_order)]
   score_long[, Train_subsets := factor(Train_subsets, label_order)]
   stats_dt <- score_value[, .(
     value_mean=mean(value),
     value_sd=sd(value),
-    value_length=.N
+    value_length=.N,
+    n.train=round(mean(n.train.groups))
   ), by=.(sample_size, Train_subsets)][, let(
-    lo=value_mean-2*value_sd,
-    hi=value_mean+2*value_sd
+    lo=value_mean-value_sd,
+    hi=value_mean+value_sd
   )]
   range_dt <- stats_dt[, {
     min_val <- min(lo, na.rm=TRUE)
@@ -364,9 +348,16 @@ pvalue_downsample <- function(
       value_mean < mid_lo, 0,
       value_mean > mid_hi, 1,
       default=0.5),
-    text_label = sprintf(
-      paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-      value_mean, value_sd
+    text_label = ifelse(
+      sample_size == "full",
+      sprintf(
+        paste0("%.", digits, "f \u00B1 %.", digits, "f, N = %d"),
+        value_mean, value_sd, n.train
+      ),
+      sprintf(
+        paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+        value_mean, value_sd
+      )
     )
   )][]
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
@@ -379,15 +370,12 @@ pvalue_downsample <- function(
     value.var=value.var,
     label_order=label_order,
     n.test.folds=n.test.folds,
-    n.random.seeds=n.random.seeds,
     caption=sprintf(
-      "%s (mean \u00B1 2sd) | subset: %s | model: %s | %d test folds | %d random %s for downsample",
+      "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
       value.var,
       subset_name,
       model_name,
-      n.test.folds,
-      n.random.seeds,
-      ifelse(n.random.seeds == 1, "seed", "seeds")
+      n.test.folds
     ),
     stats=stats_range,
     pvalues=pval_range), class=c("pvalue_downsample", "list"))
@@ -431,11 +419,13 @@ plot.pvalue_downsample <- function(x, ...){
         size=4,
         vjust=-0.5,
         data=x$pvalues)+
-      ggplot2::facet_wrap(
-        "sample_size",
-        nrow=1,
+      ggplot2::facet_grid(
+        . ~ sample_size,
         labeller=ggplot2::labeller(
-          sample_size=function(v)paste("sample size:", v)),
+          sample_size=function(v)ifelse(
+            v == "full",
+            "sample_size: full",
+            paste0("sample_size: smallest = ", v))),
         scales="free")+
       ggplot2::scale_x_continuous(
         NULL,
@@ -443,7 +433,7 @@ plot.pvalue_downsample <- function(x, ...){
       ggplot2::scale_y_discrete(
         NULL,
         drop=TRUE,
-        limits=function(l)x$label_order[x$label_order %in% l])+
+        limits=function(l)rev(x$label_order[x$label_order %in% l]))+
       ggplot2::labs(
         caption=x$caption
       )+
