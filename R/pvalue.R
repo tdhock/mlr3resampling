@@ -363,7 +363,6 @@ pvalue_downsample <- function(
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   n.test.folds <- length(unique(score_dt$test.fold))
-  n.random.seeds <- if("seed" %in% names(score_dt))length(unique(score_dt$seed)) else 1L
   structure(list(
     subset_name=subset_name,
     model_name=model_name,
@@ -381,7 +380,13 @@ pvalue_downsample <- function(
     pvalues=pval_range), class=c("pvalue_downsample", "list"))
 }
 
-plot.pvalue_downsample <- function(x, ...){
+plot.pvalue_downsample <- function(
+  x,
+  ...,
+  text.size=4,
+  p.color="grey50",
+  sd.seg.size=0.8
+){
   value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- NULL
   if(requireNamespace("ggplot2")){
     ggplot2::ggplot()+
@@ -389,34 +394,34 @@ plot.pvalue_downsample <- function(x, ...){
       ggplot2::geom_point(ggplot2::aes(
         value_mean,
         Train_subsets),
-        shape=16,
+        shape=1,
         size=1.8,
         data=x$stats)+
       ggplot2::geom_segment(ggplot2::aes(
         hi,
         Train_subsets,
         xend=lo, yend=Train_subsets),
-        linewidth=0.8,
+        linewidth=sd.seg.size,
         data=x$stats)+
       ggplot2::geom_segment(ggplot2::aes(
         compare_mean, Train_subsets,
         xend=same_mean, yend=Train_subsets),
-        color="grey50",
+        color=p.color,
         data=x$pvalues)+
       ggplot2::geom_text(ggplot2::aes(
         value_mean,
         Train_subsets,
         hjust=hjust,
         label=text_label),
-        size=4,
+        size=text.size,
         vjust=-0.5,
         data=x$stats)+
       ggplot2::geom_text(ggplot2::aes(
         text_value, Train_subsets,
         label=text_label,
         hjust=hjust),
-        color="grey50",
-        size=4,
+        color=p.color,
+        size=text.size,
         vjust=-0.5,
         data=x$pvalues)+
       ggplot2::facet_grid(
@@ -431,7 +436,7 @@ plot.pvalue_downsample <- function(x, ...){
         NULL,
         labels=function(v)sprintf("%.3f", v))+
       ggplot2::scale_y_discrete(
-        NULL,
+        "Train subsets",
         drop=TRUE,
         limits=function(l)rev(x$label_order[x$label_order %in% l]))+
       ggplot2::labs(
