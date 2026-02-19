@@ -371,25 +371,18 @@ pvalue_downsample <- function(
   )][]
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
-  metric_label <- fcase(
-    value.var == "regr.rmse", "RMSE",
-    value.var == "regr.mse", "MSE",
-    value.var == "classif.ce", "CE",
-    value.var == "classif.auc", "AUC",
-    default=toupper(value.var))
   n.test.folds <- length(unique(score_dt$test.fold))
   n.random.seeds <- if("seed" %in% names(score_dt))length(unique(score_dt$seed)) else 1L
   structure(list(
     subset_name=subset_name,
     model_name=model_name,
     value.var=value.var,
-    metric_label=metric_label,
     label_order=label_order,
     n.test.folds=n.test.folds,
     n.random.seeds=n.random.seeds,
     caption=sprintf(
       "%s (mean \u00B1 2sd) | subset: %s | model: %s | %d test folds | %d random %s for downsample",
-      metric_label,
+      value.var,
       subset_name,
       model_name,
       n.test.folds,
