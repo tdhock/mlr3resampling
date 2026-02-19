@@ -92,6 +92,19 @@ test_that("pvalue_downsample uses exact model match", {
   )
 })
 
+test_that("pvalue_downsample supports value.var and digits arguments", {
+  score.dt <- make_downsample_score()[, RMSE := regr.rmse][]
+  down.list <- mlr3resampling::pvalue_downsample(
+    score.dt,
+    "Female cohort with long text",
+    "rpart",
+    value.var="RMSE",
+    digits=2
+  )
+  expect_identical(down.list$value.var, "RMSE")
+  expect_true(all(grepl("^[0-9]+\\.[0-9]{2} \u00B1 [0-9]+\\.[0-9]{2}$", down.list$stats$text_label)))
+})
+
 test_that("plot.pvalue_downsample returns ggplot", {
   skip_if_not_installed("ggplot2")
   score.dt <- make_downsample_score()

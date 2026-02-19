@@ -11,7 +11,13 @@
   (\code{n.train.groups == min(groups)}).
 }
 \usage{
-pvalue_downsample(score_in, subset_name, model_name)
+pvalue_downsample(
+  score_in,
+  subset_name,
+  model_name,
+  value.var = NULL,
+  digits = 3
+)
 }
 \arguments{
   \item{score_in}{
@@ -26,6 +32,13 @@ Length-1 character string; exact value to match in
   \item{model_name}{
 Length-1 character string; exact value to match in
 \code{score_in$algorithm}.
+}
+  \item{value.var}{
+Optional metric column name. If \code{NULL}, the function requires exactly
+one column name matching \code{"classif|regr"} and uses it.
+}
+  \item{digits}{
+Non-negative integer number of digits to print in mean/SD text labels.
 }
 }
 \value{

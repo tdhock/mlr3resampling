@@ -164,7 +164,13 @@ plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
   }
 }
 
-pvalue_downsample <- function(score_in, subset_name, model_name){
+pvalue_downsample <- function(
+  score_in,
+  subset_name,
+  model_name,
+  value.var=NULL,
+  digits=3
+){
   Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- sample_size <- groups <- n.train.groups <- seed <- iteration <- NULL
   if(!is.character(subset_name) || length(subset_name) != 1L || is.na(subset_name)){
     stop("subset_name must be a non-NA character string of length 1")
@@ -172,6 +178,11 @@ pvalue_downsample <- function(score_in, subset_name, model_name){
   if(!is.character(model_name) || length(model_name) != 1L || is.na(model_name)){
     stop("model_name must be a non-NA character string of length 1")
   }
+  if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
+     digits < 0L || as.integer(digits) != digits){
+    stop("digits must be a non-negative integer scalar")
+  }
+  digits <- as.integer(digits)
   required.cols <- c(
     "test.subset", "train.subsets", "test.fold", "groups", "n.train.groups"
   )
@@ -201,15 +212,25 @@ pvalue_downsample <- function(score_in, subset_name, model_name){
   if("task_id" %in% names(score_dt) && length(unique(score_dt$task_id)) != 1L){
     stop("score_in must contain exactly one task_id after filtering subset_name/model_name")
   }
-  value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
-  if(length(value.candidates) != 1L){
-    stop(
-      "score_in must have exactly one metric column matching classif|regr, but found ",
-      length(value.candidates), ": ",
-      paste(value.candidates, collapse=", ")
-    )
+  if(is.null(value.var)){
+    value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
+    if(length(value.candidates) != 1L){
+      stop(
+        "score_in must have exactly one metric column matching classif|regr, but found ",
+        length(value.candidates), ": ",
+        paste(value.candidates, collapse=", "),
+        ". Please specify value.var explicitly."
+      )
+    }
+    value.var <- value.candidates[[1]]
+  }else{
+    if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var)){
+      stop("value.var must be a non-NA character string of length 1")
+    }
+    if(!value.var %in% names(score_dt)){
+      stop("value.var must be a column name of score_in after filtering subset_name/model_name")
+    }
   }
-  value.var <- value.candidates[[1]]
   if(!any(score_dt$n.train.groups < score_dt$groups)){
     stop("scores do not have downsamples")
   }
@@ -343,7 +364,10 @@ pvalue_downsample <- function(score_in, subset_name, model_name){
       value_mean < mid_lo, 0,
       value_mean > mid_hi, 1,
       default=0.5),
-    text_label = sprintf("%.5f \u00B1 %.5f", value_mean, value_sd)
+    text_label = sprintf(
+      paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+      value_mean, value_sd
+    )
   )][]
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
