@@ -1,103 +1,124 @@
 library(testthat)
 library(data.table)
 
-make_downsample_score <- function(){
-  subset_name <- "Female cohort with long text"
-  full.groups <- c(same=6L, other=4L, all=10L)
-  min.groups <- min(full.groups)
-  dt.list <- list()
-  for(train.subset in names(full.groups)){
-    full.n <- full.groups[[train.subset]]
-    train.sizes <- unique(c(full.n, min.groups))
-    for(test.fold in 1:4){
-      for(n.train.groups in train.sizes){
-        is.small <- n.train.groups < full.n
-        base <- switch(
-          train.subset,
-          same=0.84,
-          other=0.82,
-          all=0.80
-        )
-        dt.list[[paste(train.subset, test.fold, n.train.groups)]] <- data.table(
-          task_id="toy",
-          test.subset=subset_name,
-          train.subsets=train.subset,
-          test.fold=test.fold,
-          algorithm="rpart",
-          groups=full.n,
-          n.train.groups=n.train.groups,
-          regr.rmse=base+ifelse(is.small, 0.03, 0)+test.fold*0.001
-        )
-      }
+get_soak_score <- local({
+  cache <- NULL
+  function(){
+    if(!is.null(cache)){
+      return(copy(cache))
     }
+    set.seed(1)
+    N <- 60L
+    subset_name <- "Female cohort with long text"
+    task.dt <- data.table(
+      x=runif(N, -2, 2),
+      subset_col=factor(rep(c(subset_name, "Male cohort with long text"), each=N/2))
+    )[, y := x^2 + rnorm(.N, sd=0.2)][]
+    reg.task <- mlr3::TaskRegr$new("toy_soak", task.dt, target="y")
+    reg.task$col_roles$feature <- "x"
+    reg.task$col_roles$subset <- "subset_col"
+    reg.task$col_roles$stratum <- "subset_col"
+    soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+    soak$param_set$values$folds <- 2L
+    soak$param_set$values$seeds <- 1L
+    soak$param_set$values$sizes <- 0L
+    reg.learner.list <- list(
+      mlr3::LearnerRegrFeatureless$new()
+    )
+    if(requireNamespace("rpart", quietly=TRUE)){
+      reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+    }
+    bench.grid <- mlr3::benchmark_grid(
+      reg.task,
+      reg.learner.list,
+      soak
+    )
+    bench.result <- mlr3::benchmark(bench.grid)
+    cache <<- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+    copy(cache)
   }
-  rbindlist(dt.list)
-}
+})
 
 test_that("pvalue_downsample returns strict S3 object", {
-  score.dt <- make_downsample_score()
+  score.dt <- get_soak_score()
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
+  min.groups <- as.character(min(score.dt[test.subset == subset_name, groups]))
   down.list <- mlr3resampling::pvalue_downsample(
     score.dt,
-    "Female cohort with long text",
-    "rpart"
+    subset_name,
+    model_name
   )
   expect_s3_class(down.list, "pvalue_downsample")
-  expect_identical(down.list$subset_name, "Female cohort with long text")
-  expect_identical(down.list$model_name, "rpart")
+  expect_identical(down.list$subset_name, subset_name)
+  expect_identical(down.list$model_name, model_name)
   expect_identical(down.list$value.var, "regr.rmse")
-  expect_identical(levels(down.list$stats$sample_size), c("full", "4"))
+  expect_identical(levels(down.list$stats$sample_size), c("full", min.groups))
   expect_true(all(c("stats", "pvalues") %in% names(down.list)))
   expect_true(all(c("sample_size", "Train_subsets") %in% names(down.list$stats)))
   expect_true(all(c("sample_size", "Train_subsets") %in% names(down.list$pvalues)))
 })
 
 test_that("pvalue_downsample uses exact subset match", {
-  score.dt <- make_downsample_score()
+  score.dt <- get_soak_score()
+  model_name <- unique(score.dt$algorithm)[1]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort", "rpart"),
+    mlr3resampling::pvalue_downsample(score.dt, "Female cohort", model_name),
     "was not found in score_in\\$test.subset"
   )
 })
 
 test_that("pvalue_downsample errors when there is no downsample", {
-  score.dt <- make_downsample_score()[, n.train.groups := groups][]
+  score.dt <- get_soak_score()[, n.train.groups := groups][]
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort with long text", "rpart"),
+    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
     "scores do not have downsamples",
     fixed=TRUE
   )
 })
 
 test_that("pvalue_downsample errors when there is no comparison subset", {
-  score.dt <- make_downsample_score()[train.subsets == "same"]
+  score.dt <- get_soak_score()[train.subsets == "same"][
+    , n.train.groups := pmax(1L, groups - 1L)
+  ][]
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort with long text", "rpart"),
+    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
     "must contain at least one comparison subset"
   )
 })
 
 test_that("pvalue_downsample errors when multiple metric columns are present", {
-  score.dt <- make_downsample_score()[, classif.ce := 0.2][]
+  score.dt <- get_soak_score()[, classif.ce := 0.2][]
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort with long text", "rpart"),
+    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
     "exactly one metric column matching classif\\|regr"
   )
 })
 
 test_that("pvalue_downsample uses exact model match", {
-  score.dt <- make_downsample_score()
+  score.dt <- get_soak_score()
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort with long text", "tree"),
+    mlr3resampling::pvalue_downsample(score.dt, subset_name, paste0(model_name, "_missing")),
     "was not found in score_in\\$algorithm"
   )
 })
 
 test_that("pvalue_downsample supports value.var and digits arguments", {
-  score.dt <- make_downsample_score()[, RMSE := regr.rmse][]
+  score.dt <- get_soak_score()[, RMSE := regr.rmse][]
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   down.list <- mlr3resampling::pvalue_downsample(
     score.dt,
-    "Female cohort with long text",
-    "rpart",
+    subset_name,
+    model_name,
     value.var="RMSE",
     digits=2
   )
@@ -107,11 +128,13 @@ test_that("pvalue_downsample supports value.var and digits arguments", {
 
 test_that("plot.pvalue_downsample returns ggplot", {
   skip_if_not_installed("ggplot2")
-  score.dt <- make_downsample_score()
+  score.dt <- get_soak_score()
+  subset_name <- "Female cohort with long text"
+  model_name <- unique(score.dt$algorithm)[1]
   down.list <- mlr3resampling::pvalue_downsample(
     score.dt,
-    "Female cohort with long text",
-    "rpart"
+    subset_name,
+    model_name
   )
   down.plot <- plot(down.list)
   expect_s3_class(down.plot, "ggplot")
@@ -119,32 +142,12 @@ test_that("plot.pvalue_downsample returns ggplot", {
 
 test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   skip_if_not_installed("ggplot2")
-  set.seed(1)
-  N <- 40L
-  person <- factor(rep(c("F", "M"), each=N/2))
-  task.dt <- data.table(
-    x=runif(N, -2, 2),
-    person=person
-  )[, y := x^2 + rnorm(N, sd=0.2)][]
-  reg.task <- mlr3::TaskRegr$new("toy_soak", task.dt, target="y")
-  reg.task$col_roles$feature <- "x"
-  reg.task$col_roles$subset <- "person"
-  reg.task$col_roles$stratum <- "person"
-  soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-  soak$param_set$values$folds <- 2L
-  soak$param_set$values$seeds <- 1L
-  soak$param_set$values$sizes <- 0L
-  bench.grid <- mlr3::benchmark_grid(
-    reg.task,
-    list(mlr3::LearnerRegrFeatureless$new()),
-    soak
-  )
-  bench.result <- mlr3::benchmark(bench.grid)
-  score.dt <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+  score.dt <- get_soak_score()
+  subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
-  expect_true(any(score.dt[test.subset == "F", n.train.groups < groups]))
-  min.groups <- as.character(min(score.dt[test.subset == "F", groups]))
-  down.list <- mlr3resampling::pvalue_downsample(score.dt, "F", model_name)
+  expect_true(any(score.dt[test.subset == subset_name, n.train.groups < groups]))
+  min.groups <- as.character(min(score.dt[test.subset == subset_name, groups]))
+  down.list <- mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name)
   expect_s3_class(down.list, "pvalue_downsample")
   expect_true(all(c("full", min.groups) %in% unique(down.list$stats$sample_size)))
   expect_true("same" %in% as.character(unique(down.list$stats$Train_subsets)))
