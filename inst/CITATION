@@ -1,0 +1,16 @@
+bibentry(
+  bibtype="article",
+  title ="SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets",
+  author = c(
+    person("Toby Dylan", "Hocking", comment=c(ORCID="0000-0002-3146-0865")),
+    person("Gabrielle", "Thibault"),
+    person("Cameron Scott", "Bodine"),
+    person("Paul Nelsom", "Arellano"),
+    person("Alexander F", "Shenkin"),
+    person("Olivia", "Lindly")
+    ),
+  year         = 2026,
+  journal="Statistical Analysis and Data Mining",
+  doi="10.1002/sam.70055",
+  volume=19,
+  number=1)

@@ -1,3 +1,7 @@
+Changes in version 2026.2.20
+
+- added inst/CITATION.
+
 Changes in version 2025.11.19 (PR#51)
 
 - plot() yields consistent Y axes (other on top) for score() and pvalue().
