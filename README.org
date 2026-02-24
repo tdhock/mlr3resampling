@@ -15,8 +15,10 @@ framework in R
 
 ** Description
 
-For an overview of functionality, [[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]], the
-[[https://arxiv.org/abs/2410.08643][SOAK arXiv paper]], and [[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
+For an overview of functionality,
+[[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]], the
+[[https://onlinelibrary.wiley.com/doi/10.1002/sam.70055][SOAK paper]], and 
+[[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
 
 *** SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets
 
