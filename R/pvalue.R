@@ -1,3 +1,131 @@
+pvalue_compute <- function(
+  score_value,
+  measure.vars,
+  cast_id_cols,
+  melt_id_cols,
+  stats_by,
+  range_by,
+  pvalue_by,
+  pvalue_train_subset_levels,
+  add_n_train_from=NULL,
+  stats_interval_mult=1,
+  digits=3,
+  show_n_full_in_stats_label=FALSE
+){
+  train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
+  score_wide <- dcast(
+    score_value,
+    formula=stats::as.formula(paste(
+      paste(cast_id_cols, collapse=" + "),
+      "~ train.subsets"
+    )),
+    value.var="value"
+  )
+  score_long <- melt(
+    score_wide,
+    id.vars=melt_id_cols,
+    measure.vars=measure.vars,
+    variable.name="train.subsets"
+  )[, Train_subsets := factor(
+    paste0(train.subsets, "-same"),
+    pvalue_train_subset_levels
+  )][]
+  stats_dt <- score_value[, .(
+    value_mean=mean(value),
+    value_sd=sd(value),
+    value_length=.N
+  ), by=stats_by]
+  if(!is.null(add_n_train_from)){
+    n.train <- NULL
+    n.train.dt <- score_value[, .(
+      n.train=round(mean(get(add_n_train_from)))
+    ), by=stats_by]
+    stats_dt[n.train.dt, on=stats_by, n.train := i.n.train]
+  }
+  stats_dt <- stats_dt[, let(
+    lo=value_mean-stats_interval_mult*value_sd,
+    hi=value_mean+stats_interval_mult*value_sd
+  )]
+  range_dt <- stats_dt[, {
+    min_val <- min(lo, na.rm=TRUE)
+    max_val <- max(hi, na.rm=TRUE)
+    data.table(
+      min_val,
+      mid_lo=min_val*2/3+max_val*1/3,
+      mid=(min_val+max_val)/2,
+      mid_hi=min_val*1/3+max_val*2/3,
+      max_val
+    )
+  }, by=range_by]
+  try.test <- function(...)tryCatch({
+    t.test(...)
+  }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
+  pval_dt <- score_long[, {
+    paired <- try.test(value, same, paired=TRUE)
+    unpaired <- try.test(value, same, paired=FALSE)
+    data.table(
+      mean_diff=paired$estimate,
+      diff_mean=diff(unpaired$estimate),
+      p.paired=paired$p.value,
+      p.unpaired=unpaired$p.value,
+      same_mean=mean(same),
+      compare_mean=mean(value),
+      N=.N
+    )
+  }, by=pvalue_by]
+  pval_range <- range_dt[
+    pval_dt, on=range_by
+  ][, let(
+    pmin_mean = pmin(same_mean, compare_mean),
+    pmax_mean = pmax(same_mean, compare_mean)
+  )][
+  , hjust := fcase(
+    pmax_mean < mid, 0,
+    pmin_mean > mid, 1,
+    default=0.5)
+  ][, let(
+    text_label = fcase(
+      is.na(p.paired), "P = NA",
+      p.paired < 0.0001, "P < 0.0001",
+      default=sprintf("P = %.4f", p.paired)
+    ),
+    text_value = fcase(
+      hjust == 0, pmin_mean,
+      hjust == 1, pmax_mean,
+      default=(pmin_mean+pmax_mean)/2)
+  )][]
+  stats_range <- range_dt[
+    stats_dt, on=range_by
+  ][, let(
+    hjust = fcase(
+      value_mean < mid_lo, 0,
+      value_mean > mid_hi, 1,
+      default=0.5)
+  )][]
+  if(show_n_full_in_stats_label && all(c("sample_size", "n.train") %in% names(stats_range))){
+    stats_range[, text_label := ifelse(
+      sample_size == "full",
+      paste0(
+        sprintf(
+          paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+          value_mean, value_sd
+        ),
+        ", N = ", n.train
+      ),
+      sprintf(
+        paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+        value_mean, value_sd
+      )
+    )]
+  }else{
+    stats_range[, text_label := sprintf(
+      paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+      value_mean, value_sd
+    )]
+  }
+  list(stats=stats_range, pvalues=pval_range)
+}
+
 pvalue <- function(score_in, value.var=NULL, digits=3){
   Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- NULL
   if(is.null(value.var)){
@@ -34,85 +162,23 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     Train_subsets = factor(train.subsets, levs),
     value = get(value.var)
   )]
-  score_wide <- dcast(
-    score_dt,
-    task_id + test.subset + algorithm + test.fold ~ train.subsets)
-  score_long <- melt(
-    score_wide,
+  compute <- pvalue_compute(
+    score_value=score_dt,
     measure.vars=measure.vars,
-    variable.name="train.subsets")
-  stats_dt <- dcast(
-    score_dt,
-    task_id + test.subset + algorithm + Train_subsets ~ .,
-    list(mean, sd, length)
-  )[, let(
-    lo=value_mean-value_sd,
-    hi=value_mean+value_sd
-  )]
-  range_dt <- stats_dt[, {
-    min_val <- min(lo,na.rm=TRUE)
-    max_val <- max(hi,na.rm=TRUE)
-    data.table(
-      min_val,
-      mid_lo=min_val*2/3+max_val*1/3,
-      mid=(min_val+max_val)/2,
-      mid_hi=min_val*1/3+max_val*2/3,
-      max_val)
-  }, by=.(task_id, test.subset)]
-  try.test <- function(...)tryCatch({
-    t.test(...)
-  }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
-  pval_dt <- score_long[, {
-    paired <- try.test(value, same, paired=TRUE)
-    unpaired <- try.test(value, same, paired=FALSE)
-    data.table(
-      mean_diff=paired$estimate,
-      diff_mean=diff(unpaired$estimate),
-      p.paired=paired$p.value,
-      p.unpaired=unpaired$p.value,
-      same_mean=mean(same),
-      compare_mean=mean(value),
-      N=.N)
-  }, by=.(
-    task_id, test.subset, algorithm,
-    Train_subsets=factor(paste0(train.subsets,"-same"), levs)
-  )]
-  pval_range <- range_dt[
-    pval_dt, on=.(task_id,test.subset)
-  ][, let(
-    pmin_mean = pmin(same_mean, compare_mean),
-    pmax_mean = pmax(same_mean, compare_mean)
-  )][
-  , hjust := fcase(
-    pmax_mean < mid, 0,
-    pmin_mean > mid, 1,
-    default=0.5)
-  ][, let(
-    text_label = paste0(
-      ifelse(
-        p.paired<0.0001,
-        "P<0.0001",
-        sprintf("P=%.4f", p.paired))),
-    text_value = fcase(
-      hjust==0, pmin_mean,
-      hjust==1, pmax_mean,
-      default=(pmin_mean+pmax_mean)/2)
-  )][]
-  stats_range <- range_dt[
-    stats_dt, on=.(task_id,test.subset)
-  ][, let(
-    hjust = fcase(
-      value_mean<mid_lo, 0,
-      value_mean>mid_hi, 1,
-      default=0.5),
-    text_label = sprintf(
-      paste0("%.",digits,"f\u00B1%.",digits,"f"),
-      value_mean, value_sd)
-  )][]
+    cast_id_cols=c("task_id", "test.subset", "algorithm", "test.fold"),
+    melt_id_cols=c("task_id", "test.subset", "algorithm", "test.fold", "same"),
+    stats_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
+    range_by=c("task_id", "test.subset"),
+    pvalue_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
+    pvalue_train_subset_levels=levs,
+    stats_interval_mult=1,
+    digits=digits,
+    show_n_full_in_stats_label=FALSE
+  )
   structure(list(
     value.var=value.var,
-    stats=stats_range,
-    pvalues=pval_range), class=c("pvalue", "list"))
+    stats=compute$stats,
+    pvalues=compute$pvalues), class=c("pvalue", "list"))
 }
 
 plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
@@ -265,101 +331,26 @@ pvalue_downsample <- function(
   if("seed" %in% names(score_value)){
     id.cols <- c(id.cols, "seed")
   }
-  score_wide <- dcast(
-    score_value,
-    formula=stats::as.formula(paste(
-      paste(id.cols, collapse=" + "),
-      "~ train.subsets"
-    )),
-    value.var="value"
-  )
-  score_long <- melt(
-    score_wide,
-    id.vars=c(id.cols, "same"),
-    measure.vars=measure.vars,
-    variable.name="train.subsets"
-  )[, Train_subsets := paste0(train.subsets, "-same")][]
-  all.labels <- unique(c(score_value$Train_subsets, score_long$Train_subsets))
+  all.labels <- unique(c(score_value$Train_subsets, paste0(measure.vars, "-same")))
   label_order <- c("other", "other-same", "same", "all-same", "all")
   label_order <- label_order[label_order %in% all.labels]
   score_value[, Train_subsets := factor(Train_subsets, label_order)]
-  score_long[, Train_subsets := factor(Train_subsets, label_order)]
-  stats_dt <- score_value[, .(
-    value_mean=mean(value),
-    value_sd=sd(value),
-    value_length=.N,
-    n.train=round(mean(n.train.groups))
-  ), by=.(sample_size, Train_subsets)][, let(
-    lo=value_mean-value_sd,
-    hi=value_mean+value_sd
-  )]
-  range_dt <- stats_dt[, {
-    min_val <- min(lo, na.rm=TRUE)
-    max_val <- max(hi, na.rm=TRUE)
-    data.table(
-      min_val,
-      mid_lo=min_val*2/3+max_val*1/3,
-      mid=(min_val+max_val)/2,
-      mid_hi=min_val*1/3+max_val*2/3,
-      max_val
-    )
-  }, by=.(sample_size)]
-  try.test <- function(...)tryCatch({
-    t.test(...)
-  }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
-  pval_dt <- score_long[, {
-    paired <- try.test(value, same, paired=TRUE)
-    unpaired <- try.test(value, same, paired=FALSE)
-    data.table(
-      mean_diff=paired$estimate,
-      diff_mean=diff(unpaired$estimate),
-      p.paired=paired$p.value,
-      p.unpaired=unpaired$p.value,
-      same_mean=mean(same),
-      compare_mean=mean(value),
-      N=.N
-    )
-  }, by=.(sample_size, Train_subsets)]
-  pval_range <- range_dt[
-    pval_dt, on="sample_size"
-  ][, let(
-    pmin_mean = pmin(same_mean, compare_mean),
-    pmax_mean = pmax(same_mean, compare_mean)
-  )][
-  , hjust := fcase(
-    pmax_mean < mid, 0,
-    pmin_mean > mid, 1,
-    default=0.5)
-  ][, let(
-    text_label = fcase(
-      is.na(p.paired), "P = NA",
-      p.paired < 0.0001, "P < 0.0001",
-      default=sprintf("P = %.4f", p.paired)
-    ),
-    text_value = fcase(
-      hjust == 0, pmin_mean,
-      hjust == 1, pmax_mean,
-      default=(pmin_mean+pmax_mean)/2)
-  )][]
-  stats_range <- range_dt[
-    stats_dt, on="sample_size"
-  ][, let(
-    hjust = fcase(
-      value_mean < mid_lo, 0,
-      value_mean > mid_hi, 1,
-      default=0.5),
-    text_label = ifelse(
-      sample_size == "full",
-      sprintf(
-        paste0("%.", digits, "f \u00B1 %.", digits, "f, N = %d"),
-        value_mean, value_sd, n.train
-      ),
-      sprintf(
-        paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-        value_mean, value_sd
-      )
-    )
-  )][]
+  compute <- pvalue_compute(
+    score_value=score_value,
+    measure.vars=measure.vars,
+    cast_id_cols=id.cols,
+    melt_id_cols=c(id.cols, "same"),
+    stats_by=c("sample_size", "Train_subsets"),
+    range_by="sample_size",
+    pvalue_by=c("sample_size", "Train_subsets"),
+    pvalue_train_subset_levels=label_order,
+    add_n_train_from="n.train.groups",
+    stats_interval_mult=1,
+    digits=digits,
+    show_n_full_in_stats_label=TRUE
+  )
+  stats_range <- compute$stats
+  pval_range <- compute$pvalues
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   n.test.folds <- length(unique(score_dt$test.fold))
