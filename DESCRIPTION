@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2025.11.19
+Version: 2026.2.24
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
