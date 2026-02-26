@@ -3,7 +3,6 @@ pvalue_compute <- function(
   panel_keys
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
-  missing_panel_keys <- setdiff(panel_keys, names(score_value))
   cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
   stats_by <- c(panel_keys, "Train_subsets")
   range_by <- setdiff(panel_keys, "algorithm")
@@ -16,7 +15,8 @@ pvalue_compute <- function(
     as.character(score_value$Train_subsets),
     paste0(measure.vars, "-same")
   ))
-  train_subset_levels <- canonical_levels[canonical_levels %in% present_levels]
+  label_order <- canonical_levels[canonical_levels %in% present_levels]
+  score_value[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   score_wide <- dcast(
     score_value,
     formula=stats::as.formula(paste(
@@ -32,7 +32,7 @@ pvalue_compute <- function(
     variable.name="train.subsets"
   )[, Train_subsets := factor(
     paste0(train.subsets, "-same"),
-    train_subset_levels
+    label_order
   )][]
   stats_dt <- score_value[, .(
     value_mean=mean(value),
@@ -106,7 +106,9 @@ pvalue_compute <- function(
       value_mean>mid_hi, 1,
       default=0.5)
   )][]
-  list(stats=stats_range, pvalues=pval_range)
+  stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
+  pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
+  list(stats=stats_range, pvalues=pval_range, label_order=label_order)
 }
 
 pvalue <- function(score_in, value.var=NULL, digits=3){
@@ -128,19 +130,8 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   if(length(measure.vars)==0){
     stop("score_in$train.subsets does not contain 'all' or 'other' which are necessary for computing p-values")
   }
-  levs.present <- c(
-    "same",
-    measure.vars,
-    paste0(measure.vars,"-same"))
-  levs.possible <- c(
-    "all",
-    "all-same",
-    "same",
-    "other-same",
-    "other")
-  levs <- levs.possible[levs.possible %in% levs.present]
   score_dt <- add_algorithm(data.table(score_in))[, let(
-    Train_subsets = factor(train.subsets, levs),
+    Train_subsets = as.character(train.subsets),
     value = get(value.var)
   )]
   compute <- pvalue_compute(
@@ -304,16 +295,13 @@ pvalue_downsample <- function(
     Train_subsets = as.character(train.subsets),
     value = get(value.var)
   )]
-  all.labels <- unique(c(score_value$Train_subsets, paste0(measure.vars, "-same")))
-  label_order <- c("other", "other-same", "same", "all-same", "all")
-  label_order <- label_order[label_order %in% all.labels]
-  score_value[, Train_subsets := factor(Train_subsets, label_order)]
   compute <- pvalue_compute(
     score_value=score_value,
     panel_keys="sample_size"
   )
   stats_range <- compute$stats
   pval_range <- compute$pvalues
+  label_order <- compute$label_order
   base_label <- sprintf(
     paste0("%.", digits, "f \u00B1 %.", digits, "f"),
     stats_range$value_mean, stats_range$value_sd
@@ -327,8 +315,6 @@ pvalue_downsample <- function(
   }else{
     stats_range[, text_label := base_label]
   }
-  stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
-  pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   n.test.folds <- length(unique(score_dt$test.fold))
   structure(list(
     subset_name=subset_name,
