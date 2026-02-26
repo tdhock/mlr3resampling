@@ -588,7 +588,7 @@ test_that("regular K fold CV works in proj", {
       reg.task.list,
       reg.learner.list,
       kfold)
-  }, "no score_args nor save_pred, so there will no test error results")
+  }, "no score_args nor save_pred, so there will be no test error results")
 })
 
 test_that("proj_test down-samples proportionally", {

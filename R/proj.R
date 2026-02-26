@@ -98,7 +98,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   dir.create(proj_dir, showWarnings = FALSE)
   on.exit(unlink(proj_dir, recursive=TRUE))
   if(is.null(score_args) && isFALSE(save_pred)){
-    warning("no score_args nor save_pred, so there will no test error results")
+    warning("no score_args nor save_pred, so there will be no test error results")
   }
   proj.grid <- list()
   for(arg in c("tasks", "learners", "resamplings")){
