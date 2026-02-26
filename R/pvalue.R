@@ -2,13 +2,10 @@ pvalue_compute <- function(
   score_value,
   measure.vars,
   cast_id_cols,
-  melt_id_cols,
   stats_by,
   range_by,
-  pvalue_by,
   pvalue_train_subset_levels,
   add_n_train_from=NULL,
-  stats_interval_mult=1,
   digits=3,
   show_n_full_in_stats_label=FALSE
 ){
@@ -23,7 +20,7 @@ pvalue_compute <- function(
   )
   score_long <- melt(
     score_wide,
-    id.vars=melt_id_cols,
+    id.vars=c(cast_id_cols, "same"),
     measure.vars=measure.vars,
     variable.name="train.subsets"
   )[, Train_subsets := factor(
@@ -43,8 +40,8 @@ pvalue_compute <- function(
     stats_dt[n.train.dt, on=stats_by, n.train := i.n.train]
   }
   stats_dt <- stats_dt[, let(
-    lo=value_mean-stats_interval_mult*value_sd,
-    hi=value_mean+stats_interval_mult*value_sd
+    lo=value_mean-value_sd,
+    hi=value_mean+value_sd
   )]
   range_dt <- stats_dt[, {
     min_val <- min(lo, na.rm=TRUE)
@@ -72,7 +69,7 @@ pvalue_compute <- function(
       compare_mean=mean(value),
       N=.N
     )
-  }, by=pvalue_by]
+  }, by=stats_by]
   pval_range <- range_dt[
     pval_dt, on=range_by
   ][, let(
@@ -166,12 +163,9 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     score_value=score_dt,
     measure.vars=measure.vars,
     cast_id_cols=c("task_id", "test.subset", "algorithm", "test.fold"),
-    melt_id_cols=c("task_id", "test.subset", "algorithm", "test.fold", "same"),
     stats_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
     range_by=c("task_id", "test.subset"),
-    pvalue_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
     pvalue_train_subset_levels=levs,
-    stats_interval_mult=1,
     digits=digits,
     show_n_full_in_stats_label=FALSE
   )
@@ -339,13 +333,10 @@ pvalue_downsample <- function(
     score_value=score_value,
     measure.vars=measure.vars,
     cast_id_cols=id.cols,
-    melt_id_cols=c(id.cols, "same"),
     stats_by=c("sample_size", "Train_subsets"),
     range_by="sample_size",
-    pvalue_by=c("sample_size", "Train_subsets"),
     pvalue_train_subset_levels=label_order,
     add_n_train_from="n.train.groups",
-    stats_interval_mult=1,
     digits=digits,
     show_n_full_in_stats_label=TRUE
   )
