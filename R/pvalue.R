@@ -94,8 +94,8 @@ pvalue_compute <- function(
       default=sprintf("P = %.4f", p.paired)
     ),
     text_value = fcase(
-      hjust == 0, pmin_mean,
-      hjust == 1, pmax_mean,
+      hjust==0, pmin_mean,
+      hjust==1, pmax_mean,
       default=(pmin_mean+pmax_mean)/2)
   )][]
   stats_range <- range_dt[
