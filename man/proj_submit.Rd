@@ -87,5 +87,6 @@ mlr3resampling::proj_grid(
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
 if(requireNamespace("future.apply"))future::plan("multisession")
 mlr3resampling::proj_compute_all(pkg.proj.dir)
+if(requireNamespace("future.apply"))future::plan("sequential")
 
 }
