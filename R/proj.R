@@ -188,7 +188,7 @@ only_atomic <- function(in_dt){
   in_dt[, keep_vec, with=FALSE]
 }
 
-proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
+proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE, process_fun=Sys.getpid){
   status <- . <- task.i <- learner.i <- resampling.i <- iteration <- NULL
   ## Above to avoid CRAN NOTE.
   grid_jobs_dt <- proj_jobs_read(proj_dir)
@@ -215,7 +215,7 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE){
   result.row <- data.table(
     grid_job_row,
     start.time, end.time=Sys.time(),
-    process=tryCatch(pbdMPI::comm.rank(), error=function(e)NA_integer_),
+    process=process_fun(),
     learner=list(proj.grid$save_learner(this.learner)),
     pred=list(proj.grid$save_pred(pred)))
   if(is.list(proj.grid$score_args)){
@@ -275,7 +275,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
 
 proj_compute_mpi <- function(proj_dir, verbose=FALSE){
   todo.i.vec <- proj_todo(proj_dir)
-  dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir, verbose)
+  dt_list <- pbdMPI::task.pull(todo.i.vec, proj_compute, proj_dir, verbose, pbdMPI::comm.rank)
   if(pbdMPI::comm.rank()==0) proj_results_save(proj_dir)
   pbdMPI::finalize()
   rbindlist(dt_list)
