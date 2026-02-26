@@ -102,8 +102,8 @@ pvalue_compute <- function(
     stats_dt, on=range_by
   ][, let(
     hjust = fcase(
-      value_mean < mid_lo, 0,
-      value_mean > mid_hi, 1,
+      value_mean<mid_lo, 0,
+      value_mean>mid_hi, 1,
       default=0.5)
   )][]
   list(stats=stats_range, pvalues=pval_range)
