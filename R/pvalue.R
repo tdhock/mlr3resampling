@@ -51,8 +51,8 @@ pvalue_compute <- function(
     hi=value_mean+value_sd
   )]
   range_dt <- stats_dt[, {
-    min_val <- min(lo, na.rm=TRUE)
-    max_val <- max(hi, na.rm=TRUE)
+    min_val <- min(lo,na.rm=TRUE)
+    max_val <- max(hi,na.rm=TRUE)
     data.table(
       min_val,
       mid_lo=min_val*2/3+max_val*1/3,
