@@ -47,7 +47,7 @@ test_that("submit works", {
     Sys.sleep(1)
   }
   result_dt <- fread(results.csv)
-  expect_equal(length(result_dt[["process"]]==1), 72)
+  expect_equal(sum(result_dt[["process"]]==1), 72)
   expect_equal(nrow(result_dt), 72)
   expect_true(file.exists(file.path(pkg.proj.dir, "MPI.logs", "0.log")))
 })
