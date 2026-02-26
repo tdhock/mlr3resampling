@@ -74,5 +74,7 @@ Suggests:
     directlabels,
     mlr3pipelines,
     glmnet, mlr3learners,
-    mlr3torch, torch
+    mlr3torch, torch,
+    crew,
+    crew.cluster
 VignetteBuilder: knitr

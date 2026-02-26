@@ -290,6 +290,105 @@ proj_compute_all <- function(proj_dir, verbose=FALSE){
   rbindlist(dt_list)
 }
 
+proj_submit_crew <- function(proj_dir, workers=10, hours=1, gigabytes=4, seconds_idle=600, verbose=FALSE, ...){
+  proj_dir <- normalizePath(proj_dir, mustWork=TRUE)
+  if (!requireNamespace("crew.cluster", quietly = TRUE)) {
+    stop("Package 'crew.cluster' is required. Install with: install.packages('crew.cluster')")
+  }
+  if (!requireNamespace("crew", quietly = TRUE)) {
+    stop("Package 'crew' is required. Install with: install.packages('crew')")
+  }
+  todo.vec <- proj_todo(proj_dir)
+  if(length(todo.vec)==0){
+    message("No jobs to compute")
+    return(invisible(NULL))
+  }
+  if(verbose) message(sprintf("Submitting %d jobs with %d workers using crew.cluster job arrays", length(todo.vec), workers))
+  controller <- crew.cluster::crew_controller_slurm(
+    name = "mlr3resampling",
+    workers = workers,
+    seconds_idle = seconds_idle,
+    slurm_time_minutes = hours * 60,
+    slurm_memory_gigabytes_per_cpu = gigabytes,
+    ...
+  )
+  controller$start()
+  on.exit(controller$terminate())
+  if(verbose) message("Launching workers as SLURM job array...")
+  for(job.i in todo.vec){
+    controller$push(
+      command = mlr3resampling::proj_compute(grid_job_i, proj_dir, verbose),
+      data = list(
+        grid_job_i = job.i,
+        proj_dir = proj_dir,
+        verbose = verbose
+      ),
+      name = paste0("job_", job.i)
+    )
+  }
+  if(verbose) message("Waiting for all tasks to complete...")
+  controller$wait(mode = "all")
+  results <- list()
+  while(TRUE){
+    task <- controller$pop()
+    if(is.null(task)) break
+    if(!is.null(task$result)){
+      results[[length(results)+1]] <- task$result[[1]]
+    }
+  }
+  controller$terminate()
+  on.exit()
+  proj_results_save(proj_dir, verbose)
+  if(verbose) message("All jobs completed and results saved.")
+  invisible(rbindlist(results))
+}
+
+proj_compute_crew <- function(proj_dir, workers=parallel::detectCores(), seconds_idle=120, verbose=FALSE){
+  proj_dir <- normalizePath(proj_dir, mustWork=TRUE)
+  todo.vec <- proj_todo(proj_dir)
+  if(length(todo.vec)==0){
+    message("No jobs to compute")
+    return(invisible(NULL))
+  }
+  if (!requireNamespace("crew", quietly = TRUE)) {
+    stop("Package 'crew' is required. Install with: install.packages('crew')")
+  }
+  if(verbose) message(sprintf("Computing %d jobs locally with %d workers using crew", length(todo.vec), workers))
+  controller <- crew::crew_controller_local(
+    name = "mlr3resampling_local",
+    workers = workers,
+    seconds_idle = seconds_idle
+  )
+  controller$start()
+  on.exit(controller$terminate())
+  for(job.i in todo.vec){
+    controller$push(
+      command = mlr3resampling::proj_compute(grid_job_i, proj_dir, verbose),
+      data = list(
+        grid_job_i = job.i,
+        proj_dir = proj_dir,
+        verbose = verbose
+      ),
+      name = paste0("job_", job.i)
+    )
+  }
+  if(verbose) message("Waiting for all tasks to complete...")
+  controller$wait(mode = "all")
+  results <- list()
+  while(TRUE){
+    task <- controller$pop()
+    if(is.null(task)) break
+    if(!is.null(task$result)){
+      results[[length(results)+1]] <- task$result[[1]]
+    }
+  }
+  controller$terminate()
+  on.exit()
+  proj_results_save(proj_dir, verbose)
+  if(verbose) message("All jobs completed and results saved.")
+  invisible(rbindlist(results))
+}
+
 proj_results_save <- function(proj_dir, verbose=FALSE){
   learner <- . <- grid_job_i <- NULL
   ## above for CRAN check.
