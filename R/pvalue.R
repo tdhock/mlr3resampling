@@ -1,10 +1,15 @@
 pvalue_compute <- function(
   score_value,
-  cast_id_cols,
-  stats_by,
-  range_by
+  panel_keys
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
+  missing_panel_keys <- setdiff(panel_keys, names(score_value))
+  cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
+  stats_by <- c(panel_keys, "Train_subsets")
+  range_by <- setdiff(panel_keys, "algorithm")
+  if(length(range_by) == 0L){
+    range_by <- panel_keys
+  }
   measure.vars <- intersect(c("other", "all"), unique(score_value$train.subsets))
   canonical_levels <- c("other", "other-same", "same", "all-same", "all")
   present_levels <- unique(c(
@@ -140,9 +145,7 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   )]
   compute <- pvalue_compute(
     score_value=score_dt,
-    cast_id_cols=c("task_id", "test.subset", "algorithm", "test.fold"),
-    stats_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
-    range_by=c("task_id", "test.subset")
+    panel_keys=c("task_id", "test.subset", "algorithm")
   )
   stats_range <- compute$stats
   stats_range[, text_label := sprintf(
@@ -301,19 +304,13 @@ pvalue_downsample <- function(
     Train_subsets = as.character(train.subsets),
     value = get(value.var)
   )]
-  id.cols <- c("sample_size", "test.fold")
-  if("seed" %in% names(score_value)){
-    id.cols <- c(id.cols, "seed")
-  }
   all.labels <- unique(c(score_value$Train_subsets, paste0(measure.vars, "-same")))
   label_order <- c("other", "other-same", "same", "all-same", "all")
   label_order <- label_order[label_order %in% all.labels]
   score_value[, Train_subsets := factor(Train_subsets, label_order)]
   compute <- pvalue_compute(
     score_value=score_value,
-    cast_id_cols=id.cols,
-    stats_by=c("sample_size", "Train_subsets"),
-    range_by="sample_size"
+    panel_keys="sample_size"
   )
   stats_range <- compute$stats
   pval_range <- compute$pvalues
