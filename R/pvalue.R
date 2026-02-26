@@ -149,53 +149,59 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     pvalues=compute$pvalues), class=c("pvalue", "list"))
 }
 
-plot.pvalue <- function(x, ..., text.size=5, p.color="grey50", sd.seg.size=1){
-  value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- label_both <- NULL
+pvalue_ggplot <- function(x){
+  value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- NULL
   if(requireNamespace("ggplot2")){
-    ggplot2::ggplot()+
+    out.gg <- ggplot2::ggplot()+
       ggplot2::theme_bw()+
       ggplot2::geom_point(ggplot2::aes(
         value_mean,
         Train_subsets),
         shape=1,
+        size=1.8,
         data=x$stats)+
       ggplot2::geom_segment(ggplot2::aes(
         hi,
         Train_subsets,
         xend=lo, yend=Train_subsets),
-        linewidth=sd.seg.size,
+        linewidth=0.8,
         data=x$stats)+
       ggplot2::geom_segment(ggplot2::aes(
         compare_mean, Train_subsets,
         xend=same_mean, yend=Train_subsets),
-        color=p.color,
+        color="grey50",
         data=x$pvalues)+
       ggplot2::geom_text(ggplot2::aes(
         value_mean,
         Train_subsets,
         hjust=hjust,
         label=text_label),
-        size=text.size,
+        size=4,
         vjust=-0.5,
         data=x$stats)+
       ggplot2::geom_text(ggplot2::aes(
         text_value, Train_subsets,
         label=text_label,
         hjust=hjust),
-        color=p.color,
-        size=text.size,
+        color="grey50",
+        size=4,
         vjust=-0.5,
-        data=x$pvalues)+
-      ggplot2::facet_grid(
-        algorithm ~ task_id + test.subset,
-        labeller=ggplot2::label_both,
-        scales="free")+
-      ggplot2::scale_x_continuous(
-        x$value.var)+
-      ggplot2::scale_y_discrete(
-        "Train subsets",
-        drop=FALSE)
+        data=x$pvalues)
+    out.gg
   }
+}
+
+plot.pvalue <- function(x, ...){
+  pvalue_ggplot(x)+
+    ggplot2::facet_grid(
+      algorithm ~ task_id + test.subset,
+      labeller=ggplot2::label_both,
+      scales="free")+
+    ggplot2::scale_x_continuous(
+      x$value.var)+
+    ggplot2::scale_y_discrete(
+      "Train subsets",
+      drop=FALSE)
 }
 
 pvalue_downsample <- function(
@@ -333,70 +339,27 @@ pvalue_downsample <- function(
     pvalues=pval_range), class=c("pvalue_downsample", "list"))
 }
 
-plot.pvalue_downsample <- function(
-  x,
-  ...,
-  text.size=4,
-  p.color="grey50",
-  sd.seg.size=0.8
-){
-  value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- NULL
-  if(requireNamespace("ggplot2")){
-    ggplot2::ggplot()+
-      ggplot2::theme_bw()+
-      ggplot2::geom_point(ggplot2::aes(
-        value_mean,
-        Train_subsets),
-        shape=1,
-        size=1.8,
-        data=x$stats)+
-      ggplot2::geom_segment(ggplot2::aes(
-        hi,
-        Train_subsets,
-        xend=lo, yend=Train_subsets),
-        linewidth=sd.seg.size,
-        data=x$stats)+
-      ggplot2::geom_segment(ggplot2::aes(
-        compare_mean, Train_subsets,
-        xend=same_mean, yend=Train_subsets),
-        color=p.color,
-        data=x$pvalues)+
-      ggplot2::geom_text(ggplot2::aes(
-        value_mean,
-        Train_subsets,
-        hjust=hjust,
-        label=text_label),
-        size=text.size,
-        vjust=-0.5,
-        data=x$stats)+
-      ggplot2::geom_text(ggplot2::aes(
-        text_value, Train_subsets,
-        label=text_label,
-        hjust=hjust),
-        color=p.color,
-        size=text.size,
-        vjust=-0.5,
-        data=x$pvalues)+
-      ggplot2::facet_grid(
-        . ~ sample_size,
-        labeller=ggplot2::labeller(
-          sample_size=function(v)ifelse(
-            v == "full",
-            "sample_size: full",
-            paste0("sample_size: smallest = ", v))),
-        scales="free")+
-      ggplot2::scale_x_continuous(
-        NULL,
-        labels=function(v)sprintf("%.3f", v))+
-      ggplot2::scale_y_discrete(
-        "Train subsets",
-        drop=TRUE,
-        limits=function(l)rev(x$label_order[x$label_order %in% l]))+
-      ggplot2::labs(
-        caption=x$caption
-      )+
-      ggplot2::theme(
-        plot.caption=ggplot2::element_text(hjust=0.5, size=12)
-      )
-  }
+plot.pvalue_downsample <- function(x, ...){
+  pvalue_ggplot(x)+
+    ggplot2::facet_grid(
+      . ~ sample_size,
+      labeller=ggplot2::labeller(
+        sample_size=function(v)ifelse(
+          v == "full",
+          "sample_size: full",
+          paste0("sample_size: smallest = ", v))),
+      scales="free")+
+    ggplot2::scale_x_continuous(
+      NULL,
+      labels=function(v)sprintf("%.3f", v))+
+    ggplot2::scale_y_discrete(
+      "Train subsets",
+      drop=TRUE,
+      limits=function(l)rev(x$label_order[x$label_order %in% l]))+
+    ggplot2::labs(
+      caption=x$caption
+    )+
+    ggplot2::theme(
+      plot.caption=ggplot2::element_text(hjust=0.5, size=12)
+    )
 }
