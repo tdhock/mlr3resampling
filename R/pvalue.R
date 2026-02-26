@@ -1,15 +1,17 @@
 pvalue_compute <- function(
   score_value,
-  measure.vars,
   cast_id_cols,
   stats_by,
-  range_by,
-  pvalue_train_subset_levels,
-  add_n_train_from=NULL,
-  digits=3,
-  show_n_full_in_stats_label=FALSE
+  range_by
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
+  measure.vars <- intersect(c("other", "all"), unique(score_value$train.subsets))
+  canonical_levels <- c("other", "other-same", "same", "all-same", "all")
+  present_levels <- unique(c(
+    as.character(score_value$Train_subsets),
+    paste0(measure.vars, "-same")
+  ))
+  train_subset_levels <- canonical_levels[canonical_levels %in% present_levels]
   score_wide <- dcast(
     score_value,
     formula=stats::as.formula(paste(
@@ -25,17 +27,17 @@ pvalue_compute <- function(
     variable.name="train.subsets"
   )[, Train_subsets := factor(
     paste0(train.subsets, "-same"),
-    pvalue_train_subset_levels
+    train_subset_levels
   )][]
   stats_dt <- score_value[, .(
     value_mean=mean(value),
     value_sd=sd(value),
     value_length=.N
   ), by=stats_by]
-  if(!is.null(add_n_train_from)){
+  if("n.train.groups" %in% names(score_value)){
     n.train <- NULL
     n.train.dt <- score_value[, .(
-      n.train=round(mean(get(add_n_train_from)))
+      n.train=round(mean(n.train.groups))
     ), by=stats_by]
     stats_dt[n.train.dt, on=stats_by, n.train := i.n.train]
   }
@@ -99,27 +101,6 @@ pvalue_compute <- function(
       value_mean > mid_hi, 1,
       default=0.5)
   )][]
-  if(show_n_full_in_stats_label && all(c("sample_size", "n.train") %in% names(stats_range))){
-    stats_range[, text_label := ifelse(
-      sample_size == "full",
-      paste0(
-        sprintf(
-          paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-          value_mean, value_sd
-        ),
-        ", N = ", n.train
-      ),
-      sprintf(
-        paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-        value_mean, value_sd
-      )
-    )]
-  }else{
-    stats_range[, text_label := sprintf(
-      paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-      value_mean, value_sd
-    )]
-  }
   list(stats=stats_range, pvalues=pval_range)
 }
 
@@ -152,26 +133,25 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     "same",
     "other-same",
     "other")
-  levs <- c(
-    levs.possible[levs.possible %in% levs.present],
-    "")#for space above.
+  levs <- levs.possible[levs.possible %in% levs.present]
   score_dt <- add_algorithm(data.table(score_in))[, let(
     Train_subsets = factor(train.subsets, levs),
     value = get(value.var)
   )]
   compute <- pvalue_compute(
     score_value=score_dt,
-    measure.vars=measure.vars,
     cast_id_cols=c("task_id", "test.subset", "algorithm", "test.fold"),
     stats_by=c("task_id", "test.subset", "algorithm", "Train_subsets"),
-    range_by=c("task_id", "test.subset"),
-    pvalue_train_subset_levels=levs,
-    digits=digits,
-    show_n_full_in_stats_label=FALSE
+    range_by=c("task_id", "test.subset")
   )
+  stats_range <- compute$stats
+  stats_range[, text_label := sprintf(
+    paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+    value_mean, value_sd
+  )]
   structure(list(
     value.var=value.var,
-    stats=compute$stats,
+    stats=stats_range,
     pvalues=compute$pvalues), class=c("pvalue", "list"))
 }
 
@@ -331,17 +311,25 @@ pvalue_downsample <- function(
   score_value[, Train_subsets := factor(Train_subsets, label_order)]
   compute <- pvalue_compute(
     score_value=score_value,
-    measure.vars=measure.vars,
     cast_id_cols=id.cols,
     stats_by=c("sample_size", "Train_subsets"),
-    range_by="sample_size",
-    pvalue_train_subset_levels=label_order,
-    add_n_train_from="n.train.groups",
-    digits=digits,
-    show_n_full_in_stats_label=TRUE
+    range_by="sample_size"
   )
   stats_range <- compute$stats
   pval_range <- compute$pvalues
+  base_label <- sprintf(
+    paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+    stats_range$value_mean, stats_range$value_sd
+  )
+  if(all(c("sample_size", "n.train") %in% names(stats_range))){
+    stats_range[, text_label := ifelse(
+      sample_size == "full",
+      paste0(base_label, ", N = ", n.train),
+      base_label
+    )]
+  }else{
+    stats_range[, text_label := base_label]
+  }
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   n.test.folds <- length(unique(score_dt$test.fold))
