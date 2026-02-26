@@ -34,8 +34,8 @@ Length-1 character string; exact value to match in
 \code{score_in$algorithm}.
 }
   \item{value.var}{
-Optional metric column name. If \code{NULL}, the function requires exactly
-one column name matching \code{"classif|regr"} and uses it.
+    Name of column to use as the evaluation metric in T-test. Default
+    NULL means to use the first column matching \code{"classif|regr"}.
 }
   \item{digits}{
 Non-negative integer number of digits to print in mean/SD text labels.
