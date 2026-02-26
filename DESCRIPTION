@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.2.20
+Version: 2026.2.24
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -65,7 +65,7 @@ Suggests:
     animint2,
     mlr3tuning,
     lgr,
-    future,
+    future, future.apply,
     testthat,
     knitr,
     markdown,

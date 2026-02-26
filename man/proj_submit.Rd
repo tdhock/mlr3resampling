@@ -8,9 +8,12 @@
 }
 \description{
   \code{proj_todo} determines which jobs remain to be computed.
-  \code{proj_compute_all} computes all remaining jobs sequentially,
-  whereas \code{proj_compute_mpi} computes them in parallel using MPI (should
-  be run in an R session activated by \code{mpirun} or \code{srun}).
+  \code{proj_compute_all} computes all remaining jobs using
+  \code{\link[future.apply]{future_lapply}} if available, otherwise
+  \code{\link{lapply}}.
+  \code{proj_compute_mpi} computes all remaining jobs in parallel using
+  MPI (should  be run in an R session activated by \code{mpirun} or
+  \code{srun}).
   \code{proj_submit} is a non-blocking call to SLURM \code{sbatch},
   asking for a single job with several tasks that run \code{proj_compute_mpi}.
 }
@@ -82,6 +85,8 @@ mlr3resampling::proj_grid(
   SOAK,
   order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+if(requireNamespace("future.apply"))future::plan("multisession")
 mlr3resampling::proj_compute_all(pkg.proj.dir)
+if(requireNamespace("future.apply"))future::plan("sequential")
 
 }

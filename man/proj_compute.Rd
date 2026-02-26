@@ -17,12 +17,16 @@
   since it runs one split at a time.
 }
 \usage{
-proj_compute(grid_job_i, proj_dir, verbose = FALSE)
+proj_compute(grid_job_i, proj_dir, verbose=FALSE, process_fun=Sys.getpid)
 }
 \arguments{
   \item{grid_job_i}{integer from 1 to number of jobs (rows in \code{grid_jobs.csv}).}
   \item{proj_dir}{Project directory created by \code{\link{proj_grid}}.}
   \item{verbose}{Logical: print messages?}
+  \item{process_fun}{function called with no arguments
+    (default \code{\link{Sys.getpid}}),
+    should return integer process id number.
+  }
 }
 \value{
   \code{proj_compute} returns a data table with one row of results.

@@ -1,3 +1,7 @@
+Changes in version 2026.2.24 (PR#53)
+
+- proj_compute_all() uses future_lapply() if available.
+
 Changes in version 2026.2.20
 
 - added inst/CITATION.

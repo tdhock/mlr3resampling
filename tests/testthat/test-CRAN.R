@@ -568,7 +568,12 @@ test_that("regular K fold CV works in proj", {
   row3 <- mlr3resampling::proj_compute(3, pkg.proj.dir)
   two_rows <- mlr3resampling::proj_results(pkg.proj.dir)
   expect_equal(nrow(two_rows), 2)
-  mlr3resampling::proj_compute_all(pkg.proj.dir)
+  expect_identical(two_rows$process, rep(Sys.getpid(), 2))
+  future::plan("multisession", workers=2)
+  all_dt <- mlr3resampling::proj_compute_all(pkg.proj.dir)
+  expect_equal(sum(all_dt$process!=Sys.getpid()), 6)
+  expect_equal(length(unique(all_dt$process)), 2)
+  future::plan("sequential")
   expect_false(file.exists(file.path(pkg.proj.dir, "learners.csv")))
   results_dt <- fread(file.path(pkg.proj.dir, "results.csv"))
   expect_false(identical(results_dt$regr.mae[1], results_dt$regr.mae[2]))
@@ -587,7 +592,7 @@ test_that("regular K fold CV works in proj", {
       reg.task.list,
       reg.learner.list,
       kfold)
-  }, "no score_args nor save_pred, so there will no test error results")
+  }, "no score_args nor save_pred, so there will be no test error results")
 })
 
 test_that("proj_test down-samples proportionally", {
