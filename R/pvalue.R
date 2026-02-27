@@ -241,7 +241,7 @@ pvalue_downsample <- function(
   }
   score_dt <- score_dt[test.subset == subset_name]
   if(nrow(score_dt) == 0L){
-    stop("subset_name=\"", subset_name, "\" was not found in score_in$test.subset")
+    stop(sprintf("subset_name=%s was not found in score_in$test.subset", subset_name))
   }
   score_dt <- score_dt[algorithm == model_name]
   if(nrow(score_dt) == 0L){
