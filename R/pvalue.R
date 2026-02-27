@@ -1,6 +1,7 @@
 pvalue_compute <- function(
   score_value,
-  panel_keys
+  panel_keys,
+  digits=3
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
   cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
@@ -106,6 +107,10 @@ pvalue_compute <- function(
       value_mean>mid_hi, 1,
       default=0.5)
   )][]
+  stats_range[, text_label := sprintf(
+    paste0("%.", digits, "f \u00B1 %.", digits, "f"),
+    value_mean, value_sd
+  )]
   stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
   list(stats=stats_range, pvalues=pval_range, label_order=label_order)
@@ -136,13 +141,10 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   )]
   compute <- pvalue_compute(
     score_value=score_dt,
-    panel_keys=c("task_id", "test.subset", "algorithm")
+    panel_keys=c("task_id", "test.subset", "algorithm"),
+    digits=digits
   )
   stats_range <- compute$stats
-  stats_range[, text_label := sprintf(
-    paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-    value_mean, value_sd
-  )]
   structure(list(
     value.var=value.var,
     stats=stats_range,
@@ -303,23 +305,18 @@ pvalue_downsample <- function(
   )]
   compute <- pvalue_compute(
     score_value=score_value,
-    panel_keys="sample_size"
+    panel_keys="sample_size",
+    digits=digits
   )
   stats_range <- compute$stats
   pval_range <- compute$pvalues
   label_order <- compute$label_order
-  base_label <- sprintf(
-    paste0("%.", digits, "f \u00B1 %.", digits, "f"),
-    stats_range$value_mean, stats_range$value_sd
-  )
   if(all(c("sample_size", "n.train") %in% names(stats_range))){
     stats_range[, text_label := ifelse(
       sample_size == "full",
-      paste0(base_label, ", N = ", n.train),
-      base_label
+      paste0(text_label, ", N = ", n.train),
+      text_label
     )]
-  }else{
-    stats_range[, text_label := base_label]
   }
   n.test.folds <- length(unique(score_dt$test.fold))
   structure(list(
