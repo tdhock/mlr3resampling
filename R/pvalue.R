@@ -90,7 +90,6 @@ pvalue_compute <- function(
     default=0.5)
   ][, let(
     text_label = fcase(
-      is.na(p.paired), "P = NA",
       p.paired < 0.0001, "P < 0.0001",
       default=sprintf("P = %.4f", p.paired)
     ),
@@ -347,15 +346,9 @@ plot.pvalue_downsample <- function(x, ...){
           paste0("sample_size: smallest = ", v))),
       scales="free")+
     ggplot2::scale_x_continuous(
-      NULL)+
+      x$caption)+
     ggplot2::scale_y_discrete(
       "Train subsets",
       drop=TRUE,
-      limits=function(l)rev(x$label_order[x$label_order %in% l]))+
-    ggplot2::labs(
-      caption=x$caption
-    )+
-    ggplot2::theme(
-      plot.caption=ggplot2::element_text(hjust=0.5, size=12)
-    )
+      limits=function(l)rev(x$label_order[x$label_order %in% l]))
 }
