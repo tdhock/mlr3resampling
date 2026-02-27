@@ -200,7 +200,7 @@ plot.pvalue <- function(x, ...){
       labeller=ggplot2::label_both,
       scales="free")+
     ggplot2::scale_x_continuous(
-      x$value.var)+
+      paste0(x$value.var, " (mean \u00B1 sd)"))+
     ggplot2::scale_y_discrete(
       "Train subsets",
       drop=FALSE)
@@ -347,8 +347,7 @@ plot.pvalue_downsample <- function(x, ...){
           paste0("sample_size: smallest = ", v))),
       scales="free")+
     ggplot2::scale_x_continuous(
-      NULL,
-      labels=function(v)sprintf("%.3f", v))+
+      NULL)+
     ggplot2::scale_y_discrete(
       "Train subsets",
       drop=TRUE,
