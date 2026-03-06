@@ -1,3 +1,55 @@
+pvalue_prepare <- function(
+  score_in,
+  value.var=NULL,
+  digits=3
+){
+  train.subsets <- value <- Train_subsets <- algorithm <- learner_id <- NULL
+  if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
+     digits < 0L || as.integer(digits) != digits){
+    stop("digits must be a non-negative integer scalar")
+  }
+  digits <- as.integer(digits)
+  score_dt <- add_algorithm(data.table(score_in))
+  if(!"algorithm" %in% names(score_dt)){
+    stop("score_in must have either algorithm or learner_id column")
+  }
+  if(nrow(score_dt) == 0L){
+    stop("score_in must have at least one row")
+  }
+  if(is.null(value.var)){
+    value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
+    value.var <- value.candidates[1]
+    if(is.na(value.var)){
+      stop(
+        "value.var=NULL which means to take the first column matching classif|regr, but there are none, so please pick one among: ",
+        paste(names(score_in), collapse=", ")
+      )
+    }
+  }else{
+    if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var)){
+      stop("value.var must be a non-NA character string of length 1")
+    }
+    if(!value.var %in% names(score_dt)){
+      stop("value.var must be a column name of score_in")
+    }
+  }
+  measure.vars <- c("other", "all")[c("other", "all") %in% score_dt$train.subsets]
+  if(length(measure.vars) == 0L){
+    stop("score_in$train.subsets does not contain 'all' or 'other' which are necessary for computing p-values")
+  }
+  score_value <- score_dt[, let(
+    Train_subsets=as.character(train.subsets),
+    value=get(value.var)
+  )]
+  list(
+    score_dt=score_dt,
+    score_value=score_value,
+    value.var=value.var,
+    digits=digits,
+    measure.vars=measure.vars
+  )
+}
+
 pvalue_compute <- function(
   score_value,
   panel_keys,
@@ -116,35 +168,18 @@ pvalue_compute <- function(
 }
 
 pvalue <- function(score_in, value.var=NULL, digits=3){
-  Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- NULL
-  if(is.null(value.var)){
-    value.var <- grep("classif|regr", names(score_in), value=TRUE)[1]
-    if(is.na(value.var)){
-      stop("value.var=NULL which means to take the first column matching classif|regr, but there are none, so please pick one among: ", paste(names(score_in), collapse=", "))
-    }
-  }
-  if(length(value.var) != 1){
-    stop("value.var must be length=1")
-  }
-  if(!value.var %in% names(score_in)){
-    stop("value.var must be a column name of score_in")
-  }
-  measure.possible <- c("other","all")
-  measure.vars <- measure.possible[measure.possible %in% score_in$train.subsets]
-  if(length(measure.vars)==0){
-    stop("score_in$train.subsets does not contain 'all' or 'other' which are necessary for computing p-values")
-  }
-  score_dt <- add_algorithm(data.table(score_in))[, let(
-    Train_subsets = as.character(train.subsets),
-    value = get(value.var)
-  )]
-  compute <- pvalue_compute(
-    score_value=score_dt,
-    panel_keys=c("task_id", "test.subset", "algorithm"),
+  prep <- pvalue_prepare(
+    score_in=score_in,
+    value.var=value.var,
     digits=digits
   )
+  compute <- pvalue_compute(
+    score_value=prep$score_value,
+    panel_keys=c("task_id", "test.subset", "algorithm"),
+    digits=prep$digits
+  )
   structure(list(
-    value.var=value.var,
+    value.var=prep$value.var,
     stats=compute$stats,
     pvalues=compute$pvalues), class=c("pvalue", "list"))
 }
@@ -209,111 +244,58 @@ pvalue_downsample <- function(
   value.var=NULL,
   digits=3
 ){
-  Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- sample_size <- groups <- n.train.groups <- seed <- iteration <- NULL
-  subset_name <- model_name <- NULL
-  if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
-     digits < 0L || as.integer(digits) != digits){
-    stop("digits must be a non-negative integer scalar")
-  }
-  digits <- as.integer(digits)
-  required.cols <- c(
-    "test.subset", "train.subsets", "test.fold", "groups", "n.train.groups"
+  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- n.train <- NULL
+  prep <- pvalue_prepare(
+    score_in=score_in,
+    value.var=value.var,
+    digits=digits
   )
-  missing.cols <- setdiff(required.cols, names(score_in))
+  required.cols <- c(
+    "test.subset", "test.fold", "groups", "n.train.groups"
+  )
+  missing.cols <- setdiff(required.cols, names(prep$score_dt))
   if(length(missing.cols)){
     stop(
       "score_in is missing required columns: ",
       paste(missing.cols, collapse=", ")
     )
   }
-  score_dt <- add_algorithm(data.table(score_in))
-  if(!"algorithm" %in% names(score_dt)){
-    stop("score_in must have either algorithm or learner_id column")
-  }
-  if(nrow(score_dt) == 0L){
-    stop("score_in must have at least one row")
-  }
-  first_row <- score_dt[1L]
-  subset_name <- as.character(first_row$test.subset[[1]])
-  model_name <- as.character(first_row$algorithm[[1]])
-  if("task_id" %in% names(score_dt)){
-    selected_task_id <- first_row$task_id[[1]]
-    score_dt <- score_dt[task_id == selected_task_id]
-  }
-  score_dt <- score_dt[test.subset == subset_name & algorithm == model_name]
-  if(is.null(value.var)){
-    value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
-    if(length(value.candidates) != 1L){
-      stop(
-        "score_in must have exactly one metric column matching classif|regr, but found ",
-        length(value.candidates), ": ",
-        paste(value.candidates, collapse=", "),
-        ". Please specify value.var explicitly."
-      )
-    }
-    value.var <- value.candidates[[1]]
-  }else{
-    if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var)){
-      stop("value.var must be a non-NA character string of length 1")
-    }
-    if(!value.var %in% names(score_dt)){
-      stop("value.var must be a column name of score_in")
-    }
-  }
+  key_cols <- intersect(c("task_id", "test.subset", "algorithm"), names(prep$score_dt))
+  score_dt <- prep$score_dt[
+    prep$score_dt[1L, ..key_cols],
+    on=key_cols,
+    nomatch=0L
+  ]
   if(!any(score_dt$n.train.groups < score_dt$groups)){
     stop("scores do not have downsamples")
   }
-  if(!"same" %in% score_dt$train.subsets){
-    stop("score_in$train.subsets must contain 'same'")
-  }
-  measure.possible <- c("other", "all")
-  measure.vars <- measure.possible[measure.possible %in% score_dt$train.subsets]
-  if(length(measure.vars) == 0L){
-    stop(
-      "score_in$train.subsets must contain at least one comparison subset among: all, other"
-    )
-  }
-  min.groups <- min(score_dt$groups)
-  score.full <- score_dt[n.train.groups == groups]
-  score.small <- score_dt[n.train.groups == min.groups]
-  if(nrow(score.small) == 0L ||
-     !"same" %in% score.small$train.subsets ||
-     !any(measure.vars %in% score.small$train.subsets)){
-    stop("scores do not have downsamples at common size min(groups)")
-  }
   score_panels <- rbind(
-    score.full[, sample_size := "full"],
-    score.small[, sample_size := as.character(min.groups)],
+    copy(score_dt[n.train.groups == groups])[, sample_size := "full"],
+    copy(score_dt[n.train.groups == min(score_dt$groups)])[, sample_size := as.character(min(score_dt$groups))],
     fill=TRUE
-  )[, sample_size := factor(sample_size, c("full", as.character(min.groups)))]
+  )[, sample_size := factor(sample_size, c("full", as.character(min(score_dt$groups))))]
+  
   compute <- pvalue_compute(
     score_value=score_panels[, let(
       Train_subsets = as.character(train.subsets),
-      value = get(value.var)
+      value = get(prep$value.var)
     )],
     panel_keys="sample_size",
-    digits=digits
+    digits=prep$digits
   )
-  if(all(c("sample_size", "n.train") %in% names(compute$stats))){
-    compute$stats[, text_label := ifelse(
-      sample_size == "full",
-      paste0(text_label, ", N = ", n.train),
-      text_label
-    )]
-  }
-  n.test.folds <- length(unique(score_dt$test.fold))
+  compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train)]
   structure(list(
-    subset_name=subset_name,
-    model_name=model_name,
-    value.var=value.var,
+    subset_name=as.character(score_dt$test.subset[[1]]),
+    model_name=as.character(score_dt$algorithm[[1]]),
+    value.var=prep$value.var,
     label_order=compute$label_order,
-    n.test.folds=n.test.folds,
+    n.test.folds=length(unique(score_dt$test.fold)),
     caption=sprintf(
       "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
-      value.var,
-      subset_name,
-      model_name,
-      n.test.folds
+      prep$value.var,
+      as.character(score_dt$test.subset[[1]]),
+      as.character(score_dt$algorithm[[1]]),
+      length(unique(score_dt$test.fold))
     ),
     stats=compute$stats,
     pvalues=compute$pvalues), class=c("pvalue_downsample", "list"))
