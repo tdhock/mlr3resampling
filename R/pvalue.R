@@ -143,10 +143,9 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     panel_keys=c("task_id", "test.subset", "algorithm"),
     digits=digits
   )
-  stats_range <- compute$stats
   structure(list(
     value.var=value.var,
-    stats=stats_range,
+    stats=compute$stats,
     pvalues=compute$pvalues), class=c("pvalue", "list"))
 }
 
@@ -287,20 +286,16 @@ pvalue_downsample <- function(
     score.small[, sample_size := as.character(min.groups)],
     fill=TRUE
   )[, sample_size := factor(sample_size, c("full", as.character(min.groups)))]
-  score_value <- score_panels[, let(
-    Train_subsets = as.character(train.subsets),
-    value = get(value.var)
-  )]
   compute <- pvalue_compute(
-    score_value=score_value,
+    score_value=score_panels[, let(
+      Train_subsets = as.character(train.subsets),
+      value = get(value.var)
+    )],
     panel_keys="sample_size",
     digits=digits
   )
-  stats_range <- compute$stats
-  pval_range <- compute$pvalues
-  label_order <- compute$label_order
-  if(all(c("sample_size", "n.train") %in% names(stats_range))){
-    stats_range[, text_label := ifelse(
+  if(all(c("sample_size", "n.train") %in% names(compute$stats))){
+    compute$stats[, text_label := ifelse(
       sample_size == "full",
       paste0(text_label, ", N = ", n.train),
       text_label
@@ -311,7 +306,7 @@ pvalue_downsample <- function(
     subset_name=subset_name,
     model_name=model_name,
     value.var=value.var,
-    label_order=label_order,
+    label_order=compute$label_order,
     n.test.folds=n.test.folds,
     caption=sprintf(
       "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
@@ -320,8 +315,8 @@ pvalue_downsample <- function(
       model_name,
       n.test.folds
     ),
-    stats=stats_range,
-    pvalues=pval_range), class=c("pvalue_downsample", "list"))
+    stats=compute$stats,
+    pvalues=compute$pvalues), class=c("pvalue_downsample", "list"))
 }
 
 plot.pvalue_downsample <- function(x, ...){
