@@ -13,8 +13,6 @@
 \usage{
 pvalue_downsample(
   score_in,
-  subset_name,
-  model_name,
   value.var = NULL,
   digits = 3
 )
@@ -23,15 +21,9 @@ pvalue_downsample(
   \item{score_in}{
 Data table output from \code{\link{score}}, produced using
 \code{ResamplingSameOtherSizesCV} with down-sampling
-(typically \code{sizes >= 0}).
-}
-  \item{subset_name}{
-Length-1 character string; exact value to match in
-\code{score_in$test.subset}.
-}
-  \item{model_name}{
-Length-1 character string; exact value to match in
-\code{score_in$algorithm}.
+(typically \code{sizes >= 0}). If multiple \code{task_id},
+\code{test.subset}, or \code{algorithm} values are present, the first
+row values are used.
 }
   \item{value.var}{
     Name of column to use as the evaluation metric in T-test. Default
@@ -44,7 +36,8 @@ Non-negative integer number of digits to print in mean/SD text labels.
 \value{
   List of class \code{"pvalue_downsample"} with named elements
   \code{subset_name}, \code{model_name}, \code{value.var},
-  \code{stats}, and \code{pvalues}.
+  \code{stats}, and \code{pvalues}. \code{subset_name} and
+  \code{model_name} are inferred from \code{score_in}.
 }
 \author{
 Daniel Agyapong
@@ -72,6 +65,8 @@ grid <- mlr3::benchmark_grid(
 result <- mlr3::benchmark(grid)
 score.dt <- mlr3resampling::score(result, mlr3::msr("regr.rmse"))
 model_name <- unique(score.dt$algorithm)[1]
-down.list <- mlr3resampling::pvalue_downsample(score.dt, "F", model_name)
+down.list <- mlr3resampling::pvalue_downsample(
+  score.dt[test.subset == "F" & algorithm == model_name]
+)
 if(requireNamespace("ggplot2", quietly = TRUE))plot(down.list)
 }

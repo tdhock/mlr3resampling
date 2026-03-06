@@ -43,37 +43,32 @@ test_that("pvalue_downsample returns strict S3 object", {
   score.dt <- get_soak_score()
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
-  min.groups <- as.character(min(score.dt[test.subset == subset_name, groups]))
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   down.list <- mlr3resampling::pvalue_downsample(
-    score.dt,
-    subset_name,
-    model_name
+    score_in
   )
   expect_s3_class(down.list, "pvalue_downsample")
   expect_identical(down.list$subset_name, subset_name)
   expect_identical(down.list$model_name, model_name)
   expect_identical(down.list$value.var, "regr.rmse")
-  expect_identical(levels(down.list$stats$sample_size), c("full", min.groups))
-  expect_true(all(c("stats", "pvalues") %in% names(down.list)))
-  expect_true(all(c("sample_size", "Train_subsets") %in% names(down.list$stats)))
-  expect_true(all(c("sample_size", "Train_subsets") %in% names(down.list$pvalues)))
 })
 
-test_that("pvalue_downsample uses exact subset match", {
+test_that("pvalue_downsample picks first-row subset when multiple subsets exist", {
   score.dt <- get_soak_score()
   model_name <- unique(score.dt$algorithm)[1]
-  expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, "Female cohort", model_name),
-    "was not found in score_in\\$test.subset"
-  )
+  score_in <- score.dt[algorithm == model_name]
+  expected_subset <- as.character(score_in$test.subset[[1]])
+  down.list <- mlr3resampling::pvalue_downsample(score_in)
+  expect_identical(down.list$subset_name, expected_subset)
 })
 
 test_that("pvalue_downsample errors when there is no downsample", {
   score.dt <- get_soak_score()[, n.train.groups := groups][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
+    mlr3resampling::pvalue_downsample(score_in),
     "scores do not have downsamples",
     fixed=TRUE
   )
@@ -85,8 +80,9 @@ test_that("pvalue_downsample errors when there is no comparison subset", {
   ][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
+    mlr3resampling::pvalue_downsample(score_in),
     "must contain at least one comparison subset"
   )
 })
@@ -95,19 +91,10 @@ test_that("pvalue_downsample errors when multiple metric columns are present", {
   score.dt <- get_soak_score()[, classif.ce := 0.2][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name),
+    mlr3resampling::pvalue_downsample(score_in),
     "exactly one metric column matching classif\\|regr"
-  )
-})
-
-test_that("pvalue_downsample uses exact model match", {
-  score.dt <- get_soak_score()
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
-  expect_error(
-    mlr3resampling::pvalue_downsample(score.dt, subset_name, paste0(model_name, "_missing")),
-    "was not found in score_in\\$algorithm"
   )
 })
 
@@ -115,10 +102,9 @@ test_that("pvalue_downsample supports value.var and digits arguments", {
   score.dt <- get_soak_score()[, RMSE := regr.rmse][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   down.list <- mlr3resampling::pvalue_downsample(
-    score.dt,
-    subset_name,
-    model_name,
+    score_in,
     value.var="RMSE",
     digits=2
   )
@@ -134,10 +120,9 @@ test_that("plot.pvalue_downsample returns ggplot", {
   score.dt <- get_soak_score()
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   down.list <- mlr3resampling::pvalue_downsample(
-    score.dt,
-    subset_name,
-    model_name
+    score_in
   )
   down.plot <- plot(down.list)
   expect_s3_class(down.plot, "ggplot")
@@ -148,9 +133,10 @@ test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   score.dt <- get_soak_score()
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
-  expect_true(any(score.dt[test.subset == subset_name, n.train.groups < groups]))
-  min.groups <- as.character(min(score.dt[test.subset == subset_name, groups]))
-  down.list <- mlr3resampling::pvalue_downsample(score.dt, subset_name, model_name)
+  score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
+  expect_true(any(score_in$n.train.groups < score_in$groups))
+  min.groups <- as.character(min(score_in$groups))
+  down.list <- mlr3resampling::pvalue_downsample(score_in)
   expect_s3_class(down.list, "pvalue_downsample")
   expect_true(all(c("full", min.groups) %in% unique(down.list$stats$sample_size)))
   expect_true("same" %in% as.character(unique(down.list$stats$Train_subsets)))

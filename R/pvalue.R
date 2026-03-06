@@ -207,18 +207,11 @@ plot.pvalue <- function(x, ...){
 
 pvalue_downsample <- function(
   score_in,
-  subset_name,
-  model_name,
   value.var=NULL,
   digits=3
 ){
   Train_subsets <- train.subsets <- value <- value_mean <- value_sd <- . <- lo <- hi <- task_id <- algorithm <- test.subset <- same <- same_mean <- compare_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- sample_size <- groups <- n.train.groups <- seed <- iteration <- NULL
-  if(!is.character(subset_name) || length(subset_name) != 1L || is.na(subset_name)){
-    stop("subset_name must be a non-NA character string of length 1")
-  }
-  if(!is.character(model_name) || length(model_name) != 1L || is.na(model_name)){
-    stop("model_name must be a non-NA character string of length 1")
-  }
+  subset_name <- model_name <- NULL
   if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
      digits < 0L || as.integer(digits) != digits){
     stop("digits must be a non-negative integer scalar")
@@ -238,21 +231,17 @@ pvalue_downsample <- function(
   if(!"algorithm" %in% names(score_dt)){
     stop("score_in must have either algorithm or learner_id column")
   }
-  score_dt <- score_dt[test.subset == subset_name]
   if(nrow(score_dt) == 0L){
-    stop(sprintf("subset_name=%s was not found in score_in$test.subset", subset_name))
+    stop("score_in must have at least one row")
   }
-  score_dt <- score_dt[algorithm == model_name]
-  if(nrow(score_dt) == 0L){
-    stop(
-      "model_name=\"", model_name,
-      "\" was not found in score_in$algorithm for subset_name=\"",
-      subset_name, "\""
-    )
+  first_row <- score_dt[1L]
+  subset_name <- as.character(first_row$test.subset[[1]])
+  model_name <- as.character(first_row$algorithm[[1]])
+  if("task_id" %in% names(score_dt)){
+    selected_task_id <- first_row$task_id[[1]]
+    score_dt <- score_dt[task_id == selected_task_id]
   }
-  if("task_id" %in% names(score_dt) && length(unique(score_dt$task_id)) != 1L){
-    stop("score_in must contain exactly one task_id after filtering subset_name/model_name")
-  }
+  score_dt <- score_dt[test.subset == subset_name & algorithm == model_name]
   if(is.null(value.var)){
     value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
     if(length(value.candidates) != 1L){
@@ -269,7 +258,7 @@ pvalue_downsample <- function(
       stop("value.var must be a non-NA character string of length 1")
     }
     if(!value.var %in% names(score_dt)){
-      stop("value.var must be a column name of score_in after filtering subset_name/model_name")
+      stop("value.var must be a column name of score_in")
     }
   }
   if(!any(score_dt$n.train.groups < score_dt$groups)){
