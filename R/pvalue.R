@@ -3,7 +3,7 @@ pvalue_prepare <- function(
   value.var=NULL,
   digits=3
 ){
-  train.subsets <- value <- Train_subsets <- algorithm <- learner_id <- NULL
+  train.subsets <- value <- Train_subsets <- algorithm <- NULL
   if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
      digits < 0L || as.integer(digits) != digits){
     stop("digits must be a non-negative integer scalar")
@@ -16,26 +16,13 @@ pvalue_prepare <- function(
   if(nrow(score_dt) == 0L){
     stop("score_in must have at least one row")
   }
-  if(is.null(value.var)){
-    value.candidates <- grep("classif|regr", names(score_dt), value=TRUE)
-    value.var <- value.candidates[1]
-    if(is.na(value.var)){
-      stop(
-        "value.var=NULL which means to take the first column matching classif|regr, but there are none, so please pick one among: ",
-        paste(names(score_in), collapse=", ")
-      )
-    }
-  }else{
-    if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var)){
-      stop("value.var must be a non-NA character string of length 1")
-    }
-    if(!value.var %in% names(score_dt)){
-      stop("value.var must be a column name of score_in")
-    }
+  value.var <- if(is.null(value.var)) grep("classif|regr", names(score_dt), value=TRUE)[1] else value.var
+  if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var) || !value.var %in% names(score_dt)){
+    stop("value.var must be a single existing metric column (or NULL to auto-select first classif|regr column)")
   }
-  measure.vars <- c("other", "all")[c("other", "all") %in% score_dt$train.subsets]
-  if(length(measure.vars) == 0L){
-    stop("score_in$train.subsets does not contain 'all' or 'other' which are necessary for computing p-values")
+  measure.vars <- intersect(c("other", "all"), unique(score_dt$train.subsets))
+  if(!length(measure.vars)){
+    stop("score_in$train.subsets must contain at least one of: all, other")
   }
   score_value <- score_dt[, let(
     Train_subsets=as.character(train.subsets),
@@ -266,9 +253,6 @@ pvalue_downsample <- function(
     on=key_cols,
     nomatch=0L
   ]
-  if(!any(score_dt$n.train.groups < score_dt$groups)){
-    stop("scores do not have downsamples")
-  }
   score_panels <- rbind(
     copy(score_dt[n.train.groups == groups])[, sample_size := "full"],
     copy(score_dt[n.train.groups == min(score_dt$groups)])[, sample_size := as.character(min(score_dt$groups))],
