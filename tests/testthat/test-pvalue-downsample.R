@@ -62,16 +62,13 @@ test_that("pvalue_downsample picks first-row subset when multiple subsets exist"
   expect_identical(down.list$subset_name, expected_subset)
 })
 
-test_that("pvalue_downsample errors when there is no downsample", {
+test_that("pvalue_downsample handles input without downsample rows", {
   score.dt <- get_soak_score()[, n.train.groups := groups][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
-  expect_error(
-    mlr3resampling::pvalue_downsample(score_in),
-    "scores do not have downsamples",
-    fixed=TRUE
-  )
+  down.list <- suppressWarnings(mlr3resampling::pvalue_downsample(score_in))
+  expect_s3_class(down.list, "pvalue_downsample")
 })
 
 test_that("pvalue_downsample errors when there is no comparison subset", {
@@ -83,19 +80,17 @@ test_that("pvalue_downsample errors when there is no comparison subset", {
   score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   expect_error(
     mlr3resampling::pvalue_downsample(score_in),
-    "must contain at least one comparison subset"
+    "must contain at least one of: all, other"
   )
 })
 
-test_that("pvalue_downsample errors when multiple metric columns are present", {
+test_that("pvalue_downsample auto-selects first metric when multiple metric columns are present", {
   score.dt <- get_soak_score()[, classif.ce := 0.2][]
   subset_name <- "Female cohort with long text"
   model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
-  expect_error(
-    mlr3resampling::pvalue_downsample(score_in),
-    "exactly one metric column matching classif\\|regr"
-  )
+  down.list <- mlr3resampling::pvalue_downsample(score_in)
+  expect_identical(down.list$value.var, "regr.rmse")
 })
 
 test_that("pvalue_downsample supports value.var and digits arguments", {

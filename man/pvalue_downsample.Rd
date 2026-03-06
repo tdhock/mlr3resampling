@@ -43,30 +43,34 @@ Non-negative integer number of digits to print in mean/SD text labels.
 Daniel Agyapong
 }
 \examples{
+library(data.table)
 set.seed(1)
-N <- 40L
-task.dt <- data.table::data.table(
-  x = runif(N, -2, 2),
-  subset_col = factor(rep(c("F", "M"), each = N/2))
-)[, y := x^2 + rnorm(.N, sd = 0.2)]
-task <- mlr3::TaskRegr$new("toy_soak", task.dt, target = "y")
+N <- 120L
+x <- runif(N, -3, 3)
+sim.dt <- data.table(
+  x = x,
+  y = sin(x) + rnorm(N, sd = 0.3),
+  Subset = rep(c("large", "large", "small"), length.out = N)
+)
+task <- mlr3::TaskRegr$new("iid_easy", sim.dt, target = "y")
 task$col_roles$feature <- "x"
-task$col_roles$subset <- "subset_col"
-task$col_roles$stratum <- "subset_col"
+task$col_roles$subset <- "Subset"
 soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 soak$param_set$values$folds <- 2L
 soak$param_set$values$seeds <- 1L
 soak$param_set$values$sizes <- 0L
-grid <- mlr3::benchmark_grid(
-  task,
-  list(mlr3::LearnerRegrFeatureless$new()),
-  soak
-)
-result <- mlr3::benchmark(grid)
-score.dt <- mlr3resampling::score(result, mlr3::msr("regr.rmse"))
-model_name <- unique(score.dt$algorithm)[1]
-down.list <- mlr3resampling::pvalue_downsample(
-  score.dt[test.subset == "F" & algorithm == model_name]
-)
-if(requireNamespace("ggplot2", quietly = TRUE))plot(down.list)
+if(requireNamespace("rpart", quietly = TRUE)){
+  grid <- mlr3::benchmark_grid(task, list(mlr3::lrn("regr.rpart")), soak)
+  result <- mlr3::benchmark(grid)
+  score.dt <- mlr3resampling::score(result)[, .(
+    task_id, test.subset, test.fold, train.subsets,
+    groups, n.train.groups, algorithm, RMSE = sqrt(regr.mse)
+  )]
+  down.list <- mlr3resampling::pvalue_downsample(
+    score.dt[task_id == "iid_easy" & test.subset == "small" & algorithm == "rpart"],
+    value.var = "RMSE",
+    digits = 3
+  )
+  if(requireNamespace("ggplot2", quietly = TRUE)) plot(down.list)
+}
 }
