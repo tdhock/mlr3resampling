@@ -22,7 +22,7 @@ score <- function(bench.result, ...){
 }
 
 plot.score <- function(x, ..., value.var=NULL){
-  value <- Train_subsets <- NULL
+  value <- Train_subsets <- n.train.groups <- NULL
   if(requireNamespace("ggplot2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
