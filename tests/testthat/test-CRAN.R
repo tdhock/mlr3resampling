@@ -449,6 +449,8 @@ test_that("hjust correct for two algos far apart", {
   bench.score <- rbind(
     data.table(
       task_id="easy",
+      n.train.groups=1,
+      groups=1,
       test.subset=1,
       algorithm="featureless",
       test.fold=c(1,2,1,2,1,2),
@@ -456,6 +458,8 @@ test_that("hjust correct for two algos far apart", {
       train.subsets=c("same","same","other","other","all","all")),
     data.table(
       task_id="easy",
+      n.train.groups=1,
+      groups=1,
       test.subset=1,
       algorithm="rpart",
       test.fold=c(1,2,1,2,1,2),
@@ -472,6 +476,8 @@ test_that("hjust=0.5 for algo in middle", {
   score_dt <- rbind(
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="same",
       test.fold=1:3,
@@ -479,6 +485,8 @@ test_that("hjust=0.5 for algo in middle", {
       classif.auc=0.5),
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="same",
       test.fold=1:3,
@@ -486,6 +494,8 @@ test_that("hjust=0.5 for algo in middle", {
       classif.auc=c(0.91,0.915, 0.93)),
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="other",
       test.fold=1:3,
