@@ -756,6 +756,47 @@ test_that("plot ok without other", {
   expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
 })
 
+test_that("pvalue ok with sizes=0", {
+  N <- 80
+  set.seed(1)
+  reg.dt <- data.table(
+    x=runif(N, -2, 2),
+    person=rep(1:2, each=0.5*N))
+  reg.pattern.list <- list(
+    easy=function(x, person)x^2,
+    impossible=function(x, person)(x^2)*(-1)^person)
+  SAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  SAK$param_set$values$subsets <- "SA"
+  reg.task.list <- list()
+  for(pattern in names(reg.pattern.list)){
+    f <- reg.pattern.list[[pattern]]
+    yname <- paste0("y_",pattern)
+    reg.dt[, (yname) := f(x,person)+rnorm(N, sd=0.5)][]
+    task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
+    task.obj <- mlr3::TaskRegr$new(
+      pattern, task.dt, target=yname)
+    task.obj$col_roles$stratum <- "person"
+    task.obj$col_roles$subset <- "person"
+    reg.task.list[[pattern]] <- task.obj
+  }
+  reg.learner.list <- list(
+    mlr3::LearnerRegrFeatureless$new())
+  if(requireNamespace("rpart")){
+    reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+  }
+  (bench.grid <- mlr3::benchmark_grid(
+    reg.task.list,
+    reg.learner.list,
+    SAK))
+  bench.result <- mlr3::benchmark(bench.grid)
+  bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+  if(interactive())plot(bench.score)
+  expect_identical(last_lev(bench.score$Train_subsets), "same")
+  bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  if(interactive())plot(bench.pvalue)
+  expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
+})
+
 test_that("instantiate ok for large task", {
   df <- data.frame(x=1:1e5)
   big_task <- mlr3::TaskRegr$new("big", df, "x")
