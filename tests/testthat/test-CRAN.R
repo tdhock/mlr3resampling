@@ -752,6 +752,8 @@ test_that("plot ok without other", {
   if(interactive())plot(bench.score)
   expect_identical(last_lev(bench.score$Train_subsets), "same")
   bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  expect_equal(nrow(bench.pvalue$stats), 16)
+  expect_equal(nrow(bench.pvalue$pvalues), 8)
   if(interactive())plot(bench.pvalue)
   expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
 })
@@ -767,6 +769,7 @@ test_that("pvalue ok with sizes=0", {
     impossible=function(x, person)(x^2)*(-1)^person)
   SAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   SAK$param_set$values$subsets <- "SA"
+  SAK$param_set$values$sizes <- 0
   reg.task.list <- list()
   for(pattern in names(reg.pattern.list)){
     f <- reg.pattern.list[[pattern]]
@@ -792,7 +795,11 @@ test_that("pvalue ok with sizes=0", {
   bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
   if(interactive())plot(bench.score)
   expect_identical(last_lev(bench.score$Train_subsets), "same")
-  bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  expect_silent({
+    bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  })
+  expect_equal(nrow(bench.pvalue$stats), 16)
+  expect_equal(nrow(bench.pvalue$pvalues), 8)
   if(interactive())plot(bench.pvalue)
   expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
 })

@@ -30,7 +30,9 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   levs <- c(
     levs.possible[levs.possible %in% levs.present],
     "")#for space above.
-  score_dt <- add_algorithm(data.table(score_in))[, let(
+  score_dt <- add_algorithm(score_in[
+    groups==n.train.groups
+  ])[, let(
     Train_subsets = factor(train.subsets, levs),
     value = get(value.var)
   )]
