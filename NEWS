@@ -1,3 +1,8 @@
+Changes in version 2026.3.10
+
+- pbdMPI moved from Imports to Suggests for installation on Mac.
+- proj_submit() stops if pbdMPI not available.
+
 Changes in version 2026.2.24 (PR#53)
 
 - proj_compute_all() uses future_lapply() if available.

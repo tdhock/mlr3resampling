@@ -247,6 +247,7 @@ proj_results <- function(proj_dir, verbose=FALSE){
 }
 
 proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
+  if(!requireNamespace("pbdMPI"))stop("please install.packages('pbdMPI') before running proj_submit()")
   proj_dir <- normalizePath(proj_dir, mustWork=TRUE)
   param <- function(name, ...){
     paste0("#SBATCH --", name, "=", ...)
