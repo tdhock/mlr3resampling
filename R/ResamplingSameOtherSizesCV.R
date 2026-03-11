@@ -148,7 +148,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           )])[
             sample(.N)#random seed used here to order groups.
           ][
-          , groups := max(n.train.groups.vec)*seq_along(group)/length(group)
+          , groups := max(n.train.groups.vec)*(seq_along(group)/length(group))
           , by=stratum
           ][order(stratum, groups)]
           for(n.train.groups in n.train.groups.vec){

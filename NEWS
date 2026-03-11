@@ -1,5 +1,7 @@
 Changes in version 2026.3.10
 
+- fixed integer overflow in large Tasks (PR#59).
+- proj_compute_all() uses future.seed=NULL.
 - pbdMPI moved from Imports to Suggests for installation on Mac.
 - proj_submit() stops if pbdMPI not available.
 

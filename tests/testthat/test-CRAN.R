@@ -755,3 +755,12 @@ test_that("plot ok without other", {
   if(interactive())plot(bench.pvalue)
   expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
 })
+
+test_that("instantiate ok for large task", {
+  df <- data.frame(x=1:1e5)
+  big_task <- mlr3::TaskRegr$new("big", df, "x")
+  SOAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_silent({
+    SOAK$instantiate(big_task)
+  })
+})
