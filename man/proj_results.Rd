@@ -12,7 +12,7 @@
   and one or more CSV files (redundant with RDS data, but more
   convenient).
   \code{proj_fread} reads the CSV files, adding columns from
-  \code{results.csv} to \code{learners*.csv}.
+  \code{proj_grid.csv} to \code{learners*.csv}.
 }
 \usage{
 proj_results(proj_dir, verbose=FALSE)
