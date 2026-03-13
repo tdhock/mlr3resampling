@@ -258,7 +258,7 @@ proj_submit <- function(proj_dir, tasks=2, hours=1, gigabytes=1, verbose=FALSE){
     "#!/bin/bash",
     param("ntasks", tasks),
     param("time", hours*60),
-    param("mem-per-cpu", gigabytes, "G"),
+    param("mem-per-cpu", gigabytes, "GB"),
     param("cpus-per-task", 1),
     param("output", MPI.out),
     param("error", MPI.out),
