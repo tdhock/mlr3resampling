@@ -75,4 +75,5 @@ Suggests:
     mlr3pipelines,
     glmnet, mlr3learners,
     mlr3torch, torch
+    PMCMRplus
 VignetteBuilder: knitr
