@@ -449,6 +449,8 @@ test_that("hjust correct for two algos far apart", {
   bench.score <- rbind(
     data.table(
       task_id="easy",
+      n.train.groups=1,
+      groups=1,
       test.subset=1,
       algorithm="featureless",
       test.fold=c(1,2,1,2,1,2),
@@ -456,6 +458,8 @@ test_that("hjust correct for two algos far apart", {
       train.subsets=c("same","same","other","other","all","all")),
     data.table(
       task_id="easy",
+      n.train.groups=1,
+      groups=1,
       test.subset=1,
       algorithm="rpart",
       test.fold=c(1,2,1,2,1,2),
@@ -472,6 +476,8 @@ test_that("hjust=0.5 for algo in middle", {
   score_dt <- rbind(
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="same",
       test.fold=1:3,
@@ -479,6 +485,8 @@ test_that("hjust=0.5 for algo in middle", {
       classif.auc=0.5),
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="same",
       test.fold=1:3,
@@ -486,6 +494,8 @@ test_that("hjust=0.5 for algo in middle", {
       classif.auc=c(0.91,0.915, 0.93)),
     data.table(
       task_id="test",
+      n.train.groups=1,
+      groups=1,
       test.subset="foo",
       train.subsets="other",
       test.fold=1:3,
@@ -752,6 +762,54 @@ test_that("plot ok without other", {
   if(interactive())plot(bench.score)
   expect_identical(last_lev(bench.score$Train_subsets), "same")
   bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  expect_identical(bench.pvalue$stats$value_length, rep(3L, 16))
+  expect_identical(as.character(bench.pvalue$pvalues$Train_subsets), rep("all-same", 8))
+  if(interactive())plot(bench.pvalue)
+  expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
+})
+
+test_that("pvalue ok with sizes=0", {
+  N <- 80
+  set.seed(1)
+  reg.dt <- data.table(
+    x=runif(N, -2, 2),
+    person=rep(1:2, each=0.5*N))
+  reg.pattern.list <- list(
+    easy=function(x, person)x^2,
+    impossible=function(x, person)(x^2)*(-1)^person)
+  SAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  SAK$param_set$values$subsets <- "SA"
+  SAK$param_set$values$sizes <- 0
+  reg.task.list <- list()
+  for(pattern in names(reg.pattern.list)){
+    f <- reg.pattern.list[[pattern]]
+    yname <- paste0("y_",pattern)
+    reg.dt[, (yname) := f(x,person)+rnorm(N, sd=0.5)][]
+    task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
+    task.obj <- mlr3::TaskRegr$new(
+      pattern, task.dt, target=yname)
+    task.obj$col_roles$stratum <- "person"
+    task.obj$col_roles$subset <- "person"
+    reg.task.list[[pattern]] <- task.obj
+  }
+  reg.learner.list <- list(
+    mlr3::LearnerRegrFeatureless$new())
+  if(requireNamespace("rpart")){
+    reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
+  }
+  (bench.grid <- mlr3::benchmark_grid(
+    reg.task.list,
+    reg.learner.list,
+    SAK))
+  bench.result <- mlr3::benchmark(bench.grid)
+  bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+  if(interactive())plot(bench.score)
+  expect_identical(last_lev(bench.score$Train_subsets), "same")
+  expect_silent({
+    bench.pvalue <- mlr3resampling::pvalue(bench.score)
+  })
+  expect_identical(bench.pvalue$stats$value_length, rep(3L, 16))
+  expect_identical(as.character(bench.pvalue$pvalues$Train_subsets), rep("all-same", 8))
   if(interactive())plot(bench.pvalue)
   expect_identical(last_lev(bench.pvalue$stats$Train_subsets), "same")
 })

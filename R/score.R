@@ -22,7 +22,7 @@ score <- function(bench.result, ...){
 }
 
 plot.score <- function(x, ..., value.var=NULL){
-  value <- Train_subsets <- NULL
+  value <- Train_subsets <- n.train.groups <- NULL
   if(requireNamespace("ggplot2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
@@ -30,13 +30,14 @@ plot.score <- function(x, ..., value.var=NULL){
     dt <- data.table(x)[, value := get(value.var)][]
     ggplot2::ggplot()+
       ggplot2::geom_point(ggplot2::aes(
-        value, Train_subsets),
+        value, paste(Train_subsets, n.train.groups)),
         shape=1,
         data=dt)+
       ggplot2::facet_grid(
         algorithm ~ task_id + test.subset,
         labeller=ggplot2::label_both,
         scales="free")+
-      ggplot2::scale_x_continuous(value.var)
+      ggplot2::scale_x_continuous(value.var)+
+      ggplot2::scale_y_discrete("Train subsets and #groups")
   }
 }  
