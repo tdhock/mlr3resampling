@@ -155,6 +155,9 @@ pvalue_compute <- function(
 }
 
 pvalue <- function(score_in, value.var=NULL, digits=3){
+  if(all(c("groups", "n.train.groups") %in% names(score_in))){
+    score_in <- score_in[n.train.groups == groups]
+  }
   prep <- pvalue_prepare(
     score_in=score_in,
     value.var=value.var,
