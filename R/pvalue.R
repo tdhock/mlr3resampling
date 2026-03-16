@@ -38,7 +38,8 @@ pvalue_prepare <- function(
 pvalue_compute <- function(
   score_value,
   panel_keys,
-  digits=3
+  digits=3,
+  downsample=FALSE
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
   cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
@@ -48,7 +49,8 @@ pvalue_compute <- function(
     range_by <- panel_keys
   }
   measure.vars <- intersect(c("other", "all"), unique(score_value$train.subsets))
-  canonical_levels <- c("other", "other-same", "same", "all-same", "all")
+  canonical_levels <- c("all", "all-same", "same", "other-same", "other")
+  if(downsample)canonical_levels <- rev(canonical_levels)
   present_levels <- unique(c(
     score_value$Train_subsets,
     paste0(measure.vars, "-same")
@@ -153,6 +155,9 @@ pvalue_compute <- function(
 }
 
 pvalue <- function(score_in, value.var=NULL, digits=3){
+  if(all(c("groups", "n.train.groups") %in% names(score_in))){
+    score_in <- score_in[n.train.groups == groups]
+  }
   prep <- pvalue_prepare(
     score_in=score_in,
     value.var=value.var,
@@ -263,7 +268,8 @@ pvalue_downsample <- function(
       value = get(prep$value.var)
     )],
     panel_keys="sample_size",
-    digits=digits
+    digits=digits,
+    downsample=TRUE
   )
   compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train)]
   structure(list(
