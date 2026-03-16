@@ -1,13 +1,15 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.3.10
+Version: 2026.3.16
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
      role=c("aut", "cre"),
      comment = c(ORCID="0000-0002-3146-0865")),
+    person("Daniel", "Agyapong", email = "agyapongdaniel7777@gmail.com", role = "ctb",
+           comment = c(ORCID = "0009-0004-0857-3150")),
     person("Michel", "Lang", , "michellang@gmail.com", role = "ctb",
            comment = c(ORCID = "0000-0001-9754-0393", "Author of mlr3 when Resampling/ResamplingCV was copied/modified")),
     person("Bernd", "Bischl", , "bernd_bischl@gmx.net", role = "ctb",
