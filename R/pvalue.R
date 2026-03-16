@@ -1,14 +1,13 @@
 pvalue_prepare <- function(
   score_in,
   value.var=NULL,
-  digits=3
+  digits
 ){
   train.subsets <- value <- Train_subsets <- algorithm <- NULL
   if(!is.numeric(digits) || length(digits) != 1L || is.na(digits) ||
-     digits < 0L || as.integer(digits) != digits){
+     digits < 0L || digits != floor(digits)){
     stop("digits must be a non-negative integer scalar")
   }
-  digits <- as.integer(digits)
   score_dt <- add_algorithm(data.table(score_in))
   if(!"algorithm" %in% names(score_dt)){
     stop("score_in must have either algorithm or learner_id column")
@@ -25,14 +24,13 @@ pvalue_prepare <- function(
     stop("score_in$train.subsets must contain at least one of: all, other")
   }
   score_value <- score_dt[, let(
-    Train_subsets=as.character(train.subsets),
+    Train_subsets=train.subsets,
     value=get(value.var)
   )]
   list(
     score_dt=score_dt,
     score_value=score_value,
     value.var=value.var,
-    digits=digits,
     measure.vars=measure.vars
   )
 }
@@ -52,11 +50,11 @@ pvalue_compute <- function(
   measure.vars <- intersect(c("other", "all"), unique(score_value$train.subsets))
   canonical_levels <- c("other", "other-same", "same", "all-same", "all")
   present_levels <- unique(c(
-    as.character(score_value$Train_subsets),
+    score_value$Train_subsets,
     paste0(measure.vars, "-same")
   ))
   label_order <- canonical_levels[canonical_levels %in% present_levels]
-  score_value[, Train_subsets := factor(as.character(Train_subsets), label_order)]
+  score_value[, Train_subsets := factor(Train_subsets, label_order)]
   score_wide <- dcast(
     score_value,
     formula=stats::as.formula(paste(
@@ -149,8 +147,8 @@ pvalue_compute <- function(
     paste0("%.", digits, "f \u00B1 %.", digits, "f"),
     value_mean, value_sd
   )]
-  stats_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
-  pval_range[, Train_subsets := factor(as.character(Train_subsets), label_order)]
+  stats_range[, Train_subsets := factor(Train_subsets, label_order)]
+  pval_range[, Train_subsets := factor(Train_subsets, label_order)]
   list(stats=stats_range, pvalues=pval_range, label_order=label_order)
 }
 
@@ -163,7 +161,7 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
   compute <- pvalue_compute(
     score_value=prep$score_value,
     panel_keys=c("task_id", "test.subset", "algorithm"),
-    digits=prep$digits
+    digits=digits
   )
   structure(list(
     value.var=prep$value.var,
@@ -254,31 +252,31 @@ pvalue_downsample <- function(
     nomatch=0L
   ]
   score_panels <- rbind(
-    copy(score_dt[n.train.groups == groups])[, sample_size := "full"],
-    copy(score_dt[n.train.groups == min(score_dt$groups)])[, sample_size := as.character(min(score_dt$groups))],
+    score_dt[n.train.groups == groups][, sample_size := "full"],
+    score_dt[n.train.groups == min(score_dt$groups)][, sample_size := min(score_dt$groups)],
     fill=TRUE
-  )[, sample_size := factor(sample_size, c("full", as.character(min(score_dt$groups))))]
+  )[, sample_size := factor(sample_size, c("full", min(score_dt$groups)))]
   
   compute <- pvalue_compute(
     score_value=score_panels[, let(
-      Train_subsets = as.character(train.subsets),
+      Train_subsets = train.subsets,
       value = get(prep$value.var)
     )],
     panel_keys="sample_size",
-    digits=prep$digits
+    digits=digits
   )
   compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train)]
   structure(list(
-    subset_name=as.character(score_dt$test.subset[[1]]),
-    model_name=as.character(score_dt$algorithm[[1]]),
+    subset_name=score_dt$test.subset[[1]],
+    model_name=score_dt$algorithm[[1]],
     value.var=prep$value.var,
     label_order=compute$label_order,
     n.test.folds=length(unique(score_dt$test.fold)),
     caption=sprintf(
       "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
       prep$value.var,
-      as.character(score_dt$test.subset[[1]]),
-      as.character(score_dt$algorithm[[1]]),
+      score_dt$test.subset[[1]],
+      score_dt$algorithm[[1]],
       length(unique(score_dt$test.fold))
     ),
     stats=compute$stats,

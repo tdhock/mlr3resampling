@@ -48,7 +48,7 @@ test_that("pvalue_downsample returns strict S3 object", {
     score_in
   )
   expect_s3_class(down.list, "pvalue_downsample")
-  expect_identical(down.list$subset_name, subset_name)
+  expect_true(down.list$subset_name == subset_name)
   expect_identical(down.list$model_name, model_name)
   expect_identical(down.list$value.var, "regr.rmse")
 })
@@ -57,7 +57,7 @@ test_that("pvalue_downsample picks first-row subset when multiple subsets exist"
   score.dt <- get_soak_score()
   model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[algorithm == model_name]
-  expected_subset <- as.character(score_in$test.subset[[1]])
+  expected_subset <- score_in$test.subset[[1]]
   down.list <- mlr3resampling::pvalue_downsample(score_in)
   expect_identical(down.list$subset_name, expected_subset)
 })
@@ -130,12 +130,12 @@ test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
   expect_true(any(score_in$n.train.groups < score_in$groups))
-  min.groups <- as.character(min(score_in$groups))
+  min.groups <- min(score_in$groups)
   down.list <- mlr3resampling::pvalue_downsample(score_in)
   expect_s3_class(down.list, "pvalue_downsample")
   expect_true(all(c("full", min.groups) %in% unique(down.list$stats$sample_size)))
-  expect_true("same" %in% as.character(unique(down.list$stats$Train_subsets)))
-  expect_true(any(grepl("-same$", as.character(unique(down.list$pvalues$Train_subsets)))))
+  expect_true("same" %in% unique(down.list$stats$Train_subsets))
+  expect_true(any(grepl("-same$", unique(down.list$pvalues$Train_subsets))))
   down.plot <- plot(down.list)
   expect_s3_class(down.plot, "ggplot")
 })
