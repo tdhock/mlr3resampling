@@ -1,0 +1,82 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Benchmarking projects}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  fig.width=10,
+  fig.height=6)
+data.table::setDTthreads(1)
+## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
+## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The goal of this vignette is explain how to use `mlr3resampling::proj_*()` for computing machine learning benchmarks.
+
+# Introduction: `mlr3::benchmark_grid()` and `mlr3resampling::proj_grid()`
+
+In mlr3, we can setup a benchmark via:
+
+```{r}
+task_list <- mlr3::tsks(c("spam", "german_credit"))
+learner_list <- list(
+  mlr3::LearnerClassifFeatureless$new())
+if(requireNamespace("rpart")){
+  learner_list$rpart <- mlr3::LearnerClassifRpart$new()
+}
+for(learner_i in seq_along(learner_list)){
+  L <- learner_list[[learner_i]]
+  L$predict_type <- "prob"
+}
+for(task_i in seq_along(task_list)){
+  task <- task_list[[task_i]]
+  task_list$spam$col_roles$stratum <- task_list$spam$col_roles$target
+}
+kfoldcv <- mlr3::rsmp("cv", folds=3)
+bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv)
+```
+
+```{r}
+pdir <- tempfile()
+pgrid <- mlr3resampling::proj_grid(
+  pdir, task_list, learner_list, kfoldcv,
+  score_args = mlr3::msrs(c("classif.auc","classif.acc")))
+```
+
+# testing one job
+
+```{r}
+rdir <- tempfile()
+batchtools::makeExperimentRegistry(rdir)
+mlr3batchmark::batchmark(bgrid)
+batchtools::testJob(1)
+```
+
+```{r}
+mlr3resampling::proj_test(pdir, max_jobs=1)
+```
+
+# testing one job for each algo and data set
+
+
+```{r}
+jt <- batchtools::getJobTable()[, let(
+  learner_id=sapply(algo.pars, "[[", "learner_id"),
+  task_id=sapply(prob.pars, "[[", "task_id")
+)][repl==1]
+sapply(jt$job.id, batchtools::testJob)
+```
+
+```{r}
+mlr3resampling::proj_test(pdir)
+```
+
+# running locally
+
+```{r}
+```
