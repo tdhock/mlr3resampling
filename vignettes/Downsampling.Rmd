@@ -1,0 +1,173 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Downsampling}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  fig.width=10,
+  fig.height=6)
+data.table::setDTthreads(1)
+## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
+## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The goal of this vignette is explain how downsampling can be used with `ResamplingSameOtherSizesCV` to determine why there is a difference between Same/Other/All models.
+
+## Simulations
+
+We begin by simulating some regression data according to two different patterns.
+
+```{r}
+library(data.table)
+N <- 2400
+abs.x <- 3*pi
+set.seed(2)
+grid.dt <- data.table(
+  x=seq(-abs.x,abs.x, l=201),
+  y=0)
+x.vec <- runif(N, -abs.x, abs.x)
+standard.deviation.vec <- c(
+  easy=0.1,
+  hard=1.7)
+```
+
+```{r}
+reg.data.list <- list()
+grid.signal.dt.list <- list()
+sim_fun <- sin
+for(difficulty in names(standard.deviation.vec)){
+  standard.deviation <- standard.deviation.vec[[difficulty]]
+  signal.vec <- sim_fun(x.vec)
+  y <- signal.vec+rnorm(N,sd=standard.deviation)
+  task.dt <- data.table(x=x.vec, y)
+  reg.data.list[[difficulty]] <- data.table(difficulty, task.dt)
+  grid.signal.dt.list[[difficulty]] <- data.table(
+    difficulty,
+    algorithm="ideal",
+    x=grid.dt$x,
+    y=sim_fun(grid.dt$x))
+}
+(reg.data <- rbindlist(reg.data.list))
+(grid.signal.dt <- rbindlist(grid.signal.dt.list))
+algo.colors <- c(
+  featureless="blue",
+  rpart="red",
+  ideal="black")
+if(require(ggplot2)){
+  ggplot()+
+    theme_bw()+
+    geom_point(aes(
+      x, y),
+      fill="white",
+      color="grey",
+      data=reg.data)+
+    geom_line(aes(
+      x, y, color=algorithm),
+      size=2,
+      data=grid.signal.dt)+
+    scale_color_manual(values=algo.colors)+
+    facet_grid(. ~ difficulty, labeller=label_both)
+}
+```
+
+## mlr3 benchmark
+
+```{r}
+(reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new()))
+
+SOAKED <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+SOAKED$param_set$values$sizes <- 0
+SOAKED$param_set$values$folds <- 10
+SOAKED$param_set$values$seeds <- 1
+
+set.seed(1)
+sim.meta.list <- list(
+  different=rbind(
+    reg.data[difficulty=="easy"][sample(.N, 400)],
+    reg.data[difficulty=="hard"][sample(.N, 200)]
+  )[, .(x,y,Subset=ifelse(difficulty=="easy", "large", "small"))],
+  iid_easy=reg.data[
+    difficulty=="easy"
+  ][sample(.N, 120)][
+  , Subset := rep(c("large","large","small"), l=.N)
+  ][, .(x,y,Subset)])
+d_task_list <- list()
+gg_list <- list()
+for(sim.name in names(sim.meta.list)){
+  sim.i.dt <- sim.meta.list[[sim.name]]
+  sub_task <- mlr3::TaskRegr$new(
+    sim.name, sim.i.dt, target="y")
+  sub_task$col_roles$subset <- "Subset"
+  sub_task$col_roles$feature <- "x"
+  d_task_list[[sim.name]] <- sub_task
+  if(require("ggplot2")){
+    gg_list[[sim.name]] <- ggplot()+
+      ggtitle(paste("Simulation:", sim.name))+
+      geom_point(aes(
+        x, y),
+        color="black",
+        fill="white",
+        data=sim.i.dt)+
+      geom_line(aes(
+        x, y, color=algorithm),
+        data=grid.signal.dt)+
+      scale_color_manual(values=algo.colors)+
+      facet_grid(Subset~., labeller=label_both)
+  }
+}
+gg_list
+```
+
+```{r}
+(reg.bench.grid <- mlr3::benchmark_grid(
+  d_task_list,
+  reg.learner.list,
+  SOAKED))
+
+if(require(future))plan("multisession")
+if(require(lgr))get_logger("mlr3")$set_threshold("warn")
+(reg.bench.result <- mlr3::benchmark(reg.bench.grid))
+
+(score_dt <- mlr3resampling::score(
+  reg.bench.result, mlr3::msr("regr.rmse")
+)[, .(
+  test.subset, test.fold,
+  train.subsets, Train_subsets, groups, n.train.groups,
+  algorithm, regr.rmse, task_id)])
+plot(score_dt)
+```
+
+```{r}
+plist <- mlr3resampling::pvalue(score_dt)
+plot(plist)
+```
+
+```{r}
+down_plot_dt <- score_dt[, .(
+  gg=list(plot(mlr3resampling::pvalue_downsample(data.table(
+    .SD, task_id, test.subset
+  ))))
+), by=.(task_id,test.subset)]
+```
+
+## Interpretation
+
+### iid easy subsets
+
+```{r}
+down_plot_dt[task_id=="iid_easy", gg]
+```
+
+### different subsets
+
+```{r}
+down_plot_dt[task_id=="different", gg]
+```
+
