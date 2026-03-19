@@ -8,8 +8,6 @@ knitr::opts_chunk$set(
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
-## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -68,7 +66,7 @@ if(require(ggplot2)){
       data=reg.data)+
     geom_line(aes(
       x, y, color=algorithm),
-      size=2,
+      linewidth=2,
       data=grid.signal.dt)+
     scale_color_manual(values=algo.colors)+
     facet_grid(. ~ difficulty, labeller=label_both)
@@ -150,6 +148,7 @@ plot(plist)
 ```
 
 ```{r}
+mlr3resampling::pvalue_downsample(score_dt)
 down_plot_dt <- score_dt[, .(
   gg=list(plot(mlr3resampling::pvalue_downsample(data.table(
     .SD, task_id, test.subset
