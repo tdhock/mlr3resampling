@@ -1,7 +1,7 @@
 Changes in version 2026.3.16 (PR#53)
 
 - new pvalue_downsample() with plot() method for SOAK downsampling results.
-- new internal pvalue_compute() for shared p-value computation logic used by pvalue() and pvalue_downsample().
+- new internal pvalue_compute() and pvalue_prep() for shared p-value computation logic used by pvalue() and pvalue_downsample().
 
 Changes in version 2026.3.10
 
