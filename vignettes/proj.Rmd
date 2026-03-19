@@ -18,12 +18,29 @@ knitr::opts_chunk$set(
 
 The goal of this vignette is explain how to use `mlr3resampling::proj_*()` for computing machine learning benchmarks.
 
-# Introduction: `mlr3::benchmark_grid()` and `mlr3resampling::proj_grid()`
+# Introduction: tasks, learners, resampling
 
-In mlr3, we can setup a benchmark via:
+In mlr3, a benchmark is defined as combinations of tasks, learners, and resampling iterations.
+
+## Tasks
+
+First we define a list of two tasks.
 
 ```{r}
 task_list <- mlr3::tsks(c("spam", "german_credit"))
+for(task_i in seq_along(task_list)){
+  task <- task_list[[task_i]]
+  task$col_roles$stratum <- task$col_roles$target
+}
+```
+
+In the code above, we set `stratum` so that splits will preserve the target class proportions.
+
+## Learners
+
+Next, we define a list of two learners.
+
+```{r}
 learner_list <- list(
   mlr3::LearnerClassifFeatureless$new())
 if(requireNamespace("rpart")){
@@ -33,11 +50,27 @@ for(learner_i in seq_along(learner_list)){
   L <- learner_list[[learner_i]]
   L$predict_type <- "prob"
 }
-for(task_i in seq_along(task_list)){
-  task <- task_list[[task_i]]
-  task_list$spam$col_roles$stratum <- task_list$spam$col_roles$target
-}
+```
+
+In the code above, we use the `prob` predict type, because we want to use ROC-AUC as an evaluation metric:
+
+```{r}
+meas_list <- mlr3::msrs(c("classif.auc","classif.acc"))
+```
+
+## Resampling
+
+Finally we create an instance of 3-fold CV, which we will use as the train/test splitting method.
+
+```{r}
 kfoldcv <- mlr3::rsmp("cv", folds=3)
+```
+
+# `mlr3::benchmark_grid()` and `mlr3resampling::proj_grid()`
+
+The code in the previous section is required in both TODO
+
+```{r}
 bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv)
 ```
 
@@ -45,7 +78,7 @@ bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv)
 pdir <- tempfile()
 pgrid <- mlr3resampling::proj_grid(
   pdir, task_list, learner_list, kfoldcv,
-  score_args = mlr3::msrs(c("classif.auc","classif.acc")))
+  score_args = meas_list)
 ```
 
 # testing one job
@@ -63,18 +96,43 @@ mlr3resampling::proj_test(pdir, max_jobs=1)
 
 # testing one job for each algo and data set
 
+A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration:
 
 ```{r}
-jt <- batchtools::getJobTable()[, let(
-  learner_id=sapply(algo.pars, "[[", "learner_id"),
-  task_id=sapply(prob.pars, "[[", "task_id")
-)][repl==1]
+jt <- batchtools::getJobTable()[repl==1]
 sapply(jt$job.id, batchtools::testJob)
 ```
+
+There is no error above, but it is not clear if the result is reasonable.
+Another way to do it with batchtools is to submit a subset of jobs, as below:
+
+```{r}
+batchtools::submitJobs(jt$job.id)
+batchtools::waitForJobs()
+test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
+test_res$score(meas_list)
+```
+
+The result above includes test AUC and accuracy values, which are more convincing test.
+
+Our proposed way to test is via:
 
 ```{r}
 mlr3resampling::proj_test(pdir)
 ```
+
+The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster. For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
+The code below reads the down-sampled tasks:
+
+```{r}
+rds.vec <- Sys.glob(file.path(pdir,"test","tasks","*rds"))
+for(rds.i in seq_along(rds.vec)){
+  mini_task <- readRDS(rds.vec[[rds.i]])
+  print(table(mini_task$data()[[1]]))
+}
+```
+
+The output above shows that there are at least 10 data per class in the down-sampled tasks.
 
 # running locally
 
