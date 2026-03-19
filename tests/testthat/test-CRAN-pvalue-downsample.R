@@ -38,9 +38,12 @@ test_that("pvalue_downsample returns strict S3 object", {
   expect_identical(down.list$value.var, "regr.rmse")
 })
 
-test_that("pvalue_downsample picks first-row subset when multiple subsets exist", {
+test_that("pvalue_downsample picks first row subset when multiple subsets exist", {
   score_in <- score.dt[algorithm == model_name]
-  down.list <- mlr3resampling::pvalue_downsample(score_in)
+  expect_warning(
+    down.list <- mlr3resampling::pvalue_downsample(score_in),
+    "duplicate row/column combinations"
+  )
   expect_s3_class(down.list, "pvalue_downsample")
 })
 
