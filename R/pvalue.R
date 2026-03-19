@@ -23,13 +23,11 @@ pvalue_prepare <- function(
   if(!length(measure.vars)){
     stop("score_in$train.subsets must contain at least one of: all, other")
   }
-  score_value <- score_dt[, let(
-    Train_subsets=train.subsets,
-    value=get(value.var)
-  )]
   list(
-    score_dt=score_dt,
-    score_value=score_value,
+    score_dt=score_dt[, let(
+      Train_subsets=train.subsets,
+      value=get(value.var)
+    )],
     value.var=value.var,
     measure.vars=measure.vars
   )
@@ -41,7 +39,7 @@ pvalue_compute <- function(
   digits=3,
   downsample=FALSE
 ){
-  train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- NULL
+  train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- Train_subsets <- n.train.groups <- NULL
   cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
   stats_by <- c(panel_keys, "Train_subsets")
   range_by <- setdiff(panel_keys, "algorithm")
@@ -78,15 +76,7 @@ pvalue_compute <- function(
     value_mean=mean(value),
     value_sd=sd(value),
     value_length=.N
-  ), by=stats_by]
-  if("n.train.groups" %in% names(score_value)){
-    n.train <- NULL
-    n.train.dt <- score_value[, .(
-      n.train=round(mean(n.train.groups))
-    ), by=stats_by]
-    stats_dt[n.train.dt, on=stats_by, n.train := i.n.train]
-  }
-  stats_dt <- stats_dt[, let(
+  ), by=c(stats_by, "n.train.groups")][, let(
     lo=value_mean-value_sd,
     hi=value_mean+value_sd
   )]
@@ -155,6 +145,7 @@ pvalue_compute <- function(
 }
 
 pvalue <- function(score_in, value.var=NULL, digits=3){
+  n.train.groups <- groups <- NULL
   if(all(c("groups", "n.train.groups") %in% names(score_in))){
     score_in <- score_in[n.train.groups == groups]
   }
@@ -164,7 +155,7 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
     digits=digits
   )
   compute <- pvalue_compute(
-    score_value=prep$score_value,
+    score_value=prep$score_dt,
     panel_keys=c("task_id", "test.subset", "algorithm"),
     digits=digits
   )
@@ -234,7 +225,7 @@ pvalue_downsample <- function(
   value.var=NULL,
   digits=3
 ){
-  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- n.train <- NULL
+  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- NULL
   prep <- pvalue_prepare(
     score_in=score_in,
     value.var=value.var,
@@ -250,18 +241,10 @@ pvalue_downsample <- function(
       paste(missing.cols, collapse=", ")
     )
   }
-  key_cols <- intersect(c("task_id", "test.subset", "algorithm"), names(prep$score_dt))
-  score_dt <- prep$score_dt[
-    prep$score_dt[1L, ..key_cols],
-    on=key_cols,
-    nomatch=0L
-  ]
-  score_panels <- rbind(
-    score_dt[n.train.groups == groups][, sample_size := "full"],
-    score_dt[n.train.groups == min(score_dt$groups)][, sample_size := min(score_dt$groups)],
-    fill=TRUE
-  )[, sample_size := factor(sample_size, c("full", min(score_dt$groups)))]
-  
+  ss_levs <- c("full", min(prep$score_dt[["groups"]]))
+  score_panels <- data.table(sample_size=factor(ss_levs, ss_levs))[
+  , prep$score_dt[n.train.groups == if(sample_size=="full")groups else min(groups)]
+  , by=sample_size]
   compute <- pvalue_compute(
     score_value=score_panels[, let(
       Train_subsets = train.subsets,
@@ -271,19 +254,16 @@ pvalue_downsample <- function(
     digits=digits,
     downsample=TRUE
   )
-  compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train)]
+  compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train.groups)]
   structure(list(
-    subset_name=score_dt$test.subset[[1]],
-    model_name=score_dt$algorithm[[1]],
     value.var=prep$value.var,
     label_order=compute$label_order,
-    n.test.folds=length(unique(score_dt$test.fold)),
     caption=sprintf(
       "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
       prep$value.var,
-      score_dt$test.subset[[1]],
-      score_dt$algorithm[[1]],
-      length(unique(score_dt$test.fold))
+      score_in$test.subset[[1]],
+      score_in$algorithm[[1]],
+      length(unique(score_in$test.fold))
     ),
     stats=compute$stats,
     pvalues=compute$pvalues), class=c("pvalue_downsample", "list"))
