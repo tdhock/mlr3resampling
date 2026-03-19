@@ -29,22 +29,18 @@ bench.grid <- mlr3::benchmark_grid(
 )
 bench.result <- mlr3::benchmark(bench.grid)
 score.dt <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+model_name <- unique(score.dt$algorithm)[1]
 
 test_that("pvalue_downsample returns strict S3 object", {
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[test.subset == subset_name & algorithm == model_name]
-  down.list <- mlr3resampling::pvalue_downsample(
-    score_in
-  )
+  down.list <- mlr3resampling::pvalue_downsample(score_in)
   expect_s3_class(down.list, "pvalue_downsample")
-  expect_identical(down.list$subset_name, subset_name)
+  expect_identical(as.character(down.list$subset_name), subset_name)
   expect_identical(down.list$model_name, model_name)
   expect_identical(down.list$value.var, "regr.rmse")
 })
 
 test_that("pvalue_downsample picks first-row subset when multiple subsets exist", {
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[algorithm == model_name]
   expected_subset <- score_in$test.subset[[1]]
   down.list <- mlr3resampling::pvalue_downsample(score_in)
@@ -52,19 +48,17 @@ test_that("pvalue_downsample picks first-row subset when multiple subsets exist"
 })
 
 test_that("pvalue_downsample handles input without downsample rows", {
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- data.table(score.dt)[
   , n.train.groups := groups
   ][test.subset == subset_name & algorithm == model_name]
-  ##expect_warning TODO
-  down.list <- mlr3resampling::pvalue_downsample(score_in)
+  expect_warning(
+    down.list <- mlr3resampling::pvalue_downsample(score_in),
+    "duplicate row/column combinations"
+  )
   expect_s3_class(down.list, "pvalue_downsample")
 })
 
 test_that("pvalue_downsample errors when there is no comparison subset", {
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- score.dt[train.subsets == "same"][
   , n.train.groups := pmax(1L, groups - 1L)
   ][test.subset == subset_name & algorithm == model_name]
@@ -74,8 +68,6 @@ test_that("pvalue_downsample errors when there is no comparison subset", {
 })
 
 test_that("pvalue_downsample auto-selects first metric when multiple metric columns are present", {
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- data.table(score.dt)[
   , classif.ce := 0.2
   ][test.subset == subset_name & algorithm == model_name]
@@ -84,8 +76,6 @@ test_that("pvalue_downsample auto-selects first metric when multiple metric colu
 })
 
 test_that("pvalue_downsample supports value.var and digits arguments", {
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- data.table(score.dt)[
   , RMSE := regr.rmse
   ][test.subset == subset_name & algorithm == model_name]
@@ -95,17 +85,13 @@ test_that("pvalue_downsample supports value.var and digits arguments", {
     digits=2
   )
   expect_identical(down.list$value.var, "RMSE")
-  ## TODO change to expect_match
-  expect_true(all(grepl(
-    "^[0-9]+\\.[0-9]{2} \u00B1 [0-9]+\\.[0-9]{2}(, N = [0-9]+)?$",
-    down.list$stats$text_label
-  )))
+  num_pat <- "[0-9]+\\.[0-9]{2}"
+  pattern <- paste0("^", num_pat, " \u00B1 ", num_pat, "(, N = [0-9]+)?$")
+  expect_match(down.list$stats$text_label, pattern)
 })
 
 test_that("plot.pvalue_downsample returns ggplot", {
   skip_if_not_installed("ggplot2")
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- data.table(score.dt)[
     test.subset == subset_name & algorithm == model_name]
   down.list <- mlr3resampling::pvalue_downsample(score_in)
@@ -115,17 +101,14 @@ test_that("plot.pvalue_downsample returns ggplot", {
 
 test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   skip_if_not_installed("ggplot2")
-  subset_name <- "Female cohort with long text"
-  model_name <- unique(score.dt$algorithm)[1]
   score_in <- data.table(score.dt)[
     test.subset == subset_name & algorithm == model_name]
   min.groups <- min(score_in$groups)
   down.list <- mlr3resampling::pvalue_downsample(score_in)
   expect_s3_class(down.list, "pvalue_downsample")
-  ## TODO change from expect_true to expect_ something more specific
-  expect_true(all(c("full", min.groups) %in% unique(down.list$stats$sample_size)))
-  expect_true("same" %in% unique(down.list$stats$Train_subsets))
-  expect_true(any(grepl("-same$", unique(down.list$pvalues$Train_subsets))))
+  expect_setequal(unique(down.list$stats$sample_size), c("full", min.groups))
+  expect_setequal(unique(down.list$stats$Train_subsets), c("all", "other", "same"))
+  expect_setequal(unique(down.list$pvalues$Train_subsets), c("all-same", "other-same"))
   down.plot <- plot(down.list)
   expect_s3_class(down.plot, "ggplot")
 })
