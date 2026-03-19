@@ -28,8 +28,7 @@ pvalue_prepare <- function(
       Train_subsets=train.subsets,
       value=get(value.var)
     )],
-    value.var=value.var,
-    measure.vars=measure.vars
+    value.var=value.var
   )
 }
 
@@ -94,15 +93,10 @@ pvalue_compute <- function(
   }, error=function(e)list(estimate=NA_real_, p.value=NA_real_))
   pval_dt <- score_long[, {
     paired <- try.test(value, same, paired=TRUE)
-    unpaired <- try.test(value, same, paired=FALSE)
     data.table(
-      mean_diff=paired$estimate,
-      diff_mean=diff(unpaired$estimate),
       p.paired=paired$p.value,
-      p.unpaired=unpaired$p.value,
       same_mean=mean(same),
-      compare_mean=mean(value),
-      N=.N
+      compare_mean=mean(value)
     )
   }, by=stats_by]
   pval_range <- range_dt[
