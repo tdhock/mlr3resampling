@@ -8,19 +8,22 @@ knitr::opts_chunk$set(
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
-## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
+options(width=120)
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
 ```
 
-The goal of this vignette is explain how to use `mlr3resampling::proj_*()` for computing machine learning benchmarks.
+The goal of this vignette is explain how to compare and contrast calculation of machine learning benchmarks using
+
+* `mlr3` and `mlr3batchmark` packages, which are the built-in/previous/existing methods.
+* `mlr3resampling::proj_*()` functions, which are the new methods proposed in this package.
 
 # Introduction: tasks, learners, resampling
 
 In mlr3, a benchmark is defined as combinations of tasks, learners, and resampling iterations.
+The code in this section must be run using both methods (previous and proposed).
 
 ## Tasks
 
@@ -52,7 +55,7 @@ for(learner_i in seq_along(learner_list)){
 }
 ```
 
-In the code above, we use the `prob` predict type, because we want to use ROC-AUC as an evaluation metric:
+In the code above, we use the `prob` predict type, because we want to use ROC-AUC as an evaluation metric, in addition to accuracy:
 
 ```{r}
 meas_list <- mlr3::msrs(c("classif.auc","classif.acc"))
@@ -66,20 +69,34 @@ Finally we create an instance of 3-fold CV, which we will use as the train/test 
 kfoldcv <- mlr3::rsmp("cv", folds=3)
 ```
 
-# `mlr3::benchmark_grid()` and `mlr3resampling::proj_grid()`
+# Define the grid of combinations
 
-The code in the previous section is required in both TODO
+In this section, we explain the two alternative methods for defining the grid of combinations.
+
+## Previous method, `mlr3::benchmark_grid()`
+
+In the code below, we must save the result, called `bgrid`, which exists only in R (not yet saved to the file system).
 
 ```{r}
-bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv)
+(bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv))
 ```
 
+## Proposed method, `mlr3resampling::proj_grid()`
+
+In the code below, we do not save the result, because the grid of combinations is saved to the `pdir` directory.
+
 ```{r}
-pdir <- tempfile()
-pgrid <- mlr3resampling::proj_grid(
-  pdir, task_list, learner_list, kfoldcv,
+proj_dir <- tempfile()
+mlr3resampling::proj_grid(
+  proj_dir, task_list, learner_list, kfoldcv,
   score_args = meas_list)
 ```
+
+Several new arguments are provided at this step:
+
+* The first argument `proj_dir` defines the project directory.
+  * TODO directory structure
+* TODO other args
 
 # testing one job
 
@@ -91,7 +108,7 @@ batchtools::testJob(1)
 ```
 
 ```{r}
-mlr3resampling::proj_test(pdir, max_jobs=1)
+mlr3resampling::proj_test(proj_dir, max_jobs=1)
 ```
 
 # testing one job for each algo and data set
@@ -118,14 +135,14 @@ The result above includes test AUC and accuracy values, which are more convincin
 Our proposed way to test is via:
 
 ```{r}
-mlr3resampling::proj_test(pdir)
+mlr3resampling::proj_test(proj_dir)
 ```
 
 The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster. For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
 The code below reads the down-sampled tasks:
 
 ```{r}
-rds.vec <- Sys.glob(file.path(pdir,"test","tasks","*rds"))
+rds.vec <- Sys.glob(file.path(proj_dir,"test","tasks","*rds"))
 for(rds.i in seq_along(rds.vec)){
   mini_task <- readRDS(rds.vec[[rds.i]])
   print(table(mini_task$data()[[1]]))
