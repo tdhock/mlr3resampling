@@ -10,9 +10,9 @@ task.dt <- data.table(
 )[, y := x^2 + rnorm(.N, sd=0.2)][]
 reg.task <- mlr3::TaskRegr$new("toy_soak", task.dt, target="y")
 reg.task$col_roles$feature <- "x"
+soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task$col_roles$subset <- "subset_col"
 reg.task$col_roles$stratum <- "subset_col"
-soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 soak$param_set$values$folds <- 2L
 soak$param_set$values$seeds <- 1L
 soak$param_set$values$sizes <- 0L
