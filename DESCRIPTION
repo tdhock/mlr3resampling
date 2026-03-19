@@ -59,7 +59,7 @@ Imports:
     R6,
     checkmate,
     paradox,
-    mlr3 (>= 1.3.0),
+    mlr3 (>= 1.0.0),
     mlr3misc
 Suggests:
     pbdMPI,
