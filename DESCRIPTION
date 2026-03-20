@@ -69,12 +69,10 @@ Suggests:
     lgr,
     future, future.apply,
     testthat,
-    knitr,
-    markdown,
     nc,
     rpart,
     directlabels,
     mlr3pipelines,
     glmnet, mlr3learners,
     mlr3torch, torch
-VignetteBuilder: knitr
+VignetteBuilder: litedown
