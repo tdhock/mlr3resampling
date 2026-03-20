@@ -1,7 +1,9 @@
-<!--
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Comparing sizes when training on same or other groups}
--->
+---
+vignette: >
+  %\VignetteIndexEntry{Newer resamplers}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(

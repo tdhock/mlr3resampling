@@ -1,5 +1,4 @@
-mlr3resampling provides new cross-validation algorithms for the mlr3
-framework in R
+mlr3resampling provides new cross-validation algorithms for the mlr3 framework in R ([[https://mlr3resampling.netlify.app/][documentation on netlify]])
 
 | [[file:tests/testthat][tests]]    | [[https://github.com/tdhock/mlr3resampling/actions][https://github.com/tdhock/mlr3resampling/workflows/R-CMD-check/badge.svg]] |
 | [[https://github.com/jimhester/covr][coverage]] | [[https://app.codecov.io/gh/tdhock/mlr3resampling?branch=main][https://codecov.io/gh/tdhock/mlr3resampling/branch/main/graph/badge.svg]]  |
