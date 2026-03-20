@@ -4,6 +4,6 @@ output:
   html:
     meta:
       include_before: "[Description](/index.html) [Articles](/articles.html) [Manual](/manual.html)"
-      include_after: "atime package by Toby Dylan Hocking"
+      include_after: "mlr3resampling R package"
     options:
       number_sections: true
