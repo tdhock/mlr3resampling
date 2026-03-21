@@ -58,7 +58,7 @@ for(learner_i in seq_along(learner_list)){
 In the code above, we use the `prob` predict type, because we want to use ROC-AUC as an evaluation metric, in addition to accuracy:
 
 ```{r}
-meas_list <- mlr3::msrs(c("classif.auc","classif.acc"))
+measure_list <- mlr3::msrs(c("classif.auc","classif.acc"))
 ```
 
 ## Resampling
@@ -81,39 +81,51 @@ In the code below, we must save the result, called `bgrid`, which exists only in
 (bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv))
 ```
 
+After that, we save the grid to the file system via:
+
+```{r}
+reg_dir <- tempfile()
+reg <- batchtools::makeExperimentRegistry(reg_dir)
+mlr3batchmark::batchmark(bgrid)
+```
+
 ## Proposed method, `mlr3resampling::proj_grid()`
 
-In the code below, we do not save the result, because the grid of combinations is saved to the `pdir` directory.
+In the code below, the grid of combinations is saved to the `proj_dir` directory.
 
 ```{r}
 proj_dir <- tempfile()
 mlr3resampling::proj_grid(
   proj_dir, task_list, learner_list, kfoldcv,
-  score_args = meas_list)
+  score_args = measure_list)
 ```
 
-Several new arguments are provided at this step:
+At this step in the proposed code above,
 
-* The first argument `proj_dir` defines the project directory.
-  * TODO directory structure
-* TODO other args
+* The first argument `proj_dir` defines the project directory, in which data and result files are saved. This is the analog of the registry directory, `reg_dir`, in the previous approach.
+* The named argument `score_args = measure_list` defines the evaluation metrics we will use to measure the accuracy of predictions on the held-out test sets. Each train/test split will compute these valuation metrics, which will be saved to `results.csv` in the last job. Using the previous approach, `measure_list` is provided after the computations have run, so must be computed in a final combination step, after the last job.
 
-# testing one job
+# Testing
+
+After defining the grid of combinations, we typically want to do a small test on the local system, to make sure there are no errors, before submitting the full computation.
+
+## One job
+
+To test one job using the previous approach, we use:
 
 ```{r}
-rdir <- tempfile()
-batchtools::makeExperimentRegistry(rdir)
-mlr3batchmark::batchmark(bgrid)
 batchtools::testJob(1)
 ```
+
+To test one job using the proposed approach, we use:
 
 ```{r}
 mlr3resampling::proj_test(proj_dir, max_jobs=1)
 ```
 
-# testing one job for each algo and data set
+## One job for each algo and data set
 
-A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration:
+A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration, run on the local machine:
 
 ```{r}
 jt <- batchtools::getJobTable()[repl==1]
@@ -127,10 +139,10 @@ Another way to do it with batchtools is to submit a subset of jobs, as below:
 batchtools::submitJobs(jt$job.id)
 batchtools::waitForJobs()
 test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
-test_res$score(meas_list)
+test_res$score(measure_list)
 ```
 
-The result above includes test AUC and accuracy values, which are more convincing test.
+The result above includes test AUC and accuracy values, which are more convincing test (but this involves actually submitting jobs on the cluster).
 
 Our proposed way to test is via:
 
@@ -139,6 +151,37 @@ mlr3resampling::proj_test(proj_dir)
 ```
 
 The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster. For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
+
+# Running locally
+
+For some small benchmarks, you may want to compute all results on your local machine (not a cluster).
+For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
+
+```{r}
+future::plan("multisession")
+```
+
+The previous approach uses the code below:
+
+```{r}
+bench_result <- mlr3::benchmark(bgrid)
+bench_score <- bench_result$score(measure_list)
+bench_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
+```
+
+The proposed approach uses the code below:
+
+```{r}
+proj_score <- mlr3resampling::proj_compute_all(proj_dir)
+proj_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
+```
+
+The results are slightly different because the cross-validation is instantiated with different random seeds.
+
+# Peeking under the hood
+
+## Down-sampling when testing
+
 The code below reads the down-sampled tasks:
 
 ```{r}
@@ -151,7 +194,3 @@ for(rds.i in seq_along(rds.vec)){
 
 The output above shows that there are at least 10 data per class in the down-sampled tasks.
 
-# running locally
-
-```{r}
-```
