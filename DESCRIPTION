@@ -78,4 +78,3 @@ Suggests:
     batchtools, mlr3batchmark,
     litedown
 VignetteBuilder: litedown
-
