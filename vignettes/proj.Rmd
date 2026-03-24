@@ -188,12 +188,18 @@ In the previous system, we use batchtools.
 Various parallel computation methods are supported.
 Prior to running the code below on the cluster, you should create a `~/.batchtools.conf.R` file, as explained in [my R batchtools on Monsoon tutorial](https://tdhock.github.io/blog/2020/monsoon-batchtools/).
 
+TODO conf in extdata
+test if slurm prog present
+set env var here to look there for config
+
 ```{r}
 batchtools::submitJobs(jt$job.id)
 batchtools::waitForJobs()
 test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
 test_res$score(measure_list)
 ```
+
+The computation above was in 
 
 # Comparison
 
