@@ -26,10 +26,11 @@ jobs:
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      RCMDCHECK_ERROR_ON: note
       R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: install mpi-dev on mac #https://github.com/mpi4py/setup-mpi
         if: matrix.config.os == 'macos-latest'
