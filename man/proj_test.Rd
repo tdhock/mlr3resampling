@@ -4,6 +4,10 @@
   Test a project with smaller data and fewer resampling iterations
 }
 \description{
+  Like \code{\link[batchtools]{testJob}},
+  "test" means trying an example with a few small jobs
+  (default one train/test split per algorithm and data set)
+  before running the big calculation with all jobs.
   Runs \code{\link{proj_grid}} to create a new project in the
   \code{test} sub-directory, with a smaller
   number of samples in each task, and with only one iteration

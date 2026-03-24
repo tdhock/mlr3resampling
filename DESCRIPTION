@@ -75,5 +75,6 @@ Suggests:
     mlr3pipelines,
     glmnet, mlr3learners,
     mlr3torch, torch,
+    batchtools, mlr3batchmark,
     litedown
 VignetteBuilder: litedown
