@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-The goal of this vignette is explain how to compare and contrast calculation of machine learning benchmarks using
+The goal of this vignette is to compare and contrast calculation of machine learning benchmarks using
 
 * `mlr3` and `mlr3batchmark` packages, which are the built-in/previous/existing methods.
 * `mlr3resampling::proj_*()` functions, which are the new methods proposed in this package.
@@ -103,13 +103,13 @@ mlr3resampling::proj_grid(
 At this step in the proposed code above,
 
 * The first argument `proj_dir` defines the project directory, in which data and result files are saved. This is the analog of the registry directory, `reg_dir`, in the previous approach.
-* The named argument `score_args = measure_list` defines the evaluation metrics we will use to measure the accuracy of predictions on the held-out test sets. Each train/test split will compute these valuation metrics, which will be saved to `results.csv` in the last job. Using the previous approach, `measure_list` is provided after the computations have run, so must be computed in a final combination step, after the last job.
+* The named argument `score_args = measure_list` defines the evaluation metrics we will use to measure the accuracy of predictions on the held-out test sets. Each parallel job will compute these evaluation metrics for one train/test split and one Learner.
 
 # Testing
 
 After defining the grid of combinations, we typically want to do a small test on the local system, to make sure there are no errors, before submitting the full computation.
 
-## One job
+## Testing one job
 
 To test one job using the previous approach, we use:
 
@@ -123,22 +123,26 @@ To test one job using the proposed approach, we use:
 mlr3resampling::proj_test(proj_dir, max_jobs=1)
 ```
 
-## One job for each algo and data set
+We tested a featureless learner, which is not a great test (other learners may fail).
+So typically we run a more extensive test, as in the next section.
+
+## Test one job for each algo and data set
 
 A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration, run on the local machine:
 
 ```{r}
-jt <- batchtools::getJobTable()[repl==1]
-sapply(jt$job.id, batchtools::testJob)
+jt <- batchtools::getJobTable()
+jt1 <- jt[repl==1]
+sapply(jt1$job.id, batchtools::testJob)
 ```
 
 There is no error above, but it is not clear if the result is reasonable.
 Another way to do it with batchtools is to submit a subset of jobs, as below:
 
 ```{r}
-batchtools::submitJobs(jt$job.id)
+batchtools::submitJobs(jt1$job.id)
 batchtools::waitForJobs()
-test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
+test_res <- mlr3batchmark::reduceResultsBatchmark(jt1$job.id)
 test_res$score(measure_list)
 ```
 
@@ -150,9 +154,9 @@ Our proposed way to test is via:
 mlr3resampling::proj_test(proj_dir)
 ```
 
-The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster. For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
+The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster.
 
-# Running locally
+# Running all jobs locally (small benchmarks)
 
 For some small benchmarks, you may want to compute all results on your local machine (not a cluster).
 For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
@@ -178,9 +182,30 @@ proj_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
 
 The results are slightly different because the cross-validation is instantiated with different random seeds.
 
-# Peeking under the hood
+# Running all jobs on a cluster (large benchmarks)
 
-## Down-sampling when testing
+In the previous system, we use batchtools.
+Various parallel computation methods are supported.
+Prior to running the code below on the cluster, you should create a `~/.batchtools.conf.R` file, as explained in [my R batchtools on Monsoon tutorial](https://tdhock.github.io/blog/2020/monsoon-batchtools/).
+
+```{r}
+batchtools::submitJobs(jt$job.id)
+batchtools::waitForJobs()
+test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
+test_res$score(measure_list)
+```
+
+# Comparison
+
+TODO , which will be saved to `results.csv` in the last job. Using the previous approach, `measure_list` is provided after the computations have run, so must be computed in a final combination step, after the last job.
+
+Testing is more convenient
+
+# New features
+
+## Quick testing via Task down-sampling and Learner `edit_learner()` method
+
+For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
 
 The code below reads the down-sampled tasks:
 
@@ -194,3 +219,4 @@ for(rds.i in seq_along(rds.vec)){
 
 The output above shows that there are at least 10 data per class in the down-sampled tasks.
 
+## Model interpretation via `save_learner()` method
