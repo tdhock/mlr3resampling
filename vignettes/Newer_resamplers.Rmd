@@ -6,16 +6,12 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
-## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
 ```
 
 The goal of this vignette is explain how to use
