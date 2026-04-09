@@ -24,6 +24,17 @@ The goal of this vignette is to compare and contrast calculation of machine lear
 In mlr3, a benchmark is defined as combinations of tasks, learners, and resampling iterations.
 The code in this section must be run using both methods (previous and proposed).
 
+## Resampling
+
+First we create an instance of 3-fold CV, which we will use as the train/test splitting method.
+
+```{r}
+(kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
+```
+
+For reproducibility, we use `ResamplingSameOtherSizesCV` because it respects the `fold` column role (and `mlr3::ResamplingCV` does not).
+Note that the resampling should be instantiated before creating a Task, because it loads the `mlr3resampling` package (needed to avoid errors about unrecognized column roles `subset` and `fold`).
+
 ## Tasks
 
 First we define a list of two tasks.
@@ -46,7 +57,10 @@ for(task_i in seq_along(task_list)){
 tasks_with_fold
 ```
 
-In the code above, we set column role `fold` so that splits in the code below will be the same between benchmarking frameworks.
+In the code above, we set column roles for each task:
+
+* `fold` to `Fold` which is a column of fold IDs that we create in each data set, so that splits in the code below will be the same between benchmarking frameworks.
+* `stratum` to `Fold` and `tcol` so that down-sampling will maintain the proportions of the values in these columns. This is important to ensure that all train and test sets have a reasonable number of observations of each class. When running `mlr3resampling::proj_test()`, tasks are down-sampled to get quicker train times, with default 10 samples per stratum.
 
 ## Learners
 
@@ -69,16 +83,6 @@ In the code above, we use the `prob` predict type, because we want to use ROC-AU
 ```{r}
 measure_list <- mlr3::msrs(c("classif.auc","classif.acc"))
 ```
-
-## Resampling
-
-Finally we create an instance of 3-fold CV, which we will use as the train/test splitting method.
-
-```{r}
-(kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
-```
-
-For reproducibility, we use `ResamplingSameOtherSizesCV` because it respects the `fold` column role (and `mlr3::ResamplingCV` does not).
 
 # Define the grid of combinations
 
