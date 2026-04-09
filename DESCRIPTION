@@ -60,7 +60,8 @@ Imports:
     checkmate,
     paradox,
     mlr3 (>= 1.0.0),
-    mlr3misc
+    mlr3misc,
+    methods
 Suggests:
     pbdMPI,
     ggplot2,
