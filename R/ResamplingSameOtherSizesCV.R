@@ -83,21 +83,28 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         id.vars="test.subset",
         variable.name="train.subsets",
         value.name="groups")
-      strata.dt <- if(is.null(task$col_roles$stratum)){
-        data.table(stratum=rep(1L, task$nrow))
-      }else{
+      strata.dt <- if(length(task$col_roles$stratum)){
         task$data(
           cols=task$col_roles$stratum
         )[, stratum := .GRP, by=c(task$col_roles$stratum)][]
+      }else{
+        data.table(stratum=rep(1L, task$nrow))
       }
       group.row.dt <- data.table(
+        ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
-      sample.dt <- group.row.dt[
-      , private$.sample(unique(group), task=task) #assigns fold.
-      , by=stratum]
-      fold.dt <- sample.dt[, .(
-        group=row_id, fold
-      )][group.row.dt, on="group"]
+      fold.dt <- if(length(task$col_roles$fold)){
+        fold.role.dt <- task$data(cols=task$col_roles$fold)
+        data.table(group.row.dt, fold.role.dt)
+      }else{
+        sample.dt <- group.row.dt[
+          ## stratum, row_id, fold. (but row_id means group)
+        , private$.sample(unique(group), task=task) #assigns fold.
+        , by=stratum]
+        sample.dt[, .(
+          group=row_id, fold
+        )][group.row.dt, on="group"]
+      }[, .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets
       )[
