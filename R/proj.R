@@ -282,12 +282,14 @@ proj_compute_mpi <- function(proj_dir, verbose=FALSE){
   rbindlist(dt_list)
 }
 
-proj_compute_all <- function(proj_dir, verbose=FALSE){
+proj_compute_all <- function(proj_dir, verbose=FALSE, LAPPLY){
   todo.i.vec <- proj_todo(proj_dir)
-  LAPPLY <- if(requireNamespace("future.apply")){
-    function(...)future.apply::future_lapply(..., future.seed=NULL)
-  }else{
-    lapply
+  if(missing(LAPPLY)){
+    LAPPLY <- if(requireNamespace("future.apply")){
+      function(...)future.apply::future_lapply(..., future.seed=NULL)
+    }else{
+      lapply
+    }
   }
   dt_list <- LAPPLY(todo.i.vec, proj_compute, proj_dir, verbose)
   proj_results_save(proj_dir, verbose)

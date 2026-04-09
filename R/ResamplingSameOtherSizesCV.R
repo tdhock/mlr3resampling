@@ -93,9 +93,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       group.row.dt <- data.table(
         ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
-      fold.dt <- if(length(task$col_roles$fold)){
-        fold.role.dt <- task$data(cols=task$col_roles$fold)
-        data.table(group.row.dt, fold.role.dt)
+      fcol <- task$col_roles$fold
+      fold.dt <- if(length(fcol)==1){
+        fold <- task$data(cols=fcol)[[fcol]]
+        data.table(group.row.dt, fold)
       }else{
         sample.dt <- group.row.dt[
           ## stratum, row_id, fold. (but row_id means group)

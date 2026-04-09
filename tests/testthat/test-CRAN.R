@@ -822,3 +822,43 @@ test_that("instantiate ok for large task", {
     SOAK$instantiate(big_task)
   })
 })
+
+test_that("fold role works for reproducibility", {
+  task_list <- mlr3::tsks(c("spam", "german_credit"))
+  tasks_with_fold <- list()
+  for(task_i in seq_along(task_list)){
+    task <- task_list[[task_i]]
+    task_dt <- task$data()
+    task_dt[, Fold := rep(1:3, length.out=.N), by=c(task$col_roles$target)]
+    ftask <- mlr3::TaskClassif$new(
+      task_dt, id=task$id, target=task$col_roles$target)
+    ftask$col_roles$feature <- task$col_roles$feature
+    ftask$col_roles$fold <- "Fold"
+    tasks_with_fold[[task$id]] <- ftask
+  }
+  learner_list <- list(
+    mlr3::LearnerClassifFeatureless$new())
+  if(requireNamespace("rpart")){
+    learner_list$rpart <- mlr3::LearnerClassifRpart$new()
+  }
+  for(learner_i in seq_along(learner_list)){
+    L <- learner_list[[learner_i]]
+    L$predict_type <- "prob"
+  }
+  measure_list <- mlr3::msrs(c("classif.auc","classif.acc"))
+  (kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
+  (bgrid <- mlr3::benchmark_grid(tasks_with_fold, learner_list, kfoldcv))
+  proj_dir <- if(interactive())"~/testproj" else tempfile()
+  unlink(proj_dir, recursive = TRUE)
+  mlr3resampling::proj_grid(
+    proj_dir, tasks_with_fold, learner_list, kfoldcv,
+    score_args = measure_list)
+  bench_result <- mlr3::benchmark(bgrid)
+  out.list <- list(
+    bench=bench_result$score(measure_list),
+    proj=mlr3resampling::proj_compute_all(proj_dir))
+  check <- sapply(out.list, function(dt)data.table(dt)[
+  , .(task_id, learner_id, iteration, classif.auc, classif.acc)]
+  , simplify=FALSE)
+  with(check, expect_identical(proj, bench))
+})
