@@ -1,18 +1,17 @@
-<!--
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Benchmarking projects}
--->
+---
+vignette: >
+  %\VignetteIndexEntry{Benchmarking projects}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-options(width=120)
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
 ```
 
 The goal of this vignette is to compare and contrast calculation of machine learning benchmarks using
@@ -34,12 +33,14 @@ task_list <- mlr3::tsks(c("spam", "german_credit"))
 tasks_with_fold <- list()
 for(task_i in seq_along(task_list)){
   task <- task_list[[task_i]]
+  tcol <- task$col_roles$target
   task_dt <- task$data()
-  task_dt[, Fold := rep(1:3, length.out=.N), by=c(task$col_roles$target)]
+  task_dt[, Fold := rep(1:3, length.out=.N), by=c(tcol)]
   ftask <- mlr3::TaskClassif$new(
-    task_dt, id=task$id, target=task$col_roles$target)
+    task_dt, id=task$id, target=tcol)
   ftask$col_roles$feature <- task$col_roles$feature
   ftask$col_roles$fold <- "Fold"
+  ftask$col_roles$stratum <- c("Fold", tcol)
   tasks_with_fold[[task$id]] <- ftask
 }
 tasks_with_fold
