@@ -31,13 +31,21 @@ First we define a list of two tasks.
 
 ```{r}
 task_list <- mlr3::tsks(c("spam", "german_credit"))
+tasks_with_fold <- list()
 for(task_i in seq_along(task_list)){
   task <- task_list[[task_i]]
-  task$col_roles$stratum <- task$col_roles$target
+  task_dt <- task$data()
+  task_dt[, Fold := rep(1:3, length.out=.N), by=c(task$col_roles$target)]
+  ftask <- mlr3::TaskClassif$new(
+    task_dt, id=task$id, target=task$col_roles$target)
+  ftask$col_roles$feature <- task$col_roles$feature
+  ftask$col_roles$fold <- "Fold"
+  tasks_with_fold[[task$id]] <- ftask
 }
+tasks_with_fold
 ```
 
-In the code above, we set `stratum` so that splits will preserve the target class proportions.
+In the code above, we set column role `fold` so that splits in the code below will be the same between benchmarking frameworks.
 
 ## Learners
 
@@ -66,8 +74,10 @@ measure_list <- mlr3::msrs(c("classif.auc","classif.acc"))
 Finally we create an instance of 3-fold CV, which we will use as the train/test splitting method.
 
 ```{r}
-kfoldcv <- mlr3::rsmp("cv", folds=3)
+(kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
 ```
+
+We use `ResamplingSameOtherSizesCV` because it respects the `fold` column role.
 
 # Define the grid of combinations
 
@@ -78,7 +88,7 @@ In this section, we explain the two alternative methods for defining the grid of
 In the code below, we must save the result, called `bgrid`, which exists only in R (not yet saved to the file system).
 
 ```{r}
-(bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfoldcv))
+(bgrid <- mlr3::benchmark_grid(tasks_with_fold, learner_list, kfoldcv))
 ```
 
 After that, we save the grid to the file system via:
@@ -94,9 +104,9 @@ mlr3batchmark::batchmark(bgrid)
 In the code below, the grid of combinations is saved to the `proj_dir` directory.
 
 ```{r}
-proj_dir <- tempfile()
+proj_dir <- if(interactive())"~/testproj" else tempfile()
 mlr3resampling::proj_grid(
-  proj_dir, task_list, learner_list, kfoldcv,
+  proj_dir, tasks_with_fold, learner_list, kfoldcv,
   score_args = measure_list)
 ```
 
