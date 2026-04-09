@@ -77,7 +77,7 @@ Finally we create an instance of 3-fold CV, which we will use as the train/test 
 (kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
 ```
 
-We use `ResamplingSameOtherSizesCV` because it respects the `fold` column role.
+For reproducibility, we use `ResamplingSameOtherSizesCV` because it respects the `fold` column role (and `mlr3::ResamplingCV` does not).
 
 # Define the grid of combinations
 
@@ -105,6 +105,7 @@ In the code below, the grid of combinations is saved to the `proj_dir` directory
 
 ```{r}
 proj_dir <- if(interactive())"~/testproj" else tempfile()
+unlink(proj_dir, recursive = TRUE)
 mlr3resampling::proj_grid(
   proj_dir, tasks_with_fold, learner_list, kfoldcv,
   score_args = measure_list)
@@ -190,7 +191,10 @@ proj_score <- mlr3resampling::proj_compute_all(proj_dir)
 proj_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
 ```
 
-The results are slightly different because the cross-validation is instantiated with different random seeds.
+The results are identical because
+
+* we set `fold` column role, so there is no randomness in cross-validation splits.
+* the `rpart` and `featureless` learners are deterministic (neither train nor predict is random).
 
 # Running all jobs on a cluster (large benchmarks)
 
