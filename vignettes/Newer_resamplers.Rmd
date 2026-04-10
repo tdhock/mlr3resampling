@@ -14,6 +14,8 @@ litedown::reactor(
 data.table::setDTthreads(1)
 ```
 
+Bonjour du cours IFT704 !
+
 The goal of this vignette is explain how to use
 `ResamplingSameOtherSizesCV` for various kinds of cross-validation.
 
@@ -38,6 +40,7 @@ if(require(ggplot2)){
   my_theme <- theme_bw(20)
   theme_set(my_theme)
   ggplot()+
+    ggtitle("Bonjour encore une fois !")+
     geom_point(aes(
       x, y),
       shape=1,
