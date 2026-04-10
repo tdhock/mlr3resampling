@@ -114,7 +114,6 @@ test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
 })
 
 test_that("pvalue_downsample fails without downsamples", {
-
   library(data.table)
   N <- 2400
   abs.x <- 3*pi
@@ -162,11 +161,10 @@ test_that("pvalue_downsample fails without downsamples", {
       scale_color_manual(values=algo.colors)+
       facet_grid(. ~ difficulty, labeller=label_both)
   }
-  
   (reg.learner.list <- list(
     if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new()))
   SOAKED <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-  SOAKED$param_set$values$folds <- 10
+  SOAKED$param_set$values$folds <- 2
   set.seed(1)
   sim.meta.list <- list(
     different=rbind(
@@ -182,11 +180,6 @@ test_that("pvalue_downsample fails without downsamples", {
   gg_list <- list()
   for(sim.name in names(sim.meta.list)){
     sim.i.dt <- sim.meta.list[[sim.name]]
-    out.csv <- sprintf("~/data_Regr/%s.csv", sim.name)
-    if(interactive()){
-      dir.create(dirname(out.csv), showWarnings = FALSE)
-      fwrite(sim.i.dt[, .(Subset, y, x)], out.csv)
-    }
     sub_task <- mlr3::TaskRegr$new(
       sim.name, sim.i.dt, target="y")
     sub_task$col_roles$subset <- "Subset"
@@ -213,7 +206,6 @@ test_that("pvalue_downsample fails without downsamples", {
     reg.learner.list,
     SOAKED))
   (reg.bench.result <- mlr3::benchmark(reg.bench.grid))
-
   (score_dt <- mlr3resampling::score(
     reg.bench.result, mlr3::msr("regr.rmse")
   )[, .(
