@@ -123,7 +123,7 @@ To test one job using the proposed approach, we use:
 mlr3resampling::proj_test(proj_dir, max_jobs=1)
 ```
 
-We tested a featureless learner, which is not a great test (other learners may fail).
+We tested a featureless learner, which is not a great test (other learners may fail for a variety of reasons).
 So typically we run a more extensive test, as in the next section.
 
 ## Test one job for each algo and data set
