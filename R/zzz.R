@@ -11,7 +11,7 @@ register_mlr3 = function() {
   }
   x = utils::getFromNamespace("mlr_reflections", ns = "mlr3")
   for(task_type in names(x$task_col_roles)){
-    x$task_col_roles[[task_type]] = unique(c(x$task_col_roles[[task_type]], "subset"))
+    x$task_col_roles[[task_type]] = unique(c(x$task_col_roles[[task_type]], "subset", "fold"))
   }
   x$loaded_packages = c(x$loaded_packages, "mlr3resampling")
   mlr3misc::register_namespace_callback(pkgname, "mlr3", register_mlr3)

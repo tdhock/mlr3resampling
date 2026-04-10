@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.3.16
+Version: 2026.4.9
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -60,7 +60,8 @@ Imports:
     checkmate,
     paradox,
     mlr3 (>= 1.0.0),
-    mlr3misc
+    mlr3misc,
+    methods
 Suggests:
     pbdMPI,
     ggplot2,

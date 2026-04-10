@@ -29,7 +29,7 @@ save_learner_default <- function(L){
   if(is.function(L$save_learner))return(L$save_learner())
 }
 
-proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default, max_jobs=Inf){
+proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_learner_default, max_jobs=Inf, verbose=FALSE, LAPPLY=NULL){
   . <- ..batch.i <- ..row.id <- ..strat.i <- max.i <- NULL
   ## Above to avoid CRAN NOTE.
   proj.grid <- readRDS(file.path(proj_dir, "grid.rds"))
@@ -67,7 +67,7 @@ proj_test <- function(proj_dir, min_samples_per_stratum = 10, edit_learner=edit_
   proj.grid$proj_dir <- file.path(proj_dir, "test")
   unlink(proj.grid$proj_dir, recursive = TRUE)
   grid_dt <- do.call(proj_grid, proj.grid)
-  proj_compute_all(proj.grid$proj_dir)
+  proj_compute_all(proj.grid$proj_dir, verbose, LAPPLY)
   proj_fread(proj.grid$proj_dir)
 }
 
@@ -125,6 +125,9 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   ml_job_dt_list <- list()
   for(task.i in seq_along(proj.grid$tasks)){
     task.obj <- proj.grid$tasks[[task.i]]
+    if(is(task.obj, "TaskClassif")){
+      tcol <- task.obj$col_roles$target
+    }
     tasks.dir <- file.path(proj_dir, "tasks")
     dir.create(tasks.dir, showWarnings = FALSE)
     task.rds <- file.path(tasks.dir, paste0(task.i, ".rds"))
@@ -139,10 +142,28 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
       it_dt <- data.table(iteration)
       for(it in 1:nrow(it_dt)){
         resampling_list <- list()
+        if(is(task.obj, "TaskClassif")){
+          tcounts_list <- list()
+        }
         for(train_or_test in c("train","test")){
           train_or_test_set <- paste0(train_or_test, "_set")
           set_fun <- resampling.obj[[train_or_test_set]]
-          resampling_list[[train_or_test]] <- set_fun(it)
+          set_indices <- set_fun(it)
+          if(is(task.obj, "TaskClassif")){
+            target <- task.obj$data(set_indices, col=tcol)[[tcol]]
+            levs <- levels(target)
+            tcounts_list[[train_or_test]] <- as.data.table(
+              table(target)
+            )[, set := train_or_test]
+          }
+          resampling_list[[train_or_test]] <- set_indices
+        }
+        if(is(task.obj, "TaskClassif")){
+          tcounts <- rbindlist(tcounts_list)[, class := factor(target,levs)]
+          if(any(tcounts$N==0)){
+            print(dcast(tcounts, class ~ set, value.var="N"))
+            stop("Detected zero count for at least one class label after train/test split, which is invalid for a classification task; typically this can be fixed by setting task$col_roles$stratum")
+          }
         }
         resampling.rds <- file.path(
           proj_dir, "resamplings", task.i, resampling.i, paste0(it, ".rds"))
@@ -282,12 +303,14 @@ proj_compute_mpi <- function(proj_dir, verbose=FALSE){
   rbindlist(dt_list)
 }
 
-proj_compute_all <- function(proj_dir, verbose=FALSE){
+proj_compute_all <- function(proj_dir, verbose=FALSE, LAPPLY=NULL){
   todo.i.vec <- proj_todo(proj_dir)
-  LAPPLY <- if(requireNamespace("future.apply")){
-    function(...)future.apply::future_lapply(..., future.seed=NULL)
-  }else{
-    lapply
+  if(is.null(LAPPLY)){
+    LAPPLY <- if(requireNamespace("future.apply")){
+      function(...)future.apply::future_lapply(..., future.seed=NULL)
+    }else{
+      lapply
+    }
   }
   dt_list <- LAPPLY(todo.i.vec, proj_compute, proj_dir, verbose)
   proj_results_save(proj_dir, verbose)
