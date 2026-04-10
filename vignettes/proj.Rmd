@@ -133,7 +133,8 @@ To test one job using the previous approach, we use:
 batchtools::testJob(1)
 ```
 
-To test one job using the proposed approach, we use:
+To test one job using the proposed approach, we use the code below.
+Note that the test output below contains meta-data (task, learner, …) as well as prediction accuracy metrics (AUC and accuracy), so is much more useful and interpretable than the test output above.
 
 ```{r}
 mlr3resampling::proj_test(proj_dir, max_jobs=1)
@@ -149,7 +150,7 @@ A simple way to test each algorithm and data set with batchtools is via the code
 ```{r}
 jt <- batchtools::getJobTable()
 jt1 <- jt[repl==1]
-sapply(jt1$job.id, batchtools::testJob)
+testJob.repl1 <- sapply(jt1$job.id, batchtools::testJob)
 ```
 
 There is no error above, but it is not clear if the result is reasonable.
@@ -211,7 +212,7 @@ TODO conf in extdata
 test if slurm prog present
 set env var here to look there for config
 
-```{r}
+	```{r}
 batchtools::submitJobs(jt$job.id)
 batchtools::waitForJobs()
 test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
