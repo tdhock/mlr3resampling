@@ -130,7 +130,7 @@ gg_list
 
 ```{r}
 (reg.bench.grid <- mlr3::benchmark_grid(
-  d_task_list,
+  d_task_list[[1]],
   reg.learner.list,
   SOAKED))
 
@@ -153,7 +153,8 @@ plot(plist)
 ```
 
 ```{r}
-mlr3resampling::pvalue_downsample(score_dt)
+L <- mlr3resampling::pvalue_downsample(score_dt)
+plot(L)
 down_plot_dt <- score_dt[, .(
   gg=list(plot(mlr3resampling::pvalue_downsample(data.table(
     .SD, task_id, test.subset
