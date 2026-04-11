@@ -96,7 +96,18 @@ In the code below, we must save the result, called `bgrid`, which exists only in
 (bgrid <- mlr3::benchmark_grid(tasks_with_fold, learner_list, kfoldcv))
 ```
 
-After that, we save the grid to the file system via:
+After that, we save the grid to the file system, by first creating a batchtools registry.
+Various parallel computation methods are supported.
+Below we use a batchtools configuration file which will use SLURM, a cluster computing system.
+
+```{r}
+extdata <- system.file(package="mlr3resampling", "extdata")
+Sys.setenv(R_BATCHTOOLS_SEARCH_PATH=extdata)
+```
+
+The code above sets an environment variable that tells batchtools where to find the config file (that says to use SLURM when it is available for testing on GitHub Actions, otherwise sequential execution for testing on CRAN).
+If you use batchtools on a cluster, you should create a `~/.batchtools.conf.R` config file, as explained in [my R batchtools on Monsoon tutorial](https://tdhock.github.io/blog/2020/monsoon-batchtools/).
+Then when we make the registry in the code below, the batchtools config will be saved to disk, along with the benchmark grid.
 
 ```{r}
 reg_dir <- tempfile()
@@ -204,15 +215,11 @@ The results are identical because
 
 # Running all jobs on a cluster (large benchmarks)
 
-In the previous system, we use batchtools.
-Various parallel computation methods are supported.
-Prior to running the code below on the cluster, you should create a `~/.batchtools.conf.R` file, as explained in [my R batchtools on Monsoon tutorial](https://tdhock.github.io/blog/2020/monsoon-batchtools/).
-
-TODO conf in extdata
-test if slurm prog present
-set env var here to look there for config
+Now we can run
 
 ```{r}
+batchtools::getStatus()
+batchtools::getJobTable()
 batchtools::submitJobs(jt$job.id)
 batchtools::waitForJobs()
 test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
