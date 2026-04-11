@@ -113,7 +113,7 @@ Then when we make the registry in the code below, the batchtools config will be 
 if(requireNamespace("mlr3batchmark")){
   reg_dir <- tempfile()
   reg <- batchtools::makeExperimentRegistry(reg_dir)
-  chunks.as.arrayjobs <- reg$cluster.functions$name=="Slurm"
+  slurm.available <- reg$cluster.functions$name=="Slurm"
   mlr3batchmark::batchmark(bgrid)
 }
 ```
@@ -182,7 +182,7 @@ submit_job_array <- function(jobs_dt, minutes=1, gigabytes=1){
     memory = gigabytes*1000,#megabytes per cpu
     ncpus=1,  #>1 for multicore/parallel jobs.
     ntasks=1, #>1 for MPI jobs.
-    chunks.as.arrayjobs=chunks.as.arrayjobs))
+    chunks.as.arrayjobs=slurm.available))
 }
 if(requireNamespace("mlr3batchmark")){
   submit_job_array(jt1)
@@ -285,7 +285,7 @@ Note for large benchmarks, you must use `fun=ignore.learner` to avoid loading al
 The code below does the full computation on SLURM using the proposed method.
 
 ```{r}
-if(chunks.as.arrayjobs){
+if(slurm.available){
   slurm_job_id <- mlr3resampling::proj_submit(
     proj_dir, tasks=2, hours=1, gigabytes=1)
 }
