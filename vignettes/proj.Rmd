@@ -110,9 +110,11 @@ If you use batchtools on a cluster, you should create a `~/.batchtools.conf.R` c
 Then when we make the registry in the code below, the batchtools config will be saved to disk, along with the benchmark grid.
 
 ```{r}
-reg_dir <- tempfile()
-reg <- batchtools::makeExperimentRegistry(reg_dir)
-mlr3batchmark::batchmark(bgrid)
+if(requireNamespace("mlr3batchmark")){
+  reg_dir <- tempfile()
+  reg <- batchtools::makeExperimentRegistry(reg_dir)
+  mlr3batchmark::batchmark(bgrid)
+}
 ```
 
 ## Proposed method, `mlr3resampling::proj_grid()`
@@ -141,7 +143,9 @@ After defining the grid of combinations, we typically want to do a small test on
 To test one job using the previous approach, we use:
 
 ```{r}
-batchtools::testJob(1)
+if(requireNamespace("mlr3batchmark")){
+  batchtools::testJob(1)
+}
 ```
 
 To test one job using the proposed approach, we use the code below.
@@ -159,19 +163,40 @@ So typically we run a more extensive test, as in the next section.
 A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration, run on the local machine:
 
 ```{r}
-jt <- batchtools::getJobTable()
-jt1 <- jt[repl==1]
-testJob.repl1 <- sapply(jt1$job.id, batchtools::testJob)
+if(requireNamespace("mlr3batchmark")){
+  jt <- batchtools::getJobTable()
+  jt1 <- jt[repl==1]
+  testJob.repl1 <- sapply(jt1$job.id, batchtools::testJob)
+}
 ```
 
 There is no error above, but it is not clear if the result is reasonable.
 Another way to do it with batchtools is to submit a subset of jobs, as below:
 
 ```{r}
-batchtools::submitJobs(jt1$job.id)
-batchtools::waitForJobs()
-test_res <- mlr3batchmark::reduceResultsBatchmark(jt1$job.id)
-test_res$score(measure_list)
+submit_job_array <- function(jobs_dt, minutes=1, gigabytes=1){
+  jobs_dt$chunk <- 1
+  batchtools::submitJobs(jobs_dt, resources=list(
+    walltime = minutes*60,#seconds
+    memory = gigabytes*1000,#megabytes per cpu
+    ncpus=1,  #>1 for multicore/parallel jobs.
+    ntasks=1, #>1 for MPI jobs.
+    chunks.as.arrayjobs=TRUE))
+}
+if(requireNamespace("mlr3batchmark")){
+  submit_job_array(jt1)
+}
+```
+
+The code above adds a job array, one parallel CPU per `repl=1` cross-validation iteration, to the SLURM queue.
+In the code below, we wait for the jobs to compute, then gather the results.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::waitForJobs()
+  test_res <- mlr3batchmark::reduceResultsBatchmark(jt1)
+  test_res$score(measure_list)
+}
 ```
 
 The result above includes test AUC and accuracy values, which are more convincing test (but this involves actually submitting jobs on the cluster).
@@ -190,7 +215,7 @@ For some small benchmarks, you may want to compute all results on your local mac
 For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
 
 ```{r}
-future::plan("multisession")
+if(interactive())future::plan("multisession")
 ```
 
 The previous approach uses the code below:
@@ -215,20 +240,127 @@ The results are identical because
 
 # Running all jobs on a cluster (large benchmarks)
 
-Now we can run
+Now we discuss how to run large benchmarks on a cluster.
+
+## Previous method, `batchtools`
+
+In batchtools we can check the status of jobs in the registry using the code below.
 
 ```{r}
-batchtools::getStatus()
-batchtools::getJobTable()
-batchtools::submitJobs(jt$job.id)
-batchtools::waitForJobs()
-test_res <- mlr3batchmark::reduceResultsBatchmark(jt$job.id)
-test_res$score(measure_list)
+if(requireNamespace("mlr3batchmark")){
+  batchtools::getStatus()
+}
 ```
 
-The computation above was in 
+The output above shows there are 4 jobs done out of 12 in the registry.
+To launch the other jobs, we use the code below.
 
-# Comparison
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  not.done <- batchtools::getJobTable()[is.na(done)]
+  submit_job_array(not.done)
+}
+```
+
+The code above adds a job array, one parallel CPU for each remaining cross-validation iteration, to the SLURM queue.
+In the code below, we wait for the jobs to compute, then gather the results.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::waitForJobs()
+  bt_res <- mlr3batchmark::reduceResultsBatchmark(jt)
+  bt_score <- bt_res$score(measure_list)
+}
+```
+
+## Proposed method, `mlr3resampling::proj_submit()`
+
+The code below does the full computation on SLURM using the proposed method.
+
+```{r}
+(slurm_job_id <- mlr3resampling::proj_submit(proj_dir, tasks=2, hours=1, gigabytes=1))
+```
+
+The code above submits a SLURM MPI job with two tasks.
+
+* the first task is a manager,
+* the other tasks (only one here) are workers, which repeatedly ask the manager for a new train/test split to compute, then save a result file.
+
+After all computations are done, the last worker saves a `results.csv` file, which can be read back into R using the code below.
+
+```{r}
+(result_file_list <- mlr3resampling::proj_fread(proj_dir))
+```
+
+Above results show two tables,
+
+* `grid_jobs.csv` has meta-data that the workers use to determine what computation to run.
+* `results.csv` has columns including computation time, process ID, and test accuracy measures.
+
+# Results comparison
+
+## Accuracy measures
+
+```{r}
+acc_in_list <- list(
+  mlr3batchmark=bt_score,
+  mlr3resampling=result_file_list$results.csv)
+acc_out_list <- list()
+library(data.table)
+for(package in names(acc_in_list)){
+  acc_in <- melt(
+    acc_in_list[[package]],
+    id.vars=c("task_id", "learner_id", "iteration"),
+    measure.vars=c("classif.auc", "classif.acc"))
+  acc_out_list[[package]] <- data.table(package, acc_in)
+}
+(acc_out <- rbindlist(acc_out_list))
+acc_compare <- dcast(
+  acc_out,
+  variable + task_id + learner_id + iteration ~ package)
+acc_compare[, all.equal(mlr3batchmark, mlr3resampling)]
+```
+
+We see above that all accuracy metrics are equal, using the two methods.
+We plot the results below.
+
+```{r}
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      mlr3resampling, learner_id),
+      data=acc_compare)+
+    facet_wrap(
+      . ~ task_id + variable,
+      labeller=label_both, scales="free", ncol=1)
+}
+```
+
+The figure above shows that the decision tree learns something non-trivial in both data sets, and that spam is easier (more class balance, bigger improvement over featureless). 
+
+## Computation time
+
+Analysis of computation time is not very interesting for this small data example, but this code could be useful for a larger benchmark.
+
+```{r}
+time_compare <- rbind(
+  if(requireNamespace("mlr3batchmark"))batchtools::getJobTable()[, .(
+    package="mlr3batchmark", process=.I, start.time=started, end.time=done)],
+  result_file_list$results.csv[, .(
+    package="mlr3resampling", process, start.time, end.time)])
+if(require(ggplot2)){
+  ggplot(time_compare, aes(start.time, process))+
+    geom_segment(aes(
+      xend=end.time, yend=process))+
+    geom_point()+
+    facet_grid(
+      package~.,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+# Code Comparison
 
 TODO , which will be saved to `results.csv` in the last job. Using the previous approach, `measure_list` is provided after the computations have run, so must be computed in a final combination step, after the last job.
 
