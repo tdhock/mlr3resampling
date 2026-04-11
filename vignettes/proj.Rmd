@@ -333,18 +333,6 @@ if(requireNamespace("mlr3batchmark"))
 We see above that all accuracy metrics are equal, using the two methods.
 We plot the results below.
 
-```{r gg-acc-compare}
-if(require(ggplot2)){
-  ggplot()+
-    geom_point(aes(
-      mlr3resampling, learner_id),
-      data=acc_compare)+
-    facet_wrap(
-      . ~ task_id + variable,
-      labeller=label_both, scales="free", ncol=1)
-}
-```
-
 The figure above shows that the decision tree learns something non-trivial in both data sets, and that spam is easier (more class balance, bigger improvement over featureless). 
 
 ## Computation time
@@ -357,16 +345,6 @@ time_compare <- rbind(
     package="mlr3batchmark", process=.I, start.time=started, end.time=done)],
   result_file_list$results.csv[, .(
     package="mlr3resampling", process, start.time, end.time)])
-if(require(ggplot2)){
-  ggplot(time_compare, aes(start.time, process))+
-    geom_segment(aes(
-      xend=end.time, yend=process))+
-    geom_point()+
-    facet_grid(
-      package~.,
-      labeller=label_both,
-      scales="free")
-}
 ```
 
 # New features
@@ -400,7 +378,7 @@ if(requireNamespace("torch") && torch::torch_is_installed()){
 }
 if(requireNamespace("glmnet")){
   learners_new$glmnet <- mlr3resampling::LearnerClassifCVGlmnetSave$new()
-)
+}
 for(learner_i in seq_along(learners_new)){
   L <- learners_new[[learner_i]]
   L$predict_type <- "prob"
