@@ -333,7 +333,7 @@ if(requireNamespace("mlr3batchmark"))
 We see above that all accuracy metrics are equal, using the two methods.
 We plot the results below.
 
-```{r}
+```{r gg-acc-compare}
 if(require(ggplot2)){
   ggplot()+
     geom_point(aes(
@@ -351,7 +351,7 @@ The figure above shows that the decision tree learns something non-trivial in bo
 
 Analysis of computation time is not very interesting for this small data example, but this code could be useful for a larger benchmark.
 
-```{r}
+```{r gg-time-compare}
 time_compare <- rbind(
   if(requireNamespace("mlr3batchmark"))batchtools::getJobTable()[, .(
     package="mlr3batchmark", process=.I, start.time=started, end.time=done)],
