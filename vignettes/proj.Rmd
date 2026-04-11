@@ -284,7 +284,8 @@ Note for large benchmarks, you must use `fun=ignore.learner` to avoid loading al
 The code below does the full computation on SLURM using the proposed method.
 
 ```{r}
-(slurm_job_id <- mlr3resampling::proj_submit(proj_dir, tasks=2, hours=1, gigabytes=1))
+(slurm_job_id <- mlr3resampling::proj_submit(
+  proj_dir, tasks=2, hours=1, gigabytes=1))
 ```
 
 The code above submits a SLURM MPI job with two tasks.
@@ -309,8 +310,9 @@ Above results show two tables,
 
 ```{r}
 acc_in_list <- list(
-  mlr3batchmark=bt_score,
   mlr3resampling=result_file_list$results.csv)
+if(requireNamespace("mlr3batchmark"))
+  acc_in_list$mlr3batchmark <- bt_score
 acc_out_list <- list()
 library(data.table)
 for(package in names(acc_in_list)){
@@ -324,7 +326,8 @@ for(package in names(acc_in_list)){
 acc_compare <- dcast(
   acc_out,
   variable + task_id + learner_id + iteration ~ package)
-acc_compare[, all.equal(mlr3batchmark, mlr3resampling)]
+if(requireNamespace("mlr3batchmark"))
+  acc_compare[, all.equal(mlr3batchmark, mlr3resampling)]
 ```
 
 We see above that all accuracy metrics are equal, using the two methods.
@@ -375,25 +378,33 @@ For even faster test runs, Learners may define `edit_learner()` method, which ed
 ```{r}
 proj_new <- if(interactive())"~/proj_new" else tempfile()
 unlink(proj_new, recursive = TRUE)
-gen_linear <- torch::nn_module(
-  "my_linear",
-  initialize = function(task) {
-    self$weight = torch::nn_linear(task$n_features, 1)
-  },
-  forward = function(x) {
-    self$weight(x)
-  }
-)
 learners_new <- list(
-  mlr3resampling::AutoTunerTorch_epochs$new(
+  mlr3::LearnerClassifFeatureless$new())
+if(requireNamespace("torch") && torch::torch_is_installed()){
+  gen_linear <- torch::nn_module(
+    "my_linear",
+    initialize = function(task) {
+      self$weight = torch::nn_linear(task$n_features, 1)
+    },
+    forward = function(x) {
+      self$weight(x)
+    }
+  )
+  learners_new$torch <- mlr3resampling::AutoTunerTorch_epochs$new(
     "torch_linear",
     module_generator=gen_linear,
     max_epochs=1000,
     batch_size=10,
     measure_list=mlr3::msrs("classif.auc")
-  ),
-  mlr3resampling::LearnerClassifCVGlmnetSave$new()
+  )
+}
+if(requireNamespace("glmnet")){
+  learners_new$glmnet <- mlr3resampling::LearnerClassifCVGlmnetSave$new()
 )
+for(learner_i in seq_along(learners_new)){
+  L <- learners_new[[learner_i]]
+  L$predict_type <- "prob"
+}
 mlr3resampling::proj_grid(
   proj_new, tasks_with_fold$spam, learners_new, kfoldcv,
   score_args = measure_list)
@@ -434,10 +445,11 @@ In larger runs (more than two epochs), we plot these data to see if the torch mo
 Next, the weights table come from glmnet:
 
 ```{r}
-test_result_list$learners_weights.csv[weight!=0]
+test_result_list$learners_weights.csv
 ```
 
-The table above contains one row for each non-zero weight in the glmnet model (these are the features selected by L1 regularization; the other features are not used for prediction).
+The table above contains one row for each input feature.
+Some are selected by L1 regularization (non-zero weights); the other features are not used for prediction (zero weights).
 
 ## New Task down-sampling
 
