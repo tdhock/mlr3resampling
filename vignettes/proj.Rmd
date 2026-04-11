@@ -345,6 +345,16 @@ time_compare <- rbind(
     package="mlr3batchmark", process=.I, start.time=started, end.time=done)],
   result_file_list$results.csv[, .(
     package="mlr3resampling", process, start.time, end.time)])
+if(require(ggplot2)){
+  ggplot(time_compare, aes(start.time, process))+
+    geom_segment(aes(
+      xend=end.time, yend=process))+
+    geom_point()+
+    facet_grid(
+      package~.,
+      labeller=label_both,
+      scales="free")
+}
 ```
 
 # New features
