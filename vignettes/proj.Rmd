@@ -328,10 +328,10 @@ for(package in names(acc_in_list)){
     measure.vars=c("classif.auc", "classif.acc"))
   acc_out_list[[package]] <- data.table(package, acc_in)
 }
-(acc_out <- rbindlist(acc_out_list))
-acc_compare <- dcast(
+acc_out <- rbindlist(acc_out_list)
+(acc_compare <- dcast(
   acc_out,
-  variable + task_id + learner_id + iteration ~ package)
+  variable + task_id + learner_id + iteration ~ package))
 if(requireNamespace("mlr3batchmark"))
   acc_compare[, all.equal(mlr3batchmark, mlr3resampling)]
 ```
