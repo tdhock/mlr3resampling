@@ -333,6 +333,16 @@ if(requireNamespace("mlr3batchmark"))
 We see above that all accuracy metrics are equal, using the two methods.
 We plot the results below.
 
+```{r gg-acc-compare}
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      mlr3resampling, learner_id),
+      data=acc_compare)+
+    facet_wrap(c("task_id","variable"), labeller=label_both, scales="free", ncol=1)
+}
+```
+
 The figure above shows that the decision tree learns something non-trivial in both data sets, and that spam is easier (more class balance, bigger improvement over featureless). 
 
 ## Computation time
