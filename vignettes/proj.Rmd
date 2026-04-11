@@ -285,8 +285,10 @@ Note for large benchmarks, you must use `fun=ignore.learner` to avoid loading al
 The code below does the full computation on SLURM using the proposed method.
 
 ```{r}
-(slurm_job_id <- mlr3resampling::proj_submit(
-  proj_dir, tasks=2, hours=1, gigabytes=1))
+if(chunks.as.arrayjobs){
+  slurm_job_id <- mlr3resampling::proj_submit(
+    proj_dir, tasks=2, hours=1, gigabytes=1)
+}
 ```
 
 The code above submits a SLURM MPI job with two tasks.
