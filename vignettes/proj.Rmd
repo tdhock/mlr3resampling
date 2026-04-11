@@ -102,7 +102,7 @@ Below we use a batchtools configuration file which will use SLURM, a cluster com
 
 ```{r}
 extdata <- system.file(package="mlr3resampling", "extdata")
-Sys.setenv(R_BATCHTOOLS_SEARCH_PATH=extdata)
+Sys.setenv(R_BATCHTOOLS_SEARCH_PATH=extdata) #comment to use ~/.batchtools.conf.R instead.
 ```
 
 The code above sets an environment variable that tells batchtools where to find the config file (that says to use SLURM when it is available for testing on GitHub Actions, otherwise sequential execution for testing on CRAN).
@@ -113,6 +113,7 @@ Then when we make the registry in the code below, the batchtools config will be 
 if(requireNamespace("mlr3batchmark")){
   reg_dir <- tempfile()
   reg <- batchtools::makeExperimentRegistry(reg_dir)
+  chunks.as.arrayjobs <- reg$cluster.functions$name=="Slurm"
   mlr3batchmark::batchmark(bgrid)
 }
 ```
@@ -181,7 +182,7 @@ submit_job_array <- function(jobs_dt, minutes=1, gigabytes=1){
     memory = gigabytes*1000,#megabytes per cpu
     ncpus=1,  #>1 for multicore/parallel jobs.
     ntasks=1, #>1 for MPI jobs.
-    chunks.as.arrayjobs=TRUE))
+    chunks.as.arrayjobs=chunks.as.arrayjobs))
 }
 if(requireNamespace("mlr3batchmark")){
   submit_job_array(jt1)
@@ -193,7 +194,7 @@ In the code below, we wait for the jobs to compute, then gather the results.
 
 ```{r}
 if(requireNamespace("mlr3batchmark")){
-  batchtools::waitForJobs()
+  batchtools::waitForJobs(jt1)
   test_res <- mlr3batchmark::reduceResultsBatchmark(jt1)
   test_res$score(measure_list)
 }
