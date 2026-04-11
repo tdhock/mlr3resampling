@@ -268,10 +268,16 @@ In the code below, we wait for the jobs to compute, then gather the results.
 ```{r}
 if(requireNamespace("mlr3batchmark")){
   batchtools::waitForJobs()
-  bt_res <- mlr3batchmark::reduceResultsBatchmark(jt)
+  ignore.learner <- function(L){
+    L$learner_state$model <- NULL
+    L
+  }
+  bt_res <- mlr3batchmark::reduceResultsBatchmark(jt, fun=ignore.learner)
   bt_score <- bt_res$score(measure_list)
 }
 ```
+
+Note for large benchmarks, you must use `fun=ignore.learner` to avoid loading all models into memory at once.
 
 ## Proposed method, `mlr3resampling::proj_submit()`
 
@@ -360,28 +366,100 @@ if(require(ggplot2)){
 }
 ```
 
-# Code Comparison
-
-TODO , which will be saved to `results.csv` in the last job. Using the previous approach, `measure_list` is provided after the computations have run, so must be computed in a final combination step, after the last job.
-
-Testing is more convenient
-
 # New features
 
-## Quick testing via Task down-sampling and Learner `edit_learner()` method
+## New `edit_learner()` method for quick testing
 
-For even faster runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
-
-The code below reads the down-sampled tasks:
+For even faster test runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
 
 ```{r}
-rds.vec <- Sys.glob(file.path(proj_dir,"test","tasks","*rds"))
+proj_new <- if(interactive())"~/proj_new" else tempfile()
+unlink(proj_new, recursive = TRUE)
+gen_linear <- torch::nn_module(
+  "my_linear",
+  initialize = function(task) {
+    self$weight = torch::nn_linear(task$n_features, 1)
+  },
+  forward = function(x) {
+    self$weight(x)
+  }
+)
+learners_new <- list(
+  mlr3resampling::AutoTunerTorch_epochs$new(
+    "torch_linear",
+    module_generator=gen_linear,
+    max_epochs=1000,
+    batch_size=10,
+    measure_list=mlr3::msrs("classif.auc")
+  ),
+  mlr3resampling::LearnerClassifCVGlmnetSave$new()
+)
+mlr3resampling::proj_grid(
+  proj_new, tasks_with_fold$spam, learners_new, kfoldcv,
+  score_args = measure_list)
+system.time({
+  test_result_list <- mlr3resampling::proj_test(proj_new)
+})
+```
+
+Notice how fast the above code is.
+Even though the torch learner has max 1000 epochs, it is reduced to only 2 epoch when running `proj_test()`.
+
+## New `save_learner()` method for model interpretation
+
+The two learners above have `save_learner()` methods, defined in [mlr3resampling/R/Learners.R](https://github.com/tdhock/mlr3resampling/blob/main/R/Learners.R).
+
+* In `mlr3resampling::proj_grid()`, the default for most learners is to not save anything, because we don’t want to risk running out of memory, by saving and loading a bunch of large models, if we are not interested in model interpretation.
+* These two learners have `save_learner()` methods which return a named list of data tables, which should contain the important parts of `learner$learner_state$model`, which we want to use for model interpretation.
+  * in glmnet we want the linear model coefficients.
+  * in torch we want the training history (subtrain/validation loss at each epoch).
+  * in general it may be preferable (easier to understand) if this model interpretation code is in the `save_learner()` method, rather than in the cluster results analysis script.
+* The prefix `learners_` and suffix `.csv` are appended to the name of each data table, to get a file in which to save these data.
+* `proj_test()` returns all of these data tables in a list:
+
+```{r}
+names(test_result_list)
+```
+
+We see that there are two learners tables.
+First, history comes from torch:
+
+```{r}
+test_result_list$learners_history.csv
+```
+
+We see above there are two rows (one for each epoch).
+In larger runs (more than two epochs), we plot these data to see if the torch model has a good fit (avoids overfitting and underfitting).
+
+Next, the weights table come from glmnet:
+
+```{r}
+test_result_list$learners_weights.csv[weight!=0]
+```
+
+The table above contains one row for each non-zero weight in the glmnet model (these are the features selected by L1 regularization; the other features are not used for prediction).
+
+## New Task down-sampling
+
+When we ran `proj_test()` above, it created a `test` directory, which is another project directory, with a smaller task.
+Each original task in the project is down-sampled proportionally (using strata), so that we can quickly test if training and prediction work on a smaller data set.
+The code below reads the down-sampled task:
+
+```{r}
+rds.vec <- Sys.glob(file.path(proj_new,"test","tasks","*rds"))
 for(rds.i in seq_along(rds.vec)){
   mini_task <- readRDS(rds.vec[[rds.i]])
   print(table(mini_task$data()[[1]]))
 }
 ```
 
-The output above shows that there are at least 10 data per class in the down-sampled tasks.
+The output above shows that there are at least 30 data per class in the down-sampled task, because
 
-## Model interpretation via `save_learner()` method
+* default is 10 samples in the smallest stratum (this can be changed via `min_samples_per_stratum`),
+* we defined stratum as fold + target columns,
+* there were K=3 cross-validation folds,
+* so there are at least 30 data per class (10 per fold).
+
+# Conclusion
+
+We compared `mlr3resampling::proj_*()` functions to their analogs in `batchtools` and `mlr3batchmark`. We saw that the interface is similar, with some convenience features for quick testing, and for efficient model interpretation.
