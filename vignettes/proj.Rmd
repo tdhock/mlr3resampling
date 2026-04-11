@@ -278,7 +278,10 @@ if(requireNamespace("mlr3batchmark")){
 }
 ```
 
-Note for large benchmarks, you must use `fun=ignore.learner` to avoid loading all models into memory at once.
+Note for large benchmarks, you must use `fun` to avoid loading all models into memory at once.
+
+* `fun=ignore.learner` as above is good if you do not want to do model interpretation.
+* If you do want to do model interpretation, then you need to write a `fun` which keeps only the parts of the model that are necessary. This can be cumbersome to do here, especially if there are several different learners to interpret (such as torch and glmnet, see examples below).
 
 ## Proposed method, `mlr3resampling::proj_submit()`
 
@@ -425,7 +428,7 @@ The two learners above have `save_learner()` methods, defined in [mlr3resampling
 * These two learners have `save_learner()` methods which return a named list of data tables, which should contain the important parts of `learner$learner_state$model`, which we want to use for model interpretation.
   * in glmnet we want the linear model coefficients.
   * in torch we want the training history (subtrain/validation loss at each epoch).
-  * in general it may be preferable (easier to understand) if this model interpretation code is in the `save_learner()` method, rather than in the cluster results analysis script.
+  * in general it is preferable (easier to understand, less disk usage, less risk of running out of memory) if this model interpretation code is in the `save_learner()` method, rather than in the cluster results analysis script (`fun` argument of `mlr3batchmark::reduceResultsBatchmark`).
 * The prefix `learners_` and suffix `.csv` are appended to the name of each data table, to get a file in which to save these data.
 * `proj_test()` returns all of these data tables in a list:
 
