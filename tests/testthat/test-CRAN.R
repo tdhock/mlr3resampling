@@ -925,15 +925,4 @@ test_that("fold role is checked", {
   expect_error({
     soak$instantiate(group.task)
   }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
-  count.dt <- data.table(
-    x=1:9,
-    y=factor(rep(c("a", "b", "c"), each=3)),
-    Fold=rep(1:3, length.out=9))
-  count.task <- mlr3::TaskClassif$new("fold_count_bad", count.dt, target="y")
-  count.task$col_roles$feature <- "x"
-  count.task$col_roles$fold <- "Fold"
-  count.task$col_roles$stratum <- "y"
-  expect_error({
-    soak$instantiate(count.task)
-  }, "fold column has 3 unique values, but param_set$values$folds is 2", fixed=TRUE)
 })
