@@ -102,12 +102,6 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             stop("task$col_roles$fold must be constant within each group")
           }
         }
-        n.unique.folds <- length(unique(fold))
-        if(n.unique.folds != n.folds){
-          stop(sprintf(
-            "fold column has %s unique values, but param_set$values$folds is %s",
-            n.unique.folds, n.folds))
-        }
         data.table(group.row.dt, fold)
       }else{
         sample.dt <- group.row.dt[
