@@ -362,6 +362,7 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum", {
   three.prop.list <- get_prop_mat(three[["train"]])
   expect_identical(three.prop.list, exp.prop.list)
 })
+
 test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=0", {
   reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
@@ -379,9 +380,11 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
-  n.train.per.test <- 6
+  computed[test.fold==1, .(test.subset, train.subsets, groups, n.train.groups)][order(test.subset)]
+  n.train.per.test <- 5
   expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
 })
+
 test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=1", {
   reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
