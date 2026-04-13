@@ -908,3 +908,32 @@ test_that("fold and stratum roles work for reproducibility", {
   tlist <- mlr3resampling::proj_test(proj_dir)
   expect_identical(names(tlist), c("grid_jobs.csv", "results.csv"))
 })
+
+test_that("fold role is checked", {
+  soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  soak$param_set$values$folds <- 2L
+  group.dt <- data.table(
+    x=1:6,
+    y=factor(rep(c("a", "b"), each=3)),
+    grp=c(1, 1, 2, 2, 3, 3),
+    Fold=c(1, 2, 1, 1, 2, 2))
+  group.task <- mlr3::TaskClassif$new("group_fold_bad", group.dt, target="y")
+  group.task$col_roles$feature <- "x"
+  group.task$col_roles$group <- "grp"
+  group.task$col_roles$fold <- "Fold"
+  group.task$col_roles$stratum <- "y"
+  expect_error({
+    soak$instantiate(group.task)
+  }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
+  count.dt <- data.table(
+    x=1:9,
+    y=factor(rep(c("a", "b", "c"), each=3)),
+    Fold=rep(1:3, length.out=9))
+  count.task <- mlr3::TaskClassif$new("fold_count_bad", count.dt, target="y")
+  count.task$col_roles$feature <- "x"
+  count.task$col_roles$fold <- "Fold"
+  count.task$col_roles$stratum <- "y"
+  expect_error({
+    soak$instantiate(count.task)
+  }, "fold column has 3 unique values, but param_set$values$folds is 2", fixed=TRUE)
+})
