@@ -97,6 +97,25 @@ test_that("plot.pvalue_downsample returns ggplot", {
   expect_s3_class(down.plot, "ggplot")
 })
 
+test_that("plot.score orders y axis by subset and sample size", {
+  skip_if_not_installed("ggplot2")
+  score_in <- data.table(
+    task_id="toy",
+    test.subset="A",
+    algorithm="featureless",
+    Train_subsets=c("all", "same", "other", "same", "all", "other"),
+    n.train.groups=c(36L, 72L, 36L, 360L, 360L, 72L),
+    regr.rmse=c(0.3, 0.2, 0.4, 0.1, 0.5, 0.25)
+  )
+  setattr(score_in, "class", c("score", class(score_in)))
+  score.plot <- plot(score_in)
+  expect_s3_class(score.plot, "ggplot")
+  expect_identical(
+    levels(score.plot$layers[[1]]$data$y.label),
+    c("all 360", "all 36", "other 72", "other 36", "same 360", "same 72")
+  )
+})
+
 test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   skip_if_not_installed("ggplot2")
   score_in <- data.table(score.dt)[
