@@ -51,11 +51,9 @@ test_that("pvalue_downsample handles input without downsample rows", {
   score_in <- data.table(score.dt)[
   , n.train.groups := groups
   ][test.subset == subset_name & algorithm == model_name]
-  expect_warning(
-    down.list <- mlr3resampling::pvalue_downsample(score_in),
-    "duplicate row/column combinations"
-  )
-  expect_s3_class(down.list, "pvalue_downsample")
+  expect_error({
+    mlr3resampling::pvalue_downsample(score_in)
+  }, "no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark", fixed=TRUE)
 })
 
 test_that("pvalue_downsample errors when there is no comparison subset", {
@@ -217,5 +215,5 @@ test_that("pvalue_downsample fails without downsamples", {
   if(interactive())plot(plist)
   expect_error({
     mlr3resampling::pvalue_downsample(score_dt)
-  }, "no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark")
+  }, "no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark", fixed=TRUE)
 })

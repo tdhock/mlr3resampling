@@ -241,6 +241,9 @@ pvalue_downsample <- function(
       paste(missing.cols, collapse=", ")
     )
   }
+  if(!any(prep$score_dt$n.train.groups < prep$score_dt$groups)){
+    stop("no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark")
+  }
   ss_levs <- c("full", min(prep$score_dt[["groups"]]))
   score_panels <- data.table(sample_size=factor(ss_levs, ss_levs))[
   , prep$score_dt[n.train.groups == if(sample_size=="full")groups else min(groups)]
