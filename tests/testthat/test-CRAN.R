@@ -380,9 +380,20 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
   computed <- same_other_sizes_cv$instance$iteration.dt
-  computed[test.fold==1, .(test.subset, train.subsets, groups, n.train.groups)][order(test.subset)]
   n.train.per.test <- 5
   expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
+  one_fold <- computed[
+    test.fold == 1 & seed == 1 & test.subset == "A",
+    .(train.subsets, groups, n.train.groups)
+  ][order(train.subsets, n.train.groups)]
+  expect_identical(
+    one_fold,
+    data.table(
+      train.subsets = c("all", "all", "other", "other", "same"),
+      groups = c(700L, 700L, 600L, 600L, 100L),
+      n.train.groups = c(100L, 700L, 100L, 600L, 100L)
+    )
+  )
 })
 
 test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=1", {
