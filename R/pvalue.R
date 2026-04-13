@@ -51,7 +51,7 @@ pvalue_compute <- function(
     score_value$Train_subsets,
     paste0(measure.vars, "-same")
   ))
-  label_order <- canonical_levels[canonical_levels %in% present_levels]
+  label_order <- c(canonical_levels[canonical_levels %in% present_levels], "")
   score_value[, Train_subsets := factor(Train_subsets, label_order)]
   score_wide <- dcast(
     score_value,
