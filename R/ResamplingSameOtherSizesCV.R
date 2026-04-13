@@ -129,13 +129,15 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         tta.row <- train.test.groups[tta.i]
         op.chr <- if(self$param_set$values$sizes <= 0)"==" else ">="
         on.vec <- c("test.subset", paste("groups",op.chr,"train_groups"))
-        n.train.groups.vec <- c(tta.row[
+        n.train.groups.vec <- unique(c(
+          tta.row[
           train.size.dt,
           groups,
           on=on.vec,
           nomatch=0L],
-          if(self$param_set$values$sizes == 0)train.size.dt[
-            tta.row, min(train_groups), on="test.subset"])
+          if(self$param_set$values$sizes == 0) train.size.dt[
+            tta.row, min(train_groups), on="test.subset"]
+        ))
         for(seed in 1:self$param_set$values$seeds){
           is.set.subset <- list(
             test=fold.dt[["test.subset"]] == tta.row[["test.subset"]])
