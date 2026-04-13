@@ -61,7 +61,20 @@ task.dt[, random_group := rep(
 table(group.tab <- task.dt$random_group)
 ```
 
-The output above shows the number of rows in each random group. 
+The output above shows the number of rows in each random group.
+Before we create a task from these data, we need to load the `mlr3resampling` package, or we will get an error like below, because this is not a standard mlr3 role.
+
+```{r error=TRUE, purl=FALSE}
+bad.task <- mlr3::TaskRegr$new("bad", task.dt, target="y")
+bad.task$col_roles$subset <- "random_group"
+```
+
+Below we define the cross-validation object, which loads the `mlr3resampling` package,
+
+```{r}
+soak_default <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+```
+
 Below we define a task,
 
 ```{r}
@@ -72,20 +85,10 @@ reg.task$col_roles$stratum <- "random_group"
 reg.task$col_roles$feature <- "x"
 ```
 
-Note that if we assign the `subset` role at this point, we will get an
-error, because this is not a standard mlr3 role.
-
-
-```{r error=TRUE, purl=FALSE}
-reg.task$col_roles$subset <- "random_group" 
-```
-
-Below we define the cross-validation object, which loads the
-mlr3resampling package, and then we assign the random group column to
+Below we assign the random group column to
 be used as the `subset` role.
 
 ```{r}
-soak_default <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task$col_roles$subset <- "random_group" 
 ```
 

@@ -20,7 +20,7 @@
 \usage{
 proj_todo(proj_dir)
 proj_compute_mpi(proj_dir, verbose=FALSE)
-proj_compute_all(proj_dir, verbose=FALSE)
+proj_compute_all(proj_dir, verbose=FALSE, LAPPLY)
 proj_submit(
   proj_dir, tasks = 2, hours = 1, gigabytes = 1,
   verbose = FALSE)
@@ -32,6 +32,9 @@ proj_submit(
   \item{hours}{Hours of walltime to ask the SLURM scheduler.}
   \item{gigabytes}{Gigabytes of memory to ask the SLURM scheduler.}
   \item{verbose}{Logical: print messages?}
+  \item{LAPPLY}{Function like \code{\link{lapply}} (default
+    \code{future.apply::future_lapply} if available). Set to
+    \code{lapply} for debugging.}
 }
 \details{
   This is Step 2 out of the

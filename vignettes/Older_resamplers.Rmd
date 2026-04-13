@@ -23,7 +23,7 @@ is recommended to instead use the newer resampler,
 
 # Same/Other/All resampler
 
-The goal of thie section is to explain how to quantify the extent to
+The goal of this section is to explain how to quantify the extent to
 which it is possible to train on one data subset, and predict on
 another data subset. This kind of problem occurs frequently in many
 different problem domains:
@@ -44,6 +44,14 @@ regression and classification problems. To use this method in
 real data, the important sections to read below are named "Benchmark:
 computing test error," which show how to create these cross-validation
 experiments using mlr3 code.
+
+Before creating any mlr3 tasks, we need to load the K-fold cross-validation resampler, as below.
+
+```{r}
+(reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
+```
+
+This is required to do first, because it loads `mlr3resampling`, which has the effect of adding `subset` to the set of valid `mlr3` column roles (otherwise `mlr3` will give an error, subset is not a recognized role).
 
 ## Simulated regression problems
 
@@ -127,12 +135,6 @@ In the simulated data above, we can see that
   predict on another.
   
 ### Benchmark: computing test error
-
-In the code below, we define a K-fold cross-validation experiment.
-
-```{r}
-(reg_same_other <- mlr3resampling::ResamplingSameOtherCV$new())
-```
 
 In the code below, we define two learners to compare,
 
