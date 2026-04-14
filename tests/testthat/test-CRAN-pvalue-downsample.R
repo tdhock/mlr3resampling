@@ -130,7 +130,7 @@ test_that("pvalue_downsample end-to-end with real SOAK sizes=0 result", {
   expect_s3_class(down.plot, "ggplot")
 })
 
-test_that("pvalue_downsample fails without downsamples", {
+test_that("pvalue_downsample works in simulation", {
   library(data.table)
   N <- 2400
   abs.x <- 3*pi
@@ -181,7 +181,8 @@ test_that("pvalue_downsample fails without downsamples", {
   (reg.learner.list <- list(
     if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new()))
   SOAKED <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-  SOAKED$param_set$values$folds <- 2
+  SOAKED$param_set$values$sizes <- 0
+  SOAKED$param_set$values$folds <- 2 #was 10 in https://github.com/tdhock/2024-08-ift603-712/blob/main/cv-subsets-small-large-noise.R
   set.seed(1)
   sim.meta.list <- list(
     different=rbind(
@@ -225,14 +226,15 @@ test_that("pvalue_downsample fails without downsamples", {
   (reg.bench.result <- mlr3::benchmark(reg.bench.grid))
   (score_dt <- mlr3resampling::score(
     reg.bench.result, mlr3::msr("regr.rmse")
-  )[, .(
+  )[algorithm=="rpart", .(
     test.subset, test.fold,
     train.subsets, Train_subsets, groups, n.train.groups,
     algorithm, regr.rmse, task_id)])
   if(interactive())plot(score_dt)
   plist <- mlr3resampling::pvalue(score_dt)
   if(interactive())plot(plist)
-  expect_error({
-    mlr3resampling::pvalue_downsample(score_dt)
-  }, "no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark", fixed=TRUE)
+  expect_equal(nrow(plist$pvalues), 4)
+  dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  if(interactive())plot(dlist)
+  expect_equal(nrow(dlist$pvalues), 4)
 })

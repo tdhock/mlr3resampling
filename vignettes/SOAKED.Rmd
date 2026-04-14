@@ -1,20 +1,20 @@
-<!--
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Downsampling}
--->
+---
+vignette: >
+  %\VignetteIndexEntry{SOAKED}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
 ```
 
-The goal of this vignette is explain how downsampling can be used with `ResamplingSameOtherSizesCV` to determine why there is a difference between Same/Other/All models.
+The goal of this vignette is explain how SOAKED (Same/Other/All K-fold cross-validation Extension Downsampling) can be used with `ResamplingSameOtherSizesCV` to determine why there is a difference between Same/Other/All models.
 
 ## Simulations
 
