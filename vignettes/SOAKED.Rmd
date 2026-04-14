@@ -100,11 +100,6 @@ d_task_list <- list()
 gg_list <- list()
 for(sim.name in names(sim.meta.list)){
   sim.i.dt <- sim.meta.list[[sim.name]]
-  out.csv <- sprintf("~/data_Regr/%s.csv", sim.name)
-  if(interactive()){
-    dir.create(dirname(out.csv), showWarnings = FALSE)
-    fwrite(sim.i.dt[, .(Subset, y, x)], out.csv)
-  }
   sub_task <- mlr3::TaskRegr$new(
     sim.name, sim.i.dt, target="y")
   sub_task$col_roles$subset <- "Subset"
@@ -130,7 +125,7 @@ gg_list
 
 ```{r}
 (reg.bench.grid <- mlr3::benchmark_grid(
-  d_task_list[[1]],
+  d_task_list,
   reg.learner.list,
   SOAKED))
 
@@ -138,12 +133,8 @@ if(require(future))plan("multisession")
 if(require(lgr))get_logger("mlr3")$set_threshold("warn")
 (reg.bench.result <- mlr3::benchmark(reg.bench.grid))
 
-(score_dt <- mlr3resampling::score(
-  reg.bench.result, mlr3::msr("regr.rmse")
-)[, .(
-  test.subset, test.fold,
-  train.subsets, Train_subsets, groups, n.train.groups,
-  algorithm, regr.rmse, task_id)])
+score_dt <- mlr3resampling::score(
+  reg.bench.result, mlr3::msr("regr.rmse"))
 plot(score_dt)
 ```
 
