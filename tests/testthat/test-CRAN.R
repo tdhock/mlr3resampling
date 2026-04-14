@@ -513,6 +513,65 @@ test_that("hjust=0.5 for algo in middle", {
   expect_equal(plist$stats[algorithm=="conv" & Train_subsets=="same", hjust], 1)
 })
 
+test_that("plot.pvalue keeps blank top level", {
+  blank.top.levels <- c("all", "all-same", "same", "other-same", "other", "")
+  N <- 60L
+  task.dt <- data.table(
+    x=runif(N, -2, 2),
+    subset_col=factor(rep(c("A", "B"), each=N/2))
+  )[, y := x^2 + rnorm(.N, sd=0.2)][]
+  soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  reg.task <- mlr3::TaskRegr$new("toy_plot", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$subset <- "subset_col"
+  reg.task$col_roles$stratum <- "subset_col"
+  soak$param_set$values$folds <- 2L
+  soak$param_set$values$seeds <- 1L
+  soak$param_set$values$sizes <- 0L
+  bench.grid <- mlr3::benchmark_grid(
+    reg.task,
+    mlr3::LearnerRegrFeatureless$new(),
+    soak
+  )
+  bench.result <- mlr3::benchmark(bench.grid)
+  soak.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+  plist <- mlr3resampling::pvalue(soak.score)
+  expect_identical(
+    levels(plist$stats$Train_subsets),
+    blank.top.levels)
+})
+
+test_that("plot.pvalue_downsample keeps blank top level", {
+  blank.top.levels <- c("all", "all-same", "same", "other-same", "other", "")
+  N <- 60L
+  subset_name <- "Female cohort with long text"
+  task.dt <- data.table(
+    x=runif(N, -2, 2),
+    subset_col=factor(rep(c(subset_name, "Male cohort with long text"), each=N/2))
+  )[, y := x^2 + rnorm(.N, sd=0.2)][]
+  soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  reg.task <- mlr3::TaskRegr$new("toy_soak", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$subset <- "subset_col"
+  reg.task$col_roles$stratum <- "subset_col"
+  soak$param_set$values$folds <- 2L
+  soak$param_set$values$seeds <- 1L
+  soak$param_set$values$sizes <- 0L
+  bench.grid <- mlr3::benchmark_grid(
+    reg.task,
+    mlr3::LearnerRegrFeatureless$new(),
+    soak
+  )
+  bench.result <- mlr3::benchmark(bench.grid)
+  soak.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
+  down.list <- mlr3resampling::pvalue_downsample(
+    soak.score[test.subset == subset_name]
+  )
+  expect_identical(
+    levels(down.list$stats$Train_subsets),
+    blank.top.levels)
+})
+
 test_that("regular K fold CV works in proj", {
   N <- 80
   set.seed(1)
