@@ -36,8 +36,7 @@ pvalue_prepare <- function(
 pvalue_compute <- function(
   score_value,
   panel_keys,
-  digits=3,
-  downsample=FALSE
+  digits=3
 ){
   train.subsets <- same <- value <- value_mean <- value_sd <- . <- lo <- hi <- compare_mean <- same_mean <- hjust <- pmax_mean <- mid <- pmin_mean <- p.paired <- mid_lo <- mid_hi <- text_label <- text_value <- Train_subsets <- n.train.groups <- NULL
   cast_id_cols <- c(panel_keys, "test.fold", intersect("seed", names(score_value)))
@@ -48,7 +47,6 @@ pvalue_compute <- function(
   }
   measure.vars <- intersect(c("other", "all"), unique(score_value$train.subsets))
   canonical_levels <- c("all", "all-same", "same", "other-same", "other")
-  if(downsample)canonical_levels <- rev(canonical_levels)
   present_levels <- unique(c(
     score_value$Train_subsets,
     paste0(measure.vars, "-same")
@@ -167,44 +165,47 @@ pvalue <- function(score_in, value.var=NULL, digits=3){
 
 pvalue_ggplot <- function(x){
   value_mean <- Train_subsets <- hi <- lo <- compare_mean <- same_mean <- hjust <- text_label <- text_value <- NULL
-  if(requireNamespace("ggplot2")){
-    out.gg <- ggplot2::ggplot()+
-      ggplot2::theme_bw()+
-      ggplot2::geom_point(ggplot2::aes(
-        value_mean,
-        Train_subsets),
-        shape=1,
-        size=1.8,
-        data=x$stats)+
-      ggplot2::geom_segment(ggplot2::aes(
-        hi,
-        Train_subsets,
-        xend=lo, yend=Train_subsets),
-        linewidth=0.8,
-        data=x$stats)+
-      ggplot2::geom_segment(ggplot2::aes(
-        compare_mean, Train_subsets,
-        xend=same_mean, yend=Train_subsets),
-        color="grey50",
-        data=x$pvalues)+
-      ggplot2::geom_text(ggplot2::aes(
-        value_mean,
-        Train_subsets,
-        hjust=hjust,
-        label=text_label),
-        size=4,
-        vjust=-0.5,
-        data=x$stats)+
-      ggplot2::geom_text(ggplot2::aes(
-        text_value, Train_subsets,
-        label=text_label,
-        hjust=hjust),
-        color="grey50",
-        size=4,
-        vjust=-0.5,
-        data=x$pvalues)
-    out.gg
+  if(!requireNamespace("ggplot2")){
+    stop("please install.packages('ggplot2') for pvalue plots")
   }
+  ggplot2::ggplot()+
+    ggplot2::theme_bw()+
+    ggplot2::geom_point(ggplot2::aes(
+      value_mean,
+      Train_subsets),
+      shape=1,
+      size=1.8,
+      data=x$stats)+
+    ggplot2::geom_segment(ggplot2::aes(
+      hi,
+      Train_subsets,
+      xend=lo, yend=Train_subsets),
+      linewidth=0.8,
+      data=x$stats)+
+    ggplot2::geom_segment(ggplot2::aes(
+      compare_mean, Train_subsets,
+      xend=same_mean, yend=Train_subsets),
+      color="grey50",
+      data=x$pvalues)+
+    ggplot2::geom_text(ggplot2::aes(
+      value_mean,
+      Train_subsets,
+      hjust=hjust,
+      label=text_label),
+      size=4,
+      vjust=-0.5,
+      data=x$stats)+
+    ggplot2::geom_text(ggplot2::aes(
+      text_value, Train_subsets,
+      label=text_label,
+      hjust=hjust),
+      color="grey50",
+      size=4,
+      vjust=-0.5,
+      data=x$pvalues)+
+    ggplot2::scale_y_discrete(
+      "Train subsets",
+      drop=FALSE)
 }
 
 plot.pvalue <- function(x, ...){
@@ -214,10 +215,7 @@ plot.pvalue <- function(x, ...){
       labeller=ggplot2::label_both,
       scales="free")+
     ggplot2::scale_x_continuous(
-      paste0(x$value.var, " (mean \u00B1 sd)"))+
-    ggplot2::scale_y_discrete(
-      "Train subsets",
-      drop=FALSE)
+      paste0(x$value.var, " (mean \u00B1 sd)"))
 }
 
 pvalue_downsample <- function(
@@ -254,8 +252,7 @@ pvalue_downsample <- function(
       value = get(prep$value.var)
     )],
     panel_keys="sample_size",
-    digits=digits,
-    downsample=TRUE
+    digits=digits
   )
   compute$stats[sample_size == "full", text_label := paste0(text_label, ", N = ", n.train.groups)]
   structure(list(
@@ -283,9 +280,5 @@ plot.pvalue_downsample <- function(x, ...){
           paste0("sample_size: smallest = ", v))),
       scales="free")+
     ggplot2::scale_x_continuous(
-      x$caption)+
-    ggplot2::scale_y_discrete(
-      "Train subsets",
-      drop=TRUE,
-      limits=function(l)rev(x$label_order[x$label_order %in% l]))
+      x$caption)
 }

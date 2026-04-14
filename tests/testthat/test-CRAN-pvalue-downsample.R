@@ -8,9 +8,9 @@ task.dt <- data.table(
   x=runif(N, -2, 2),
   subset_col=factor(rep(c(subset_name, "Male cohort with long text"), each=N/2))
 )[, y := x^2 + rnorm(.N, sd=0.2)][]
+soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task <- mlr3::TaskRegr$new("toy_soak", task.dt, target="y")
 reg.task$col_roles$feature <- "x"
-soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task$col_roles$subset <- "subset_col"
 reg.task$col_roles$stratum <- "subset_col"
 soak$param_set$values$folds <- 2L

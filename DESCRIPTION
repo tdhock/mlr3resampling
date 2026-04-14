@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.3.16
+Version: 2026.4.9
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -45,7 +45,7 @@ Description: A supervised learning algorithm inputs a train set,
  after training on Other subsets?
  And how do we know if training on All subsets would improve
  prediction accuracy, relative to training on the Same subset?
- SOAK, Same/Other/All K-fold cross-validation, <doi:10.48550/arXiv.2410.08643>
+ SOAK, Same/Other/All K-fold cross-validation, <doi:10.1002/sam.70055>
  can be used to answer these questions, by fixing a test subset,
  training models on Same/Other/All subsets, and then
  comparing test error rates (Same versus Other and Same versus All).
@@ -60,7 +60,8 @@ Imports:
     checkmate,
     paradox,
     mlr3 (>= 1.0.0),
-    mlr3misc
+    mlr3misc,
+    methods
 Suggests:
     pbdMPI,
     ggplot2,
@@ -69,12 +70,12 @@ Suggests:
     lgr,
     future, future.apply,
     testthat,
-    knitr,
-    markdown,
     nc,
     rpart,
     directlabels,
     mlr3pipelines,
     glmnet, mlr3learners,
-    mlr3torch, torch
-VignetteBuilder: knitr
+    mlr3torch, torch,
+    batchtools, mlr3batchmark,
+    litedown
+VignetteBuilder: litedown

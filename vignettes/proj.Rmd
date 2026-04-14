@@ -1,0 +1,481 @@
+---
+vignette: >
+  %\VignetteIndexEntry{Benchmarking projects}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width=10,
+  fig.height=6)
+data.table::setDTthreads(1)
+```
+
+The goal of this vignette is to compare and contrast calculation of machine learning benchmarks using
+
+* `mlr3` and `mlr3batchmark` packages, which are the built-in/previous/existing methods.
+* `mlr3resampling::proj_*()` functions, which are the new methods proposed in this package.
+
+# Introduction: tasks, learners, resampling
+
+In mlr3, a benchmark is defined as combinations of tasks, learners, and resampling iterations.
+The code in this section must be run using both methods (previous and proposed).
+
+## Resampling
+
+First we create an instance of 3-fold CV, which we will use as the train/test splitting method.
+
+```{r}
+(kfoldcv <- mlr3resampling::ResamplingSameOtherSizesCV$new())
+```
+
+For reproducibility, we use `ResamplingSameOtherSizesCV` because it respects the `fold` column role (and `mlr3::ResamplingCV` does not).
+Note that the resampling should be instantiated before creating a Task, because it loads the `mlr3resampling` package (needed to avoid errors about unrecognized column roles `subset` and `fold`).
+
+## Tasks
+
+First we define a list of two tasks.
+
+```{r}
+task_list <- mlr3::tsks(c("spam", "german_credit"))
+tasks_with_fold <- list()
+for(task_i in seq_along(task_list)){
+  task <- task_list[[task_i]]
+  tcol <- task$col_roles$target
+  task_dt <- task$data()
+  task_dt[, Fold := rep(1:3, length.out=.N), by=c(tcol)]
+  ftask <- mlr3::TaskClassif$new(
+    task_dt, id=task$id, target=tcol)
+  ftask$col_roles$feature <- task$col_roles$feature
+  ftask$col_roles$fold <- "Fold"
+  ftask$col_roles$stratum <- c("Fold", tcol)
+  tasks_with_fold[[task$id]] <- ftask
+}
+tasks_with_fold
+```
+
+In the code above, we set column roles for each task:
+
+* `fold` to `Fold` which is a column of fold IDs that we create in each data set, so that splits in the code below will be the same between benchmarking frameworks.
+* `stratum` to `Fold` and `tcol` so that down-sampling will maintain the proportions of the values in these columns. This is important to ensure that all train and test sets have a reasonable number of observations of each class. When running `mlr3resampling::proj_test()`, tasks are down-sampled to get quicker train times, with default 10 samples per stratum.
+
+## Learners
+
+Next, we define a list of two learners.
+
+```{r}
+learner_list <- list(
+  mlr3::LearnerClassifFeatureless$new())
+if(requireNamespace("rpart")){
+  learner_list$rpart <- mlr3::LearnerClassifRpart$new()
+}
+for(learner_i in seq_along(learner_list)){
+  L <- learner_list[[learner_i]]
+  L$predict_type <- "prob"
+}
+```
+
+In the code above, we use the `prob` predict type, because we want to use ROC-AUC as an evaluation metric, in addition to accuracy:
+
+```{r}
+measure_list <- mlr3::msrs(c("classif.auc","classif.acc"))
+```
+
+# Define the grid of combinations
+
+In this section, we explain the two alternative methods for defining the grid of combinations.
+
+## Previous method, `mlr3::benchmark_grid()`
+
+In the code below, we must save the result, called `bgrid`, which exists only in R (not yet saved to the file system).
+
+```{r}
+(bgrid <- mlr3::benchmark_grid(tasks_with_fold, learner_list, kfoldcv))
+```
+
+After that, we save the grid to the file system, by first creating a batchtools registry.
+Various parallel computation methods are supported.
+Below we use a batchtools configuration file which will use SLURM, a cluster computing system.
+
+```{r}
+extdata <- system.file(package="mlr3resampling", "extdata")
+Sys.setenv(R_BATCHTOOLS_SEARCH_PATH=extdata) #comment to use ~/.batchtools.conf.R instead.
+```
+
+The code above sets an environment variable that tells batchtools where to find the config file (that says to use SLURM when it is available for testing on GitHub Actions, otherwise sequential execution for testing on CRAN).
+If you use batchtools on a cluster, you should create a `~/.batchtools.conf.R` config file, as explained in [my R batchtools on Monsoon tutorial](https://tdhock.github.io/blog/2020/monsoon-batchtools/).
+Then when we make the registry in the code below, the batchtools config will be saved to disk, along with the benchmark grid.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  reg_dir <- tempfile()
+  reg <- batchtools::makeExperimentRegistry(reg_dir)
+  slurm.available <- reg$cluster.functions$name=="Slurm"
+  mlr3batchmark::batchmark(bgrid)
+}
+```
+
+## Proposed method, `mlr3resampling::proj_grid()`
+
+In the code below, the grid of combinations is saved to the `proj_dir` directory.
+
+```{r}
+proj_dir <- if(interactive())"~/testproj" else tempfile()
+unlink(proj_dir, recursive = TRUE)
+mlr3resampling::proj_grid(
+  proj_dir, tasks_with_fold, learner_list, kfoldcv,
+  score_args = measure_list)
+```
+
+At this step in the proposed code above,
+
+* The first argument `proj_dir` defines the project directory, in which data and result files are saved. This is the analog of the registry directory, `reg_dir`, in the previous approach.
+* The named argument `score_args = measure_list` defines the evaluation metrics we will use to measure the accuracy of predictions on the held-out test sets. Each parallel job will compute these evaluation metrics for one train/test split and one Learner.
+
+# Testing
+
+After defining the grid of combinations, we typically want to do a small test on the local system, to make sure there are no errors, before submitting the full computation.
+
+## Testing one job
+
+To test one job using the previous approach, we use:
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::testJob(1)
+}
+```
+
+To test one job using the proposed approach, we use the code below.
+Note that the test output below contains meta-data (task, learner, …) as well as prediction accuracy metrics (AUC and accuracy), so is much more useful and interpretable than the test output above.
+
+```{r}
+mlr3resampling::proj_test(proj_dir, max_jobs=1)
+```
+
+We tested a featureless learner, which is not a great test (other learners may fail for a variety of reasons).
+So typically we run a more extensive test, as in the next section.
+
+## Test one job for each algo and data set
+
+A simple way to test each algorithm and data set with batchtools is via the code below, which uses `repl==1` to consider only the first cross-validation iteration, run on the local machine:
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  jt <- batchtools::getJobTable()
+  jt1 <- jt[repl==1]
+  testJob.repl1 <- sapply(jt1$job.id, batchtools::testJob)
+}
+```
+
+There is no error above, but it is not clear if the result is reasonable.
+Another way to do it with batchtools is to submit a subset of jobs, as below:
+
+```{r}
+submit_job_array <- function(jobs_dt, minutes=1, gigabytes=1){
+  jobs_dt$chunk <- 1
+  batchtools::submitJobs(jobs_dt, resources=list(
+    walltime = minutes*60,#seconds
+    memory = gigabytes*1000,#megabytes per cpu
+    ncpus=1,  #>1 for multicore/parallel jobs.
+    ntasks=1, #>1 for MPI jobs.
+    chunks.as.arrayjobs=slurm.available))
+}
+if(requireNamespace("mlr3batchmark")){
+  submit_job_array(jt1)
+}
+```
+
+The code above adds a job array, one parallel CPU per `repl=1` cross-validation iteration, to the SLURM queue.
+In the code below, we wait for the jobs to compute, then gather the results.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::waitForJobs(jt1)
+  test_res <- mlr3batchmark::reduceResultsBatchmark(jt1)
+  test_res$score(measure_list)
+}
+```
+
+The result above includes test AUC and accuracy values, which are more convincing test (but this involves actually submitting jobs on the cluster).
+
+Our proposed way to test is via:
+
+```{r}
+mlr3resampling::proj_test(proj_dir)
+```
+
+The results above include test AUC and accuracy, but with different values because the tasks are down-sampled to make training faster.
+
+# Running all jobs locally (small benchmarks)
+
+For some small benchmarks, you may want to compute all results on your local machine (not a cluster).
+For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
+
+```{r}
+if(interactive())future::plan("multisession")
+```
+
+The previous approach uses the code below:
+
+```{r}
+bench_result <- mlr3::benchmark(bgrid)
+bench_score <- bench_result$score(measure_list)
+bench_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
+```
+
+The proposed approach uses the code below:
+
+```{r}
+proj_score <- mlr3resampling::proj_compute_all(proj_dir)
+proj_score[, .(task_id, learner_id, iteration, classif.auc, classif.acc)]
+```
+
+The results are identical because
+
+* we set `fold` column role, so there is no randomness in cross-validation splits.
+* the `rpart` and `featureless` learners are deterministic (neither train nor predict is random).
+
+# Running all jobs on a cluster (large benchmarks)
+
+Now we discuss how to run large benchmarks on a cluster.
+
+## Previous method, `batchtools`
+
+In batchtools we can check the status of jobs in the registry using the code below.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::getStatus()
+}
+```
+
+The output above shows there are 4 jobs done out of 12 in the registry.
+To launch the other jobs, we use the code below.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  not.done <- batchtools::getJobTable()[is.na(done)]
+  submit_job_array(not.done)
+}
+```
+
+The code above adds a job array, one parallel CPU for each remaining cross-validation iteration, to the SLURM queue.
+In the code below, we wait for the jobs to compute, then gather the results.
+
+```{r}
+if(requireNamespace("mlr3batchmark")){
+  batchtools::waitForJobs()
+  ignore.learner <- function(L){
+    L$learner_state$model <- NULL
+    L
+  }
+  bt_res <- mlr3batchmark::reduceResultsBatchmark(jt, fun=ignore.learner)
+  bt_score <- bt_res$score(measure_list)
+}
+```
+
+Note for large benchmarks, you must use `fun` to avoid loading all models into memory at once.
+
+* `fun=ignore.learner` as above is good if you do not want to do model interpretation.
+* If you do want to do model interpretation, then you need to write a `fun` which keeps only the parts of the model that are necessary. This can be cumbersome to do here, especially if there are several different learners to interpret (such as torch and glmnet, see examples below).
+
+## Proposed method, `mlr3resampling::proj_submit()`
+
+The code below does the full computation on SLURM using the proposed method.
+
+```{r}
+if(slurm.available){
+  slurm_job_id <- mlr3resampling::proj_submit(
+    proj_dir, tasks=2, hours=1, gigabytes=1)
+}
+```
+
+The code above submits a SLURM MPI job with two tasks.
+
+* the first task is a manager,
+* the other tasks (only one here) are workers, which repeatedly ask the manager for a new train/test split to compute, then save a result file.
+
+After all computations are done, the last worker saves a `results.csv` file, which can be read back into R using the code below.
+
+```{r}
+(result_file_list <- mlr3resampling::proj_fread(proj_dir))
+```
+
+Above results show two tables,
+
+* `grid_jobs.csv` has meta-data that the workers use to determine what computation to run.
+* `results.csv` has columns including computation time, process ID, and test accuracy measures.
+
+# Results comparison
+
+## Accuracy measures
+
+```{r}
+acc_in_list <- list(
+  mlr3resampling=result_file_list$results.csv)
+if(requireNamespace("mlr3batchmark"))
+  acc_in_list$mlr3batchmark <- bt_score
+acc_out_list <- list()
+library(data.table)
+for(package in names(acc_in_list)){
+  acc_in <- melt(
+    acc_in_list[[package]],
+    id.vars=c("task_id", "learner_id", "iteration"),
+    measure.vars=c("classif.auc", "classif.acc"))
+  acc_out_list[[package]] <- data.table(package, acc_in)
+}
+acc_out <- rbindlist(acc_out_list)
+(acc_compare <- dcast(
+  acc_out,
+  variable + task_id + learner_id + iteration ~ package))
+if(requireNamespace("mlr3batchmark"))
+  acc_compare[, all.equal(mlr3batchmark, mlr3resampling)]
+```
+
+We see above that all accuracy metrics are equal, using the two methods.
+We plot the results below.
+
+```{r gg-acc-compare}
+if(require(ggplot2)){
+  ggplot()+
+    geom_point(aes(
+      mlr3resampling, learner_id),
+      data=acc_compare)+
+    facet_wrap(c("task_id","variable"), labeller=label_both, scales="free", ncol=1)
+}
+```
+
+The figure above shows that the decision tree learns something non-trivial in both data sets, and that spam is easier (more class balance, bigger improvement over featureless). 
+
+## Computation time
+
+Analysis of computation time is not very interesting for this small data example, but this code could be useful for a larger benchmark.
+
+```{r gg-time-compare}
+time_compare <- rbind(
+  if(requireNamespace("mlr3batchmark"))batchtools::getJobTable()[, .(
+    package="mlr3batchmark", process=.I, start.time=started, end.time=done)],
+  result_file_list$results.csv[, .(
+    package="mlr3resampling", process, start.time, end.time)])
+if(require(ggplot2)){
+  ggplot(time_compare, aes(start.time, process))+
+    geom_segment(aes(
+      xend=end.time, yend=process))+
+    geom_point()+
+    facet_grid(
+      package~.,
+      labeller=label_both,
+      scales="free")
+}
+```
+
+# New features
+
+## New `edit_learner()` method for quick testing
+
+For even faster test runs, Learners may define `edit_learner()` method, which edits the learner to make training faster. For example, the default with `AutoTuner` and `TorchLearner` is to only use two epochs of training during `proj_test()`, so you can quickly see if results look reasonable, before running training using the full number of epochs, and the full data set.
+
+```{r}
+proj_new <- if(interactive())"~/proj_new" else tempfile()
+unlink(proj_new, recursive = TRUE)
+learners_new <- list(
+  mlr3::LearnerClassifFeatureless$new())
+if(requireNamespace("torch") && torch::torch_is_installed()){
+  gen_linear <- torch::nn_module(
+    "my_linear",
+    initialize = function(task) {
+      self$weight = torch::nn_linear(task$n_features, 1)
+    },
+    forward = function(x) {
+      self$weight(x)
+    }
+  )
+  learners_new$torch <- mlr3resampling::AutoTunerTorch_epochs$new(
+    "torch_linear",
+    module_generator=gen_linear,
+    max_epochs=1000,
+    batch_size=10,
+    measure_list=mlr3::msrs("classif.auc")
+  )
+}
+if(requireNamespace("glmnet")){
+  learners_new$glmnet <- mlr3resampling::LearnerClassifCVGlmnetSave$new()
+}
+for(learner_i in seq_along(learners_new)){
+  L <- learners_new[[learner_i]]
+  L$predict_type <- "prob"
+}
+mlr3resampling::proj_grid(
+  proj_new, tasks_with_fold$spam, learners_new, kfoldcv,
+  score_args = measure_list)
+system.time({
+  test_result_list <- mlr3resampling::proj_test(proj_new)
+})
+```
+
+Notice how fast the above code is.
+Even though the torch learner has max 1000 epochs, it is reduced to only 2 epoch when running `proj_test()`.
+
+## New `save_learner()` method for model interpretation
+
+The two learners above have `save_learner()` methods, defined in [mlr3resampling/R/Learners.R](https://github.com/tdhock/mlr3resampling/blob/main/R/Learners.R).
+
+* In `mlr3resampling::proj_grid()`, the default for most learners is to not save anything, because we don’t want to risk running out of memory, by saving and loading a bunch of large models, if we are not interested in model interpretation.
+* These two learners have `save_learner()` methods which return a named list of data tables, which should contain the important parts of `learner$learner_state$model`, which we want to use for model interpretation.
+  * in glmnet we want the linear model coefficients.
+  * in torch we want the training history (subtrain/validation loss at each epoch).
+  * in general it is preferable (easier to understand, less disk usage, less risk of running out of memory) if this model interpretation code is in the `save_learner()` method, rather than in the cluster results analysis script (`fun` argument of `mlr3batchmark::reduceResultsBatchmark`).
+* The prefix `learners_` and suffix `.csv` are appended to the name of each data table, to get a file in which to save these data.
+* `proj_test()` returns all of these data tables in a list:
+
+```{r}
+names(test_result_list)
+```
+
+We see that there are two learners tables.
+First, history comes from torch:
+
+```{r}
+test_result_list$learners_history.csv
+```
+
+We see above there are two rows (one for each epoch).
+In larger runs (more than two epochs), we plot these data to see if the torch model has a good fit (avoids overfitting and underfitting).
+
+Next, the weights table come from glmnet:
+
+```{r}
+test_result_list$learners_weights.csv
+```
+
+The table above contains one row for each input feature.
+Some are selected by L1 regularization (non-zero weights); the other features are not used for prediction (zero weights).
+
+## New Task down-sampling
+
+When we ran `proj_test()` above, it created a `test` directory, which is another project directory, with a smaller task.
+Each original task in the project is down-sampled proportionally (using strata), so that we can quickly test if training and prediction work on a smaller data set.
+The code below reads the down-sampled task:
+
+```{r}
+rds.vec <- Sys.glob(file.path(proj_new,"test","tasks","*rds"))
+for(rds.i in seq_along(rds.vec)){
+  mini_task <- readRDS(rds.vec[[rds.i]])
+  print(table(mini_task$data()[[1]]))
+}
+```
+
+The output above shows that there are at least 30 data per class in the down-sampled task, because
+
+* default is 10 samples in the smallest stratum (this can be changed via `min_samples_per_stratum`),
+* we defined stratum as fold + target columns,
+* there were K=3 cross-validation folds,
+* so there are at least 30 data per class (10 per fold).
+
+# Conclusion
+
+We compared `mlr3resampling::proj_*()` functions to their analogs in `batchtools` and `mlr3batchmark`. We saw that the interface is similar, with some convenience features for quick testing, and for efficient model interpretation.

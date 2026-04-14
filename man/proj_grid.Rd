@@ -24,7 +24,8 @@ proj_grid(
     \code{grid_jobs.csv}, which is how worker processes determine what
     work to do next (smaller numbers have higher priority). Default
     \code{NULL} means to keep default order.}
-  \item{score_args}{Passed to \code{pred$score()}.}
+  \item{score_args}{Passed to \code{pred$score()}, typically a list of
+    measures to use for evaluation of predictions on the test set.}
   \item{save_learner}{Function to process Learner, after
     training/prediction, but before saving result to disk.
     For interpreting complex models, you should write a function that

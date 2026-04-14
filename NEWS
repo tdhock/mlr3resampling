@@ -1,7 +1,15 @@
+Changes in version 2026.4.9 (PR#69)
+
+- proj_grid() error for train/test set with missing class.
+- new proj vignette.
+- proj_compute_all() gains LAPPLY arg.
+- proj_test() gains verbose, LAPPLY args.
+- ResamplingSameOtherSizesCV respects new column role=fold, for reproducible splits in benchmarks. If fold role is set, it should also be used in stratum role.
+
 Changes in version 2026.3.16 (PR#53)
 
 - new pvalue_downsample() with plot() method for SOAK downsampling results.
-- new internal pvalue_compute() for shared p-value computation logic used by pvalue() and pvalue_downsample().
+- new internal pvalue_compute() and pvalue_prep() for shared p-value computation logic used by pvalue() and pvalue_downsample().
 
 Changes in version 2026.3.10
 

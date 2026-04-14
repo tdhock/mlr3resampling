@@ -1,19 +1,17 @@
-<!--
-%\VignetteEngine{knitr::knitr}
-%\VignetteIndexEntry{Comparing sizes when training on same or other groups}
--->
+---
+vignette: >
+  %\VignetteIndexEntry{Newer resamplers}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
   fig.width=10,
   fig.height=6)
 data.table::setDTthreads(1)
-## output: rmarkdown::html_vignette above creates html where figures are limited to 700px wide.
-## Above CSS from https://stackoverflow.com/questions/34906002/increase-width-of-entire-html-rmarkdown-output main-container is for html_document, body is for html_vignette
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
 ```
 
 The goal of this vignette is explain how to use
@@ -63,7 +61,20 @@ task.dt[, random_group := rep(
 table(group.tab <- task.dt$random_group)
 ```
 
-The output above shows the number of rows in each random group. 
+The output above shows the number of rows in each random group.
+Before we create a task from these data, we need to load the `mlr3resampling` package, or we will get an error like below, because this is not a standard mlr3 role.
+
+```{r error=TRUE, purl=FALSE}
+bad.task <- mlr3::TaskRegr$new("bad", task.dt, target="y")
+bad.task$col_roles$subset <- "random_group"
+```
+
+Below we define the cross-validation object, which loads the `mlr3resampling` package,
+
+```{r}
+soak_default <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+```
+
 Below we define a task,
 
 ```{r}
@@ -74,20 +85,10 @@ reg.task$col_roles$stratum <- "random_group"
 reg.task$col_roles$feature <- "x"
 ```
 
-Note that if we assign the `subset` role at this point, we will get an
-error, because this is not a standard mlr3 role.
-
-
-```{r error=TRUE, purl=FALSE}
-reg.task$col_roles$subset <- "random_group" 
-```
-
-Below we define the cross-validation object, which loads the
-mlr3resampling package, and then we assign the random group column to
+Below we assign the random group column to
 be used as the `subset` role.
 
 ```{r}
-soak_default <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 reg.task$col_roles$subset <- "random_group" 
 ```
 
