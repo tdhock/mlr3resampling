@@ -143,27 +143,34 @@ plist <- mlr3resampling::pvalue(score_dt)
 plot(plist)
 ```
 
-```{r}
-L <- mlr3resampling::pvalue_downsample(score_dt)
-plot(L)
-down_plot_dt <- score_dt[, .(
-  gg=list(plot(mlr3resampling::pvalue_downsample(data.table(
-    .SD, task_id, test.subset
-  ))))
-), by=.(task_id,test.subset)]
-```
-
-## Interpretation
+## Downsample analysis
 
 ### iid easy subsets
 
 ```{r}
-down_plot_dt[task_id=="iid_easy", gg]
+dlist <- mlr3resampling::pvalue_downsample(score_dt[
+  algorithm=="rpart" & task_id=="iid_easy" & test.subset=="large"])
+plot(dlist)
+```
+
+```{r}
+dlist <- mlr3resampling::pvalue_downsample(score_dt[
+  algorithm=="rpart" & task_id=="iid_easy" & test.subset=="small"])
+plot(dlist)
 ```
 
 ### different subsets
 
 ```{r}
-down_plot_dt[task_id=="different", gg]
+dlist <- mlr3resampling::pvalue_downsample(score_dt[
+  algorithm=="rpart" & task_id=="different" & test.subset=="large"])
+plot(dlist)
 ```
+
+```{r}
+dlist <- mlr3resampling::pvalue_downsample(score_dt[
+  algorithm=="rpart" & task_id=="different" & test.subset=="small"])
+plot(dlist)
+```
+
 
