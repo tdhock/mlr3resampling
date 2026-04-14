@@ -234,7 +234,25 @@ test_that("pvalue_downsample works in simulation", {
   plist <- mlr3resampling::pvalue(score_dt)
   if(interactive())plot(plist)
   expect_equal(nrow(plist$pvalues), 4)
+  expect_equal(nrow(plist$stats), 6)
   dlist <- mlr3resampling::pvalue_downsample(score_dt)
   if(interactive())plot(dlist)
   expect_equal(nrow(dlist$pvalues), 4)
+  expect_equal(nrow(dlist$stats), 6)
+  ## one subset.
+  (score_dt <- mlr3resampling::score(
+    reg.bench.result, mlr3::msr("regr.rmse")
+  )[test.subset=="small" & algorithm=="rpart", .(
+    test.subset, test.fold,
+    train.subsets, Train_subsets, groups, n.train.groups,
+    algorithm, regr.rmse, task_id)])
+  if(interactive())plot(score_dt)
+  plist <- mlr3resampling::pvalue(score_dt)
+  if(interactive())plot(plist)
+  expect_equal(nrow(plist$pvalues), 2)
+  expect_equal(nrow(plist$stats), 3)
+  dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  if(interactive())plot(dlist)
+  expect_equal(nrow(dlist$pvalues), 4)
+  expect_equal(nrow(dlist$stats), 6)
 })
