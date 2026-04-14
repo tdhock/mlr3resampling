@@ -1,3 +1,7 @@
+Changes in version 2026.4.13 (PR#83)
+
+- ResamplingSameOtherSizesCV with sizes=0 now means 5 train/test splits per test subset, instead of 6. The intermediate size was removed because it is not used in pvalue_downsample().
+
 Changes in version 2026.4.9 (PR#69)
 
 - proj_grid() error for train/test set with missing class.
