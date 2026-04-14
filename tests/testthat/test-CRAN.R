@@ -362,6 +362,7 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum", {
   three.prop.list <- get_prop_mat(three[["train"]])
   expect_identical(three.prop.list, exp.prop.list)
 })
+
 test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=0", {
   reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
@@ -371,17 +372,22 @@ test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=
   reg.task$col_roles$subset <- "random_group"
   n.subsets <- length(unique(task.dt$random_group))
   same_other_sizes_cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-  n.folds <- 3
-  same_other_sizes_cv$param_set$values$folds <- n.folds
+  same_other_sizes_cv$param_set$values$folds <- 3
   same_other_sizes_cv$param_set$values$seeds <- 1
-  same_other_sizes_cv$param_set$values$ratio <- 0.5
   same_other_sizes_cv$param_set$values$sizes <- 0
   same_other_sizes_cv$param_set$values$ignore_subset <- FALSE
   same_other_sizes_cv$instantiate(reg.task)
-  computed <- same_other_sizes_cv$instance$iteration.dt
-  n.train.per.test <- 6
-  expect_equal(nrow(computed), n.folds*n.subsets*n.train.per.test)
+  computed <- same_other_sizes_cv$instance$iteration.dt[
+    test.fold == 1 & test.subset == "A",
+    .(train.subsets, groups, n.train.groups)
+  ][order(train.subsets, n.train.groups)]
+  expected <- data.table(
+    train.subsets = c("all", "all", "other", "other", "same"),
+    groups = c(700L, 700L, 600L, 600L, 100L),
+    n.train.groups = c(100L, 700L, 100L, 600L, 100L))
+  expect_identical(computed, expected)
 })
+
 test_that("ResamplingSameOtherSizesCV yes subset, yes group, yes stratum, sizes=1", {
   reg.task <- mlr3::TaskRegr$new(
     "sin", task.dt, target="y")
@@ -907,4 +913,22 @@ test_that("fold and stratum roles work for reproducibility", {
   with(check, expect_identical(proj, bench))
   tlist <- mlr3resampling::proj_test(proj_dir)
   expect_identical(names(tlist), c("grid_jobs.csv", "results.csv"))
+})
+
+test_that("fold role is checked", {
+  soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  soak$param_set$values$folds <- 2L
+  group.dt <- data.table(
+    x=1:6,
+    y=factor(rep(c("a", "b"), each=3)),
+    grp=c(1, 1, 2, 2, 3, 3),
+    Fold=c(1, 2, 1, 1, 2, 2))
+  group.task <- mlr3::TaskClassif$new("group_fold_bad", group.dt, target="y")
+  group.task$col_roles$feature <- "x"
+  group.task$col_roles$group <- "grp"
+  group.task$col_roles$fold <- "Fold"
+  group.task$col_roles$stratum <- "y"
+  expect_error({
+    soak$instantiate(group.task)
+  }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
 })

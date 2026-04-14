@@ -96,6 +96,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       fcol <- task$col_roles$fold
       fold.dt <- if(length(fcol)==1){
         fold <- task$data(cols=fcol)[[fcol]]
+        if(length(acol)==1){
+          group.fold.dt <- unique(data.table(group=avec, fold))
+          if(any(group.fold.dt[, .N, by=group][["N"]] > 1L)){
+            stop("task$col_roles$fold must be constant within each group")
+          }
+        }
         data.table(group.row.dt, fold)
       }else{
         sample.dt <- group.row.dt[
@@ -127,13 +133,17 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       iteration.dt.list <- list()
       for(tta.i in 1:nrow(train.test.groups)){
         tta.row <- train.test.groups[tta.i]
-        op.chr <- if(self$param_set$values$sizes == -1)"==" else ">="
+        op.chr <- if(self$param_set$values$sizes <= 0)"==" else ">="
         on.vec <- c("test.subset", paste("groups",op.chr,"train_groups"))
-        n.train.groups.vec <- tta.row[
+        n.train.groups.vec <- unique(c(
+          tta.row[
           train.size.dt,
           groups,
           on=on.vec,
-          nomatch=0L]
+          nomatch=0L],
+          if(self$param_set$values$sizes == 0) train.size.dt[
+            tta.row, min(train_groups), on="test.subset"]
+        ))
         for(seed in 1:self$param_set$values$seeds){
           is.set.subset <- list(
             test=fold.dt[["test.subset"]] == tta.row[["test.subset"]])
