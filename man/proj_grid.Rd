@@ -41,7 +41,10 @@ proj_grid(
     \code{NULL}).
     \code{TRUE} means to keep it without any special processing.}
   \item{train_seed}{integer: random seed to use before training (default
-    \code{1L} for reproducibility, or \code{NA_integer_} to not set seed.}
+    \code{1L} for reproducibility, or \code{NA_integer_} to not set
+    seed. Note that this seed only affects training of random learners;
+    random splits from instantiating resamplings are controlled by the
+    random seed which is set at the time of calling \code{proj_grid()}.}
 }
 \details{
   This is Step 1 out of the
