@@ -89,7 +89,7 @@ proj_fread <- function(proj_dir){
   out_list
 }  
 
-proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE, train_seed=1L){
+proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE, train_seed=1L, resampling_seed=1L){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
   if(file.exists(proj_dir)){
@@ -135,6 +135,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     saveRDS(task.obj, task.rds)
     for(resampling.i in seq_along(proj.grid$resamplings)){
       resampling.obj <- proj.grid$resamplings[[resampling.i]]$clone()
+      set.seed(resampling_seed)
       resampling.obj$instantiate(task.obj)
       iteration <- resampling.obj$instance$iteration.dt
       if(is.null(iteration)){
