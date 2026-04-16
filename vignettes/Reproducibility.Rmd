@@ -191,6 +191,13 @@ rbind(
 The output above is a table with AUC values that are identical across packages used for computation.
 These data indicate that the proposed framework with `fold` column role enables reproducibility even if `mlr3resampling` is not used.
 
+If the seed is not obvious from the code, you can read it from the grid RDS file:
+
+```{r}
+grid.rds <- file.path(pdir, "grid.rds")
+readRDS(grid.rds)$train_seed
+```
+
 # Comparison with batchtools
 
 If you want consistent results between runs with batchtools, you need to set the seed argument when making the registry.
@@ -270,6 +277,18 @@ rbind(
 ```
 
 The DIY results above are consistent with the previous two runs, indicating that reproducibility is possible with batchtools as well.
+
+If the seed was not set in the batchtools code, you can read it from the registry RDS file:
+
+```{r}
+registry.rds <- file.path(reg_dir, "registry.rds")
+rbind(
+  code=batchtools.seed,
+  registry=readRDS(registry.rds)$seed)
+unlink(reg_dir, recursive = TRUE)
+batchtools::makeExperimentRegistry(reg_dir)
+readRDS(registry.rds)$seed
+```
 
 # Conclusion
 
