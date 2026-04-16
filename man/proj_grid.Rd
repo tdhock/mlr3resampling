@@ -13,7 +13,7 @@ proj_grid(
   proj_dir, tasks, learners, resamplings,
   order_jobs = NULL, score_args = NULL,
   save_learner = save_learner_default, save_pred = FALSE,
-  train_seed = 1L)
+  train_seed = 1L, resampling_seed = 1L)
 }
 \arguments{
   \item{proj_dir}{Path to directory to create.}
