@@ -1009,8 +1009,9 @@ test_that("cv.glmnet same result between two tests", {
   }
   kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
   pdir <- if(interactive())"~/pdir" else tempfile()
-  unlink(pdir, recursive = TRUE)
   task_list <- list(spam, spam_with_fold)
+  ## test 1 default set train seed.
+  unlink(pdir, recursive = TRUE)
   mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"))
   set.seed(1)#needed to avoid spurious err in checks.
   test_res_list <- list()
@@ -1024,5 +1025,23 @@ test_that("cv.glmnet same result between two tests", {
   test_wide <- dcast(
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
   test_wide[task_id=="spam_with_fold", expect_identical(run1, run2)]
-  test_wide[task_id=="spam", expect_false(identical(run1, run2))]
+  test_wide[task_id=="spam", expect_equal(sum(run1!=run2), 2)]
+  ## test 2 train_seed=NULL means do not set seed.
+  unlink(pdir, recursive = TRUE)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NULL)
+  set.seed(1)#needed to avoid spurious err in checks.
+  test_res_list <- list()
+  for(run.num in 1:2){
+    tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+    test_res_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), tres$results.csv)
+  }
+  test_res <- rbindlist(test_res_list)[
+  , algorithm := sub("classif.", "", learner_id)]
+  test_wide <- dcast(
+    test_res, task_id + algorithm ~ run, value.var="classif.auc")
+  is.deterministic <- test_wide[
+  , task_id=="spam_with_fold" & algorithm=="rpart"]
+  test_wide[is.deterministic, expect_identical(run1, run2)]
+  test_wide[!is.deterministic, expect_equal(sum(run1!=run2), 3)]
 })
