@@ -1026,9 +1026,9 @@ test_that("cv.glmnet same result between two tests", {
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
   test_wide[task_id=="spam_with_fold", expect_identical(run1, run2)]
   test_wide[task_id=="spam", expect_equal(sum(run1!=run2), 2)]
-  ## test 2 train_seed=NULL means do not set seed.
+  ## test 2 train_seed=NA means do not set seed.
   unlink(pdir, recursive = TRUE)
-  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NULL)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NA_integer_)
   set.seed(1)#needed to avoid spurious err in checks.
   test_res_list <- list()
   for(run.num in 1:2){
