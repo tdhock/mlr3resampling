@@ -28,7 +28,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
