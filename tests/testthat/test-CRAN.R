@@ -1024,4 +1024,5 @@ test_that("cv.glmnet same result between two tests", {
   test_wide <- dcast(
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
   test_wide[task_id=="spam_with_fold", expect_identical(run1, run2)]
+  test_wide[task_id=="spam", expect_false(identical(run1, run2))]
 })
