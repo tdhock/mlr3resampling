@@ -12,7 +12,8 @@
 proj_grid(
   proj_dir, tasks, learners, resamplings,
   order_jobs = NULL, score_args = NULL,
-  save_learner = save_learner_default, save_pred = FALSE)
+  save_learner = save_learner_default, save_pred = FALSE,
+  train_seed = 1L)
 }
 \arguments{
   \item{proj_dir}{Path to directory to create.}
@@ -39,6 +40,8 @@ proj_grid(
     Default \code{FALSE} means to not keep it (always returns
     \code{NULL}).
     \code{TRUE} means to keep it without any special processing.}
+  \item{train_seed}{integer: random seed to use before training (default
+    \code{1L} for reproducibility, or \code{NA_integer_} to not set seed.}
 }
 \details{
   This is Step 1 out of the
