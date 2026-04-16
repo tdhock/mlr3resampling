@@ -1,0 +1,201 @@
+---
+vignette: >
+  %\VignetteIndexEntry{Reproducible benchmarks}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width=10,
+  fig.height=6)
+data.table::setDTthreads(1)
+```
+
+The goal of this vignette is to explain how to compute reproducible machine learning benchmarks.
+
+# Introduction
+
+Reproducibility is the ability to re-compute the exact same results, given the exact same inputs, possibly on a variety of different computers.
+
+In mlr3 benchmarks, there are three components, all of which may present barriers to reproducibility:
+
+* Tasks represent data sets, which may not have pre-defined splits or cross-validation folds, in which case mlr3 will create them randomly (with a loss of reproducibility).
+* Learners represent algorithms which may be deterministic (reproducible) or random (not reproducible unless random seed is set).
+* Resampling methods like cross-validation are inherently random.
+
+When using `mlr3resampling::proj_grid()`, the default is `train_seed=1L`, which means R’s random seed will be set before training.
+
+For reproducible train/test splits, we recommend
+
+* randomly creating a fold column, so that fold values respect strata such as class labels.
+* save data with the fold column as a new CSV file, which can be used to communicate to others what cross-validation splits you used in your benchmark.
+* assign the fold column to the `fold` role in the mlr3 Task.
+* use `mlr3resampling::ResamplingSameOtherSizesCV` which uses the column with `fold` role in cross-validation.
+
+These steps ensure that the benchmark results are reproducible, given the CSV file with fold column, and the random seed for training.
+
+# Example
+
+We begin by defining the Resampling method (default is 3-fold CV).
+
+```{r}
+kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+```
+
+Next we load the `spam` binary classification task, optionally down-sampling to 200 rows to make the computations quicker.
+
+```{r}
+spam <- mlr3::tsk("spam")
+## uncomment next line to speedup rendering:
+#spam$filter(as.integer(seq(1, spam$nrow, length.out = 200)))
+spam
+```
+
+Next, we create a new CSV file with fold IDs.
+
+```{r}
+library(data.table)
+spam_with_fold.csv <- if(interactive())"~/spam_with_fold.csv" else tempfile()
+spam_with_fold.dt <- spam$data()[
+, Fold := rep(1:3, length.out = .N)
+, by = type]
+fwrite(spam_with_fold.dt, spam_with_fold.csv)
+spam_with_fold.dt[, table(Fold, type)]
+```
+
+The outpat above shows that the number of samples in each class is approximately constant across folds.
+Next, we use these data to define a new task with the `fold` role.
+
+```{r}
+spam_with_fold <- mlr3::TaskClassif$new(
+  "spam_with_fold", spam_with_fold.dt, target="type")
+spam_with_fold$col_roles$fold <- "Fold"
+spam_with_fold$col_roles$feature <- spam$col_roles$feature
+```
+
+Below we assign the `stratum` role to both tasks, for proportional down-sampling.
+
+```{r}
+spam_with_fold$col_roles$stratum <- c("type","Fold")
+spam$col_roles$stratum <- "type"
+```
+
+Next we define learners and ensure their predict types are real-valued scores (`predict_type="prob"`), so we can compute AUC.
+
+```{r}
+learner_list <- list(
+  mlr3learners::LearnerClassifCVGlmnet$new(),
+  mlr3::LearnerClassifRpart$new())
+for(learner.i in seq_along(learner_list)){
+  learner_list[[learner.i]]$predict_type <- "prob"
+}
+```
+
+Next, we create a project grid.
+
+```{r}
+pdir <- if(interactive())"~/pdir" else tempfile()
+task_list <- list(spam, spam_with_fold)
+unlink(pdir, recursive = TRUE)
+measure_list <- mlr3::msrs("classif.auc")
+mlr3resampling::proj_grid(
+  pdir, task_list, learner_list, kfold, score_args=measure_list)
+```
+
+## Demonstration with test project
+
+Below we run `proj_test()` twice.
+
+```{r}
+test_res_list <- list()
+for(run.num in 1:2){
+  tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+  test_res_list[[run.num]] <- data.table(
+    run=paste0("run", run.num), tres$results.csv)
+}
+test_res <- rbindlist(test_res_list)[
+, algorithm := sub("classif.", "", learner_id)]
+dcast(
+  test_res, task_id + algorithm ~ run, value.var="classif.auc")
+```
+
+The result above shows that the two runs have the same AUC values only for `spam_with_fold`, not for `spam` (which gets a different fold vector for each run).
+
+## Demonstration with full benchmark
+
+Below we create two project grids from the same code.
+
+```{r}
+set.seed(1)
+jobs_list <- list()
+for(run.num in 1:2){
+  pdir <- if(interactive())paste0("~/pdir",run.num) else tempfile()
+  unlink(pdir, recursive = TRUE)
+  pgrid <- mlr3resampling::proj_grid(
+    pdir, task_list, learner_list, kfold, score_args=measure_list)
+  jobs_list[[run.num]] <- data.table(
+    run=paste0("run", run.num), pdir, job.i=pgrid[
+    , which(test.fold==1 & grepl("glmnet", learner_id))])
+}
+```
+
+In the code above, the two grids have different random fold assignments.
+Below, we compute one glmnet job for each run and task.
+
+```{r}
+proj_res <- rbindlist(jobs_list)[
+, mlr3resampling::proj_compute(job.i, pdir)
+, by=.(run, pdir, job.i)][
+, algorithm := sub("classif.", "", learner_id)]
+dcast(
+  proj_res, task_id + algorithm ~ run, value.var="classif.auc")
+```
+
+The results above are consistent with the results above.
+
+# Comparison with batchtools
+
+If you want consistent results between runs with batchtools, you need to set the seed argument when making the registry.
+
+```{r}
+(bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfold))
+if(requireNamespace("mlr3batchmark")){
+  batch_dt_list <- list()
+  for(run.num in 1:2){
+    reg_dir <- if(interactive())paste0("~/reg",run.num) else tempfile()
+    unlink(reg_dir, recursive = TRUE)
+    reg <- batchtools::makeExperimentRegistry(reg_dir, seed=1)
+    mlr3batchmark::batchmark(bgrid)
+    jt <- batchtools::getJobTable()
+    jt1 <- jt[repl==1]
+    batchtools::submitJobs(jt1)
+    batchtools::waitForJobs()
+    ignore.learner <- function(L){
+      L$learner_state$model <- NULL
+      L
+    }
+    bt_res <- mlr3batchmark::reduceResultsBatchmark(jt1, fun=ignore.learner)
+    bt_score <- bt_res$score(measure_list)
+    batch_dt_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), bt_score
+    )[
+    , algorithm := sub("classif.", "", learner_id)]
+  }
+  batch_dt <- rbindlist(batch_dt_list)
+  dcast(
+    batch_dt, task_id + algorithm ~ run, value.var="classif.auc")
+}
+```
+
+# Conclusion
+
+We see that reproducibility is possible in mlr3.
+Using `mlr3resampling::proj_grid()`
+
+* Use tasks with `fold` column role.
+* Default sets random seed for reproducible training.
+
+Using `mlr3batchmark`, user needs to give `seed=1` argument to `batchtools::makeExperimentRegistry`.
