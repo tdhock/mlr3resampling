@@ -122,7 +122,8 @@ dcast(
   test_res, task_id + algorithm ~ run, value.var="classif.auc")
 ```
 
-The result above shows that the two runs have the same AUC values only for `spam_with_fold`, not for `spam` (which gets a different fold vector for each run).
+The result above shows that the two runs have the same AUC values.
+Even for `spam`, which does not have `fold` column role, the random seed is set for reproducible fold assignments.
 
 ## Demonstration with full benchmark
 
@@ -142,7 +143,7 @@ for(run.num in 1:2){
 }
 ```
 
-In the code above, the two grids have different random fold assignments.
+In the code above, the two grids have the same fold assignments (because random seed is set inside `proj_grid`).
 Below, we compute one glmnet job for each run and task.
 
 ```{r}
@@ -154,7 +155,7 @@ dcast(
   proj_res, task_id + algorithm ~ run, value.var="classif.auc")
 ```
 
-The results here using `proj_compute()` are consistent with the results above using `proj_test()`: results are reproducible between runs if the Task has the `fold` role.
+The results here using `proj_compute()` are consistent with the results above using `proj_test()`: results are reproducible between runs.
 
 ## Do it yourself
 
@@ -189,7 +190,7 @@ rbind(
 ```
 
 The output above is a table with AUC values that are identical across packages used for computation.
-These data indicate that the proposed framework with `fold` column role enables reproducibility even if `mlr3resampling` is not used.
+These data indicate that the proposed framework enables reproducibility even if `mlr3resampling` is not used.
 
 If the seed is not obvious from the code, you can read it from the grid RDS file:
 
@@ -295,7 +296,7 @@ readRDS(registry.rds)$seed
 We see that reproducibility is possible in mlr3.
 Using `mlr3resampling::proj_grid()`
 
-* Use tasks with `fold` column role.
-* Default sets random seed for reproducible training.
+* For simple reproducibility even outside R and mlr3, use tasks with `fold` column role.
+* Even without `fold` column role, random seeds are set for reproducible splitting and training.
 
 Using `mlr3batchmark`, user needs to give `seed` argument to `batchtools::makeExperimentRegistry`.
