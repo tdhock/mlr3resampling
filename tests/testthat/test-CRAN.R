@@ -1024,8 +1024,7 @@ test_that("cv.glmnet same result between two tests", {
   , algorithm := sub("classif.", "", learner_id)]
   test_wide <- dcast(
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
-  test_wide[task_id=="spam_with_fold", expect_identical(run1, run2)]
-  test_wide[task_id=="spam", expect_equal(sum(run1!=run2), 2)]
+  test_wide[, expect_identical(run1, run2)]
   ## test 2 train_seed=NA means do not set seed.
   unlink(pdir, recursive = TRUE)
   mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NA_integer_)
@@ -1040,8 +1039,5 @@ test_that("cv.glmnet same result between two tests", {
   , algorithm := sub("classif.", "", learner_id)]
   test_wide <- dcast(
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
-  is.deterministic <- test_wide[
-  , task_id=="spam_with_fold" & algorithm=="rpart"]
-  test_wide[is.deterministic, expect_identical(run1, run2)]
-  test_wide[!is.deterministic, expect_equal(sum(run1!=run2), 3)]
+  test_wide[, expect_identical(run1, run2)]
 })
