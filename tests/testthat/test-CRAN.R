@@ -980,7 +980,7 @@ test_that("fold role is checked", {
   group.dt <- data.table(
     x=1:6,
     y=factor(rep(c("a", "b"), each=3)),
-    grp=c(1, 1, 2, 2, 3, 3),
+    grp=c(1, 1, 2, 3, 3, 4),
     Fold=c(1, 2, 1, 1, 2, 2))
   group.task <- mlr3::TaskClassif$new("group_fold_bad", group.dt, target="y")
   group.task$col_roles$feature <- "x"
@@ -1040,4 +1040,26 @@ test_that("cv.glmnet same result between two tests", {
   test_wide <- dcast(
     test_res, task_id + algorithm ~ run, value.var="classif.auc")
   test_wide[, expect_identical(run1, run2)]
+})
+
+test_that("error for groups with multiple strata", {
+  ## https://github.com/tdhock/mlr3resampling/issues/86
+  set.seed(123)
+  n = 50
+  files <- data.table(
+    PID = sample(1:10, n, replace = TRUE),   # ID for Grouping
+    y = factor(ifelse(rbinom(n, size = 1, prob = 0.2) == 1, "A", "B")),
+    feature1 = rnorm(n, mean = 0, sd = 1),
+    feature2 = rnorm(n, mean = 5, sd = 2),
+    feature3 = rnorm(n, mean = 100, sd = 15))
+  files[, table(PID, y)]
+  task_amr = mlr3::as_task_classif(files, target = "y")
+  task_amr$positive = "A"
+  task_amr$set_col_roles("PID", roles = "group")
+  task_amr$set_col_roles("y", roles = c("target", "stratum")) 
+  task_amr$col_roles
+  test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_error({
+    test.validation.resampling$instantiate(task_amr)
+  }, "some groups are present in several strata; please fix by changing stratum/group such that each group only occurs in one stratum")
 })
