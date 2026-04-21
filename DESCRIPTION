@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.4.13
+Version: 2026.4.15
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -70,6 +70,7 @@ Suggests:
     lgr,
     future, future.apply,
     testthat,
+    WeightedROC,
     nc,
     rpart,
     directlabels,

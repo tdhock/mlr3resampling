@@ -89,12 +89,13 @@ proj_fread <- function(proj_dir){
   out_list
 }  
 
-proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE){
+proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, score_args=NULL, save_learner=save_learner_default, save_pred=FALSE, train_seed=1L, resampling_seed=1L){
   . <- n.train.groups <- NULL
   ## Above to avoid CRAN NOTE.
   if(file.exists(proj_dir)){
     stop(proj_dir, " already exists, so not over-writing")
   }
+  if(!is.integer(train_seed))stop("train_seed must be integer")
   dir.create(proj_dir, showWarnings = FALSE)
   on.exit(unlink(proj_dir, recursive=TRUE))
   if(is.null(score_args) && isFALSE(save_pred)){
@@ -134,6 +135,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
     saveRDS(task.obj, task.rds)
     for(resampling.i in seq_along(proj.grid$resamplings)){
       resampling.obj <- proj.grid$resamplings[[resampling.i]]$clone()
+      set.seed(resampling_seed)
       resampling.obj$instantiate(task.obj)
       iteration <- resampling.obj$instance$iteration.dt
       if(is.null(iteration)){
@@ -196,6 +198,7 @@ proj_grid <- function(proj_dir, tasks, learners, resamplings, order_jobs=NULL, s
   task.i.max <- max(ml_job_dt$task.i)
   proj.grid$tasks <- proj.grid$tasks[seq(1, task.i.max)]
   proj.grid$tasks <- NULL
+  proj.grid$train_seed <- train_seed
   saveRDS(proj.grid, file.path(proj_dir, "grid.rds"))
   out_dt <- only_atomic(ml_job_dt)
   fwrite(out_dt, file.path(proj_dir, "grid_jobs.csv"))
@@ -231,6 +234,8 @@ proj_compute <- function(grid_job_i, proj_dir, verbose=FALSE, process_fun=Sys.ge
   this.learner <- proj.grid$learners[[grid_job_row$learner.i]]
   resampling_list <- readRDS(grid_job_row[, file.path(
     proj_dir, "resamplings", task.i, resampling.i, paste0(iteration, ".rds"))])
+  train_seed <- proj.grid$train_seed
+  if(!is.na(train_seed))set.seed(train_seed)
   this.learner$train(this.task, resampling_list$train)
   pred <- this.learner$predict(this.task, resampling_list$test)
   result.row <- data.table(

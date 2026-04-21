@@ -1,3 +1,7 @@
+Changes in version 2026.4.15 (PR#85)
+
+- proj_grid() gains argument train_seed, default=1L for reproducibility, use NA_integer_ for old behavior (seed not set before training).
+
 Changes in version 2026.4.13 (PR#83)
 
 - ResamplingSameOtherSizesCV with sizes=0 now means 5 train/test splits per test subset, instead of 6. The intermediate size was removed because it is not used in pvalue_downsample().

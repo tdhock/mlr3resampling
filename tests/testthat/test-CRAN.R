@@ -991,3 +991,53 @@ test_that("fold role is checked", {
     soak$instantiate(group.task)
   }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
 })
+
+test_that("cv.glmnet same result between two tests", {
+  spam <- mlr3::tsk("spam")
+  spam$col_roles$stratum <- "type"
+  sdata <- data.table(spam$data(), Fold=rep(1:3, length.out = spam$nrow))
+  spam_with_fold <- mlr3::TaskClassif$new(
+    "spam_with_fold", sdata, target="type")
+  spam_with_fold$col_roles$stratum <- c("type","Fold")
+  spam_with_fold$col_roles$fold <- "Fold"
+  spam_with_fold$col_roles$feature <- spam$col_roles$feature
+  L <- list(
+    mlr3learners::LearnerClassifCVGlmnet$new(),
+    mlr3::LearnerClassifRpart$new())
+  for(learner.i in seq_along(L)){
+    L[[learner.i]]$predict_type <- "prob"
+  }
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  pdir <- if(interactive())"~/pdir" else tempfile()
+  task_list <- list(spam, spam_with_fold)
+  ## test 1 default set train seed.
+  unlink(pdir, recursive = TRUE)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"))
+  set.seed(1)#needed to avoid spurious err in checks.
+  test_res_list <- list()
+  for(run.num in 1:2){
+    tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+    test_res_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), tres$results.csv)
+  }
+  test_res <- rbindlist(test_res_list)[
+  , algorithm := sub("classif.", "", learner_id)]
+  test_wide <- dcast(
+    test_res, task_id + algorithm ~ run, value.var="classif.auc")
+  test_wide[, expect_identical(run1, run2)]
+  ## test 2 train_seed=NA means do not set seed.
+  unlink(pdir, recursive = TRUE)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NA_integer_)
+  set.seed(1)#needed to avoid spurious err in checks.
+  test_res_list <- list()
+  for(run.num in 1:2){
+    tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+    test_res_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), tres$results.csv)
+  }
+  test_res <- rbindlist(test_res_list)[
+  , algorithm := sub("classif.", "", learner_id)]
+  test_wide <- dcast(
+    test_res, task_id + algorithm ~ run, value.var="classif.auc")
+  test_wide[, expect_identical(run1, run2)]
+})
