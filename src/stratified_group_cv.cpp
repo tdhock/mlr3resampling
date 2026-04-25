@@ -1,3 +1,4 @@
+#include <armadillo>
 #include "stratified_group_cv.h"
 #include <vector>
 
@@ -10,6 +11,8 @@ public:
   int get(int i);
   void set(int,int,int);
   void set(int,int);
+  void increment(int,int);
+  void increment(int);
   int index(int,int);
   std::vector<int> data_vec;
   int size, nrow;
@@ -26,7 +29,7 @@ CountMatrix::CountMatrix(int rows){
 void CountMatrix::init(int rows, int cols){
   nrow = rows;
   size = rows*cols;
-  data_vec.resize(size);
+  data_vec.resize(size, 0);
 }
   
 int CountMatrix::index(int i, int j){
@@ -49,12 +52,20 @@ void CountMatrix::set(int i, int value){
   set(i,1);
 } 
 
+void CountMatrix::increment(int i){
+  increment(i,1);
+}
+
+void CountMatrix::increment(int i, int j){
+  data_vec[index(i,j)]++;
+} 
+
 // from https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
 int stratified_group_cv
 (const int* strat_ptr,
  const int* group_ptr,
  const int N_data,
- const int num_folds,
+ const int N_fold,
  // inputs above, outputs below.
  int* fold_ptr){
   int strat_max = 0, group_max = 0;
@@ -67,15 +78,16 @@ int stratified_group_cv
     if(group_max<strat)group_max=group;
   }
   int N_strat=strat_max+1, N_group=group_max+1;
-  CountMatrix strat_counts(N_strat), strat_per_group_mat(N_strat, N_group);
-//     labels_num = np.max(y) + 1
-//     y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
-//     y_distr = Counter()
-//     for label, g in zip(y, groups):
-//         y_counts_per_group[g][label] += 1
-//         y_distr[label] += 1
-//     y_counts_per_fold = defaultdict(lambda: np.zeros(labels_num))
-//     groups_per_fold = defaultdict(set)
+  arma::Mat<int> strat_per_group_mat(N_strat, N_group), strat_per_fold_mat(N_strat, N_fold);
+  arma::Col<int> strat_counts(N_strat);
+  for(int data_i; data_i<N_data; data_i++){
+    int strat = strat_ptr[data_i];
+    int group = group_ptr[data_i];
+    strat_per_group_mat(strat, group)++;
+    strat_counts(strat)++;
+  }
+  std::vector<int> fold_for_group(N_group);
+  //arma::stddev()
 //     def eval_y_counts_per_fold(y_counts, fold):
 //         y_counts_per_fold[fold] += y_counts
 //         std_per_label = []

@@ -54,7 +54,7 @@ Description: A supervised learning algorithm inputs a train set,
 License: LGPL-3
 URL: https://github.com/tdhock/mlr3resampling
 BugReports: https://github.com/tdhock/mlr3resampling/issues
-LinkingTo: Rcpp
+LinkingTo: Rcpp, RcppArmadillo
 Imports:
     data.table,
     R6,
