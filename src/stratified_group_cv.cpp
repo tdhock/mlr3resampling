@@ -1,6 +1,54 @@
 #include "stratified_group_cv.h"
 #include <vector>
 
+class CountMatrix {
+public:
+  CountMatrix(int rows, int cols);
+  CountMatrix(int rows);
+  void init(int,int);
+  int get(int i, int j);
+  int get(int i);
+  void set(int,int,int);
+  void set(int,int);
+  int index(int,int);
+  std::vector<int> data_vec;
+  int size, nrow;
+};
+
+CountMatrix::CountMatrix(int rows, int cols){
+  init(rows, cols);
+}
+  
+CountMatrix::CountMatrix(int rows){
+  init(rows, 1);
+}
+
+void CountMatrix::init(int rows, int cols){
+  nrow = rows;
+  size = rows*cols;
+  data_vec.resize(size);
+}
+  
+int CountMatrix::index(int i, int j){
+  return i+j*nrow;
+}
+
+int CountMatrix::get(int i, int j){
+  return data_vec[index(i,j)];
+}
+
+void CountMatrix::set(int i, int j, int value){
+  data_vec[index(i,j)] = value;
+} 
+
+int CountMatrix::get(int i){
+  return get(i,1);
+}
+
+void CountMatrix::set(int i, int value){
+  set(i,1);
+} 
+
 // from https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
 int stratified_group_cv
 (const int* strat_ptr,
@@ -19,7 +67,7 @@ int stratified_group_cv
     if(group_max<strat)group_max=group;
   }
   int N_strat=strat_max+1, N_group=group_max+1;
-  std::vector<int> strat_counts(N_strat), strat_per_group_mat(N_strat*N_group);
+  CountMatrix strat_counts(N_strat), strat_per_group_mat(N_strat, N_group);
 //     labels_num = np.max(y) + 1
 //     y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
 //     y_distr = Counter()
