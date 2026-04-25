@@ -1,64 +1,5 @@
 #include <armadillo>
 #include "stratified_group_cv.h"
-#include <vector>
-
-class CountMatrix {
-public:
-  CountMatrix(int rows, int cols);
-  CountMatrix(int rows);
-  void init(int,int);
-  int get(int i, int j);
-  int get(int i);
-  void set(int,int,int);
-  void set(int,int);
-  void increment(int,int);
-  void increment(int);
-  int index(int,int);
-  std::vector<int> data_vec;
-  int size, nrow;
-};
-
-CountMatrix::CountMatrix(int rows, int cols){
-  init(rows, cols);
-}
-  
-CountMatrix::CountMatrix(int rows){
-  init(rows, 1);
-}
-
-void CountMatrix::init(int rows, int cols){
-  nrow = rows;
-  size = rows*cols;
-  data_vec.resize(size, 0);
-}
-  
-int CountMatrix::index(int i, int j){
-  return i+j*nrow;
-}
-
-int CountMatrix::get(int i, int j){
-  return data_vec[index(i,j)];
-}
-
-void CountMatrix::set(int i, int j, int value){
-  data_vec[index(i,j)] = value;
-} 
-
-int CountMatrix::get(int i){
-  return get(i,1);
-}
-
-void CountMatrix::set(int i, int value){
-  set(i,1);
-} 
-
-void CountMatrix::increment(int i){
-  increment(i,1);
-}
-
-void CountMatrix::increment(int i, int j){
-  data_vec[index(i,j)]++;
-} 
 
 // from https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
 int stratified_group_cv
@@ -79,14 +20,13 @@ int stratified_group_cv
   }
   int N_strat=strat_max+1, N_group=group_max+1;
   arma::Mat<int> strat_per_group_mat(N_strat, N_group), strat_per_fold_mat(N_strat, N_fold);
-  arma::Col<int> strat_counts(N_strat);
+  arma::Col<int> strat_counts(N_strat), fold_for_group(N_group);
   for(int data_i; data_i<N_data; data_i++){
     int strat = strat_ptr[data_i];
     int group = group_ptr[data_i];
     strat_per_group_mat(strat, group)++;
     strat_counts(strat)++;
   }
-  std::vector<int> fold_for_group(N_group);
   //arma::stddev()
 //     def eval_y_counts_per_fold(y_counts, fold):
 //         y_counts_per_fold[fold] += y_counts
