@@ -1,3 +1,5 @@
+useDynLib(mlr3resampling)
+importFrom(Rcpp, evalCpp)
 import(R6, checkmate, data.table, mlr3, mlr3misc, paradox)
 importFrom("utils", "str")
 importFrom("methods", "is")

@@ -171,15 +171,15 @@ N <- 2100
 abs.x <- 20
 set.seed(1)
 x.vec <- sort(runif(N, -abs.x, abs.x))
-(task.dt <- data.table(
+task.dt <- data.table(
   x=x.vec,
-  y = sin(x.vec)+rnorm(N,sd=0.5)))
+  y = sin(x.vec)+rnorm(N,sd=0.5))
 atomic.group.size <- 2
-task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)]
 task.dt[, random_group := rep(
   rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
   l=.N
-)][]
+)]
 group.tab <- table(task.dt$random_group)
 get_props <- function(x)x/sum(x)
 prop.tab <- get_props(group.tab)
@@ -992,7 +992,7 @@ test_that("fold role is checked", {
   }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
 })
 
-test_that("cv.glmnet same result between two tests", {
+if(requireNamespace("mlr3learners"))test_that("cv.glmnet same result between two tests", {
   spam <- mlr3::tsk("spam")
   spam$col_roles$stratum <- "type"
   sdata <- data.table(spam$data(), Fold=rep(1:3, length.out = spam$nrow))
