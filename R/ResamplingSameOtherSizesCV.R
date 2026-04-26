@@ -93,14 +93,6 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       group.row.dt <- data.table(
         ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
-      scounts <- group.row.dt[, .(
-        N=.N
-      ), keyby=.(group,stratum)][, .(
-        strata=.N
-      ), by=group]
-      if(any(scounts$strata>1)){
-        stop("some groups are present in several strata; please fix by changing stratum/group such that each group only occurs in one stratum")
-      }
       fcol <- task$col_roles$fold
       fold.dt <- if(length(fcol)==1){
         fold <- task$data(cols=fcol)[[fcol]]
@@ -112,13 +104,11 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
         data.table(group.row.dt, fold)
       }else{
-        sample.dt <- group.row.dt[
-          ## stratum, row_id, fold. (but row_id means group)
-        , private$.sample(unique(group), task=task) #assigns fold.
-        , by=stratum]
-        sample.dt[, .(
-          group=row_id, fold
-        )][group.row.dt, on="group"]
+        zerofac <- function(x)as.integer(factor(x))-1L
+        group.row.dt[
+        , fold := mlr3resampling:::stratified_group_cv_interface(
+          zerofac(stratum), zerofac(group), n.folds)+1L
+        ]
       }[, .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets

@@ -2,14 +2,6 @@ library(testthat)
 library(data.table)
 if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 
-train_dt <- fread("~/projects/stratified-group-cv/train.csv")
-train_dt[
-, fold := mlr3resampling:::stratified_group_cv_interface(
-  AdoptionSpeed, as.integer(factor(RescuerID))-1L, 10)
-]
-train_dt[, table(fold, AdoptionSpeed)]
-train_dt[, .(N=.N), by=.(fold, RescuerID)][, .(folds=.N), by=RescuerID][, table(folds)]
-
 test_that("resampling error if no group", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
@@ -1050,7 +1042,7 @@ if(requireNamespace("mlr3learners"))test_that("cv.glmnet same result between two
   test_wide[, expect_identical(run1, run2)]
 })
 
-test_that("error for groups with multiple strata", {
+test_that("no error for groups with multiple strata", {
   ## https://github.com/tdhock/mlr3resampling/issues/86
   set.seed(123)
   n = 50
@@ -1067,7 +1059,11 @@ test_that("error for groups with multiple strata", {
   task_amr$set_col_roles("y", roles = c("target", "stratum")) 
   task_amr$col_roles
   test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
-  expect_error({
-    test.validation.resampling$instantiate(task_amr)
-  }, "some groups are present in several strata; please fix by changing stratum/group such that each group only occurs in one stratum")
+  test.validation.resampling$instantiate(task_amr)
+  fold.dt <- test.validation.resampling$instance$fold.dt
+  fold.dt[, table(fold, stratum)]
+  fold.dt[, table(group, stratum)]
+  fold.tab <- fold.dt[, .(N=.N), by=.(fold, group)][, .(folds=.N), by=group][, table(folds)]
+  group.tab <- table(files$PID)
+  expect_equal(as.integer(fold.tab), length(group.tab))
 })
