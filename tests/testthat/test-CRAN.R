@@ -2,6 +2,14 @@ library(testthat)
 library(data.table)
 if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 
+train_dt <- fread("~/projects/stratified-group-cv/train.csv")
+train_dt[
+, fold := mlr3resampling:::stratified_group_cv_interface(
+  AdoptionSpeed, factor(RescuerID), 10)
+]
+train_dt[, table(fold, AdoptionSpeed)]
+train_dt[, .(N=.N), by=.(fold, RescuerID)][, .(folds=.N), by=RescuerID][, table(folds)]
+
 test_that("resampling error if no group", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()

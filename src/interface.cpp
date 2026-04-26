@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include "stratified_group_cv.h"
 
+// [[Rcpp::export]]
 Rcpp::IntegerVector stratified_group_cv_interface
 (Rcpp::IntegerVector strat_vec,
  Rcpp::IntegerVector group_vec,
