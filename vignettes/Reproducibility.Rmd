@@ -122,7 +122,8 @@ dcast(
   test_res, task_id + algorithm ~ run, value.var="classif.auc")
 ```
 
-The result above shows that the two runs have the same AUC values only for `spam_with_fold`, not for `spam` (which gets a different fold vector for each run).
+The result above shows that the two runs have the same AUC values.
+Even for `spam`, which does not have `fold` column role, the random seed is set for reproducible fold assignments.
 
 ## Demonstration with full benchmark
 
@@ -142,7 +143,7 @@ for(run.num in 1:2){
 }
 ```
 
-In the code above, the two grids have different random fold assignments.
+In the code above, the two grids have the same fold assignments (because random seed is set inside `proj_grid`).
 Below, we compute one glmnet job for each run and task.
 
 ```{r}
@@ -154,7 +155,49 @@ dcast(
   proj_res, task_id + algorithm ~ run, value.var="classif.auc")
 ```
 
-The results above are consistent with the results above.
+The results here using `proj_compute()` are consistent with the results above using `proj_test()`: results are reproducible between runs.
+
+## Do it yourself
+
+In this section we demonstrate that it is possible to compute the same test AUC values without using the mlr3 framework.
+
+```{r}
+fold1.dt <- data.table(spam_with_fold.dt)[
+, set := ifelse(Fold==1, "test", "train")][]
+set.dt.list <- split(fold1.dt, fold1.dt$set)
+set.xy.list <- list()
+for(set in names(set.dt.list)){
+  set.dt <- set.dt.list[[set]]
+  set.xy.list[[set]] <- list(
+    X=as.matrix(set.dt[, spam$col_roles$feature, with=FALSE]),
+    y=set.dt$type)
+}
+library(glmnet)
+set.seed(1)
+cvg_train_predict <- function(set.xy.list){
+  cvfit <- with(set.xy.list$train, cv.glmnet(X, y, family="binomial"))
+  with(set.xy.list$test, {
+    pred <- predict(cvfit, X)
+    roc.df <- WeightedROC::WeightedROC(pred, y)
+    WeightedROC::WeightedAUC(roc.df)
+  })
+}
+fold1.test.auc <- cvg_train_predict(set.xy.list)
+rbind(
+  data.table(packages="glmnet,WeightedROC", run="only", auc=fold1.test.auc),
+  proj_res[task_id=="spam_with_fold", .(
+    packages="mlr3resampling", run, auc=classif.auc)])
+```
+
+The output above is a table with AUC values that are identical across packages used for computation.
+These data indicate that the proposed framework enables reproducibility even if `mlr3resampling` is not used.
+
+If the seed is not obvious from the code, you can read it from the grid RDS file:
+
+```{r}
+grid.rds <- file.path(pdir, "grid.rds")
+readRDS(grid.rds)$train_seed
+```
 
 # Comparison with batchtools
 
@@ -162,12 +205,13 @@ If you want consistent results between runs with batchtools, you need to set the
 
 ```{r}
 (bgrid <- mlr3::benchmark_grid(task_list, learner_list, kfold))
+batchtools.seed <- 1
 if(requireNamespace("mlr3batchmark")){
   batch_dt_list <- list()
   for(run.num in 1:2){
     reg_dir <- if(interactive())paste0("~/reg",run.num) else tempfile()
     unlink(reg_dir, recursive = TRUE)
-    reg <- batchtools::makeExperimentRegistry(reg_dir, seed=1)
+    reg <- batchtools::makeExperimentRegistry(reg_dir, seed=batchtools.seed)
     mlr3batchmark::batchmark(bgrid)
     jt <- batchtools::getJobTable()
     jt1 <- jt[repl==1]
@@ -190,12 +234,69 @@ if(requireNamespace("mlr3batchmark")){
 }
 ```
 
+The table above shows consistent results across runs, which means that reproducibility is possible as long as batchtools is used with the same seed argument.
+
+## Do it yourself
+
+It is possible to reproduce these results without batchtools.
+First, the code below shows that the `bgrid` object contains an instantiated sampler with fold IDs that are consistent with the values in the `Fold` column.
+
+```{r}
+bgrid_dt <- as.data.table(bgrid)[, task_id := sapply(task, "[[", "id")][]
+resampler_with_fold <- bgrid_dt[task_id=="spam_with_fold"]$resampling[[1]]
+identical(resampler_with_fold$instance$fold.dt$Fold, spam_with_fold.dt$Fold)
+```
+
+To reproduce these values outside of the batchtools framework, we need to set the same random seed that was used by batchtools.
+This is documented on `?batchtools::makeExperimentRegistry` which says
+
+```
+    seed: ['integer(1)']
+          Start seed for jobs. Each job uses the ('seed' + 'job.id') as
+          seed. Default is a random integer between 1 and 32768.
+```
+
+The code below sets this random seed.
+
+```{r}
+(one_job <- jt1[, let(
+  task_id = sapply(prob.pars, "[[", "task_id"),
+  learner_id = sapply(algo.pars, "[[", "learner_id")
+)][task_id=="spam_with_fold" & learner_id=="classif.cv_glmnet"])
+set.seed(one_job$job.id+batchtools.seed)
+```
+
+Next we train cv glmnet again.
+
+```{r}
+batchtools.test.auc <- cvg_train_predict(set.xy.list)
+rbind(
+  data.table(
+    packages="glmnet,WeightedROC", run="only", auc=batchtools.test.auc),
+  batch_dt[algorithm=="cv_glmnet" & task_id=="spam_with_fold", .(
+    packages="batchtools", run, auc=classif.auc)])
+```
+
+The DIY results above are consistent with the previous two runs, indicating that reproducibility is possible with batchtools as well.
+
+If the seed was not set in the batchtools code, you can read it from the registry RDS file:
+
+```{r}
+registry.rds <- file.path(reg_dir, "registry.rds")
+rbind(
+  code=batchtools.seed,
+  registry=readRDS(registry.rds)$seed)
+unlink(reg_dir, recursive = TRUE)
+batchtools::makeExperimentRegistry(reg_dir)
+readRDS(registry.rds)$seed
+```
+
 # Conclusion
 
 We see that reproducibility is possible in mlr3.
 Using `mlr3resampling::proj_grid()`
 
-* Use tasks with `fold` column role.
-* Default sets random seed for reproducible training.
+* For simple reproducibility even outside R and mlr3, use tasks with `fold` column role.
+* Even without `fold` column role, random seeds are set for reproducible splitting and training.
 
-Using `mlr3batchmark`, user needs to give `seed=1` argument to `batchtools::makeExperimentRegistry`.
+Using `mlr3batchmark`, user needs to give `seed` argument to `batchtools::makeExperimentRegistry`.

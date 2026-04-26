@@ -93,6 +93,14 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       group.row.dt <- data.table(
         ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
+      scounts <- group.row.dt[, .(
+        N=.N
+      ), keyby=.(group,stratum)][, .(
+        strata=.N
+      ), by=group]
+      if(any(scounts$strata>1)){
+        stop("some groups are present in several strata; please fix by changing stratum/group such that each group only occurs in one stratum")
+      }
       fcol <- task$col_roles$fold
       fold.dt <- if(length(fcol)==1){
         fold <- task$data(cols=fcol)[[fcol]]
