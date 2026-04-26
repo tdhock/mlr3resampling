@@ -5,7 +5,7 @@ if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 train_dt <- fread("~/projects/stratified-group-cv/train.csv")
 train_dt[
 , fold := mlr3resampling:::stratified_group_cv_interface(
-  AdoptionSpeed, factor(RescuerID), 10)
+  AdoptionSpeed, as.integer(factor(RescuerID))-1L, 10)
 ]
 train_dt[, table(fold, AdoptionSpeed)]
 train_dt[, .(N=.N), by=.(fold, RescuerID)][, .(folds=.N), by=RescuerID][, table(folds)]
