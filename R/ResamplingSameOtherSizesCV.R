@@ -104,11 +104,30 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
         data.table(group.row.dt, fold)
       }else{
-        zerofac <- function(x)as.integer(factor(x))-1L
-        group.row.dt[
-        , fold := mlr3resampling:::stratified_group_cv_interface(
-          zerofac(stratum), zerofac(group), n.folds)+1L
-        ]
+        scounts <- group.row.dt[, .(
+          N=.N
+        ), keyby=.(group,stratum)][, .(
+          strata=.N
+        ), by=group]
+        if(any(scounts$strata>1)){
+          ## less efficient code for fold assignment when there are
+          ## some groups in multiple strata.
+          zerofac <- function(x)as.integer(factor(x))-1L
+          group.row.dt[
+          , fold := stratified_group_cv_interface(
+            zerofac(stratum), zerofac(group), n.folds)+1L
+          ]
+        }else{
+          ## more efficient code for fold assignment when each group
+          ## is in a different stratum.
+          sample.dt <- group.row.dt[
+            ## stratum, row_id, fold. (but row_id means group)
+          , private$.sample(unique(group), task=task) #assigns fold.
+          , by=stratum]
+          sample.dt[, .(
+            group=row_id, fold
+          )][group.row.dt, on="group"]
+        }
       }[, .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets
