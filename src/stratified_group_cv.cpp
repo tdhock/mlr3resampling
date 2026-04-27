@@ -30,7 +30,7 @@ int stratified_group_cv
     strat_per_group_mat(N_strat, N_group, arma::fill::zeros),
     strat_per_fold_mat(N_strat, N_fold, arma::fill::zeros);
   arma::ivec fold_for_group(N_group);
-  for(int data_i; data_i<N_data; data_i++){
+  for(int data_i=0; data_i<N_data; data_i++){
     int strat = strat_ptr[data_i];
     int group = group_ptr[data_i];
     strat_per_group_mat(strat, group)++;
