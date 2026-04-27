@@ -1085,8 +1085,9 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   , by=g]
   files[, table(g, y)]
   files[, table(y)]
-  comb.dt <- CJ(set_group=c(TRUE,FALSE), set_strata=c()
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
   fpg.dt.list <- list()
+  set.seed(1)
   for(comb.i in 1:nrow(comb.dt)){
     comb <- comb.dt[comb.i]
     task_amr = mlr3::as_task_classif(files, target = "y")
@@ -1094,15 +1095,15 @@ test_that("prop sizes for regular sized groups with multiple strata", {
     task_amr$set_col_roles("y", roles = c("target", "stratum"))
     task_amr$col_roles
     test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$param_set$values$folds <- comb$nfold
     test.validation.resampling$instantiate(task_amr)
     fold.dt <- test.validation.resampling$instance$fold.dt
     fold.dt[, table(fold, stratum)]
     fold.dt[, table(group, stratum)]
-    fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
+    fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
     fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
   }
   fpg.dt <- rbindlist(fpg.dt.list)
-  folds <- dcast(fpg.dt, set_group + group ~ run, value.var="fold")
-  expect_false(folds[set_group==FALSE, identical(run1, run2)])
-  expect_false(folds[set_group==TRUE,  identical(run1, run2)])
+  expect_equal(fpg.dt[nfold==3, sort(N)], rep(c(5,45),each=6))
+  expect_equal(fpg.dt[nfold==5, sort(N)], rep(c(3,27),each=10))
 })

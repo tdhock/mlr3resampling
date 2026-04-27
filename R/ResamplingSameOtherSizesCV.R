@@ -114,8 +114,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           ## some groups in multiple strata.
           zerofac <- function(x)as.integer(factor(x))-1L
           group.row.dt[
-          , fold := stratified_group_cv_interface(
-            zerofac(stratum), zerofac(group), n.folds)+1L
+            sample(.N),
+            fold := stratified_group_cv_interface(
+              zerofac(stratum), zerofac(group), n.folds
+            )+1L
           ]
         }else{
           ## more efficient code for fold assignment when each group
