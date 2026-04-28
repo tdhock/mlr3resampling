@@ -1,6 +1,6 @@
 Changes in version 2026.4.26 (PR#88)
 
-- ResamplingSameOtherSizesCV$instantiate() uses new C++ code, adapted from scikit-learn StratifiedGroupKFold, te assign fold, including with groups in several strata.
+- ResamplingSameOtherSizesCV$instantiate() uses new C++ code, adapted from scikit-learn StratifiedGroupKFold, to assign folds, when there are groups in several strata.
 
 Changes in version 2026.4.21 (PR#87)
 
