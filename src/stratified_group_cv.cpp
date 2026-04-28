@@ -55,22 +55,22 @@ int stratified_group_cv
       int best_fold=0;
       double min_sd=INFINITY;
       for(int fold=0; fold<N_fold; fold++){
-	strat_per_fold_mat.col(fold) += strat_counts_for_group;
-	props = strat_per_fold_mat.each_col()/strat_counts;
-	// sd_vec has one element per stratum;
-	// each is the variability between folds.
-	sd_vec = arma::stddev(props, 0, 1);
-	strat_per_fold_mat.col(fold) -= strat_counts_for_group;
-	double fold_sd = arma::mean(arma::mean(sd_vec));
-	if(fold_sd<min_sd){
-	  // best fold results in the least variability between folds,
-	  // averaged over all strata.
-	  min_sd=fold_sd;
-	  best_fold = fold;
-	}
+        strat_per_fold_mat.col(fold) += strat_counts_for_group;
+        props = strat_per_fold_mat.each_col()/strat_counts;
+        // sd_vec has one element per stratum;
+        // each is the variability between folds.
+        sd_vec = arma::stddev(props, 0, 1);
+        strat_per_fold_mat.col(fold) -= strat_counts_for_group;
+        double fold_sd = arma::mean(arma::mean(sd_vec));
+        if(fold_sd<min_sd){
+          // best fold results in the least variability between folds,
+          // averaged over all strata.
+          min_sd=fold_sd;
+          best_fold = fold;
+        }
       }
       for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
-	fold_ptr[set_i] = best_fold;
+        fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
     }
