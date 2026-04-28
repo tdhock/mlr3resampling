@@ -3,3 +3,5 @@ site/doc
 site/manual
 site/*html
 *~
+*.o
+*.so
