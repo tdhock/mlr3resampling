@@ -12,14 +12,14 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // stratified_group_cv_interface
-Rcpp::IntegerVector stratified_group_cv_interface(Rcpp::IntegerVector strat_vec, Rcpp::IntegerVector group_vec, int num_folds);
+Rcpp::IntegerVector stratified_group_cv_interface(const Rcpp::IntegerVector strat_vec, const Rcpp::IntegerVector group_vec, const int num_folds);
 RcppExport SEXP _mlr3resampling_stratified_group_cv_interface(SEXP strat_vecSEXP, SEXP group_vecSEXP, SEXP num_foldsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type strat_vec(strat_vecSEXP);
-    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type group_vec(group_vecSEXP);
-    Rcpp::traits::input_parameter< int >::type num_folds(num_foldsSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type strat_vec(strat_vecSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type group_vec(group_vecSEXP);
+    Rcpp::traits::input_parameter< const int >::type num_folds(num_foldsSEXP);
     rcpp_result_gen = Rcpp::wrap(stratified_group_cv_interface(strat_vec, group_vec, num_folds));
     return rcpp_result_gen;
 END_RCPP

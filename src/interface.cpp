@@ -3,9 +3,9 @@
 
 // [[Rcpp::export]]
 Rcpp::IntegerVector stratified_group_cv_interface
-(Rcpp::IntegerVector strat_vec,
- Rcpp::IntegerVector group_vec,
- int num_folds
+(const Rcpp::IntegerVector strat_vec,
+ const Rcpp::IntegerVector group_vec,
+ const int num_folds
  ){
   int N_data = strat_vec.length();
   Rcpp::IntegerVector fold_vec(N_data);
