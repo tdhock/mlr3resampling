@@ -1107,3 +1107,38 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   expect_equal(fpg.dt[nfold==3, sort(N)], rep(c(5,45),each=6))
   expect_equal(fpg.dt[nfold==5, sort(N)], rep(c(3,27),each=10))
 })
+
+test_that("random folds for irregular sized groups with multiple strata", {
+  ## https://github.com/tdhock/mlr3resampling/issues/86
+  files <- rbind(
+    data.table(g="f1g1", y=c(1,2)),
+    data.table(g="f1g2", y=c(2,2)))
+    data.table(g="f2g1", y=c(1,2,2)),
+    data.table(g="f2g2", y=c(2)),
+    data.table(g=3, y=c(1,2,2,2)),
+  files[, table(y)]
+  files[, table(g, y)]
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
+  fpg.dt.list <- list()
+  for(comb.i in 1:nrow(comb.dt)){
+    comb <- comb.dt[comb.i]
+    task_amr = mlr3::as_task_classif(files, target = "y")
+    if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
+    task_amr$set_col_roles("y", roles = c("target", "stratum"))
+    task_amr$col_roles
+    test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$instantiate(task_amr)
+    fold.dt <- test.validation.resampling$instance$fold.dt
+    print(fold.dt[, table(fold, stratum)])
+    fold.dt[, table(group, stratum)]
+    fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
+    fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
+  }
+  fpg.dt <- rbindlist(fpg.dt.list)
+  folds <- dcast(fpg.dt, set_group + group ~ run, value.var="fold")
+  expect_false(folds[set_group==FALSE, identical(run1, run2)])
+  ## the groups are all different, so different variance, same sort
+  ## order, no randomness between runs.
+  folds[set_group==TRUE,  expect_identical(run1, run2)]
+})
+

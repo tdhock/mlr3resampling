@@ -112,22 +112,29 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         if(any(scounts$strata>1)){
           ## less efficient code for fold assignment when there are
           ## some groups in multiple strata.
-          stab <- group.row.dt[, let(
+          table_prop <- function(x){
+            stab <- table(x)
+            stab/sum(stab)
+          }
+          ptab <- group.row.dt[, let(
             random_order = sample(.N),
             stratum_fac = factor(stratum)
-          )][, table(stratum_fac)]
-          ptab <- stab/sum(stab)
+          )][, table_prop(stratum_fac)]
           group.row.dt[, let(
+            neg_dev = -mean((table_prop(stratum_fac)-ptab)^2),
             neg_var = -var(table(stratum_fac)),
             neg_nrow = -.N,
             freq = mean(ptab*table(stratum_fac)),
             g_ord = min(random_order)
           ), by=group]
-          setkey(group.row.dt, neg_var, neg_nrow, freq, g_ord)
+          setkey(group.row.dt, neg_dev, neg_nrow, freq, g_ord)
           group.row.dt[
           , fold := stratified_group_cv_interface(
             stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
           )+1L]
+          print(group.row.dt)
+          browser()
+          print(1)
         }else{
           ## more efficient code for fold assignment when each group
           ## is in a different stratum.
