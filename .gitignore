@@ -1,3 +1,4 @@
+*.dll
 *__files/
 site/doc
 site/manual

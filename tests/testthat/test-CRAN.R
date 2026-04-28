@@ -1088,6 +1088,7 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
   fpg.dt.list <- list()
   set.seed(1)
+  grdt <- list()
   for(comb.i in 1:nrow(comb.dt)){
     comb <- comb.dt[comb.i]
     task_amr = mlr3::as_task_classif(files, target = "y")
@@ -1098,25 +1099,33 @@ test_that("prop sizes for regular sized groups with multiple strata", {
     test.validation.resampling$param_set$values$folds <- comb$nfold
     test.validation.resampling$instantiate(task_amr)
     fold.dt <- test.validation.resampling$instance$fold.dt
+    grdt[[comb.i]] <- test.validation.resampling$instance$group.row.dt
     fold.dt[, table(fold, stratum)]
     fold.dt[, table(group, stratum)]
     fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
     fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
   }
+  ##dcast(melt(dcast(grdt[[3]][, .(row=.I, fold, y, g_ord)][, r := min(row), by=g_ord], r ~ fold+y), id="r")[, cum := cumsum(value), by=variable], r ~ variable, value.var="cum")
+  ## 69:   137       45      1       45      1       44      2
+  ## 70:   139       46      2       45      1       44      2
+  ideal <- c(45,5)
+  ideal-c(45,1)#16
+  ideal-c(46,2)#10
+  ideal-c(44,2)#10
+  ideal-c(45,3)#4
   fpg.dt <- rbindlist(fpg.dt.list)
   expect_equal(fpg.dt[nfold==3, sort(N)], rep(c(5,45),each=6))
   expect_equal(fpg.dt[nfold==5, sort(N)], rep(c(3,27),each=10))
 })
 
-test_that("random folds for irregular sized groups with multiple strata", {
-  ## https://github.com/tdhock/mlr3resampling/issues/86
+test_that("deterministic fold assignment for unique group sizes with multiple strata", {
   files <- rbind(
     data.table(g="f1g1", y=c(1,2)),
-    data.table(g="f1g2", y=c(2,2)))
+    data.table(g="f1g2", y=c(2,2)),
     data.table(g="f2g1", y=c(1,2,2)),
     data.table(g="f2g2", y=c(2)),
-    data.table(g=3, y=c(1,2,2,2)),
-  files[, table(y)]
+    data.table(g="f3g1", y=c(1,2,2,2)))
+  ideal <- as.numeric(files[, table(y)]/3)
   files[, table(g, y)]
   comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
   fpg.dt.list <- list()
@@ -1129,8 +1138,7 @@ test_that("random folds for irregular sized groups with multiple strata", {
     test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
     test.validation.resampling$instantiate(task_amr)
     fold.dt <- test.validation.resampling$instance$fold.dt
-    print(fold.dt[, table(fold, stratum)])
-    fold.dt[, table(group, stratum)]
+    expect_equal(sum(fold.dt[, t(table(fold, stratum))]==ideal), 6)
     fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
     fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
   }

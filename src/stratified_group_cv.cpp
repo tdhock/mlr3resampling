@@ -1,10 +1,12 @@
 #include <armadillo>
 #include "stratified_group_cv.h"
+#define ABS(x)((x)<0 ? (-(x)) : (x))
+#define CLOSE(x,y)(ABS((x)-(y))<1e-3)
 
 // adapted from
 // https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
 // https://github.com/scikit-learn/scikit-learn/blob/fe2edb3cd/sklearn/model_selection/_split.py#L1086C1-L1106C25
-int stratified_group_cv
+int stratified_group_cv_kaggle
 (const int* strat_ptr, // in 0,…,strat_max
  const int* group_ptr, // sorted, non-decreasing.
  const int N_data,
@@ -73,6 +75,90 @@ int stratified_group_cv
         fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
+    }
+  }
+  return 0;
+}
+
+int stratified_group_cv_diff
+(const int* strat_ptr, // in 0,…,strat_max
+ const int* group_ptr, // sorted, non-decreasing.
+ const int N_data,
+ const int N_fold,
+ // inputs above, outputs below.
+ int* fold_ptr){
+  int strat_max = 0;
+  // begin by scanning all data, checking for errors and determining
+  // number of strata.
+  for(int data_i=0; data_i<N_data; data_i++){
+    if(0<data_i && group_ptr[data_i] < group_ptr[data_i-1])
+      return ERROR_GROUP_MUST_BE_NON_DECREASING;
+    int strat = strat_ptr[data_i];
+    if(strat<0)return ERROR_STRATA_MUST_BE_NON_NEGATIVE;
+    if(strat_max<strat)strat_max=strat;
+  }
+  int N_strat=strat_max+1;
+  arma::vec
+    strat_counts(N_strat, arma::fill::zeros),
+    ideal_strat_counts_per_fold(N_strat),
+    strat_counts_for_group(N_strat);
+  arma::mat
+    strat_per_fold_mat(N_strat, N_fold, arma::fill::zeros);
+  // count each stratum, error if any are zero.
+  for(int data_i=0; data_i<N_data; data_i++){
+    int strat = strat_ptr[data_i];
+    strat_counts(strat)++;
+    fold_ptr[data_i] = -1;
+  }
+  for(int strat=0; strat<N_strat; strat++){
+    if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
+  }
+  ideal_strat_counts_per_fold = strat_counts / N_fold;
+  double RSS = 0;
+  for(int strat=0; strat<N_strat; strat++){
+    RSS += N_fold*ideal_strat_counts_per_fold(strat);
+  }
+  // main fold assignment loop over data, already sorted by group.
+  int data_i_at_group_start;
+  for(int data_i=0; data_i<N_data; data_i++){
+    int group = group_ptr[data_i];
+    if(data_i==0 || (data_i>0 && group_ptr[data_i-1] != group)){
+      // start of a group, so restart counts to zero.
+      data_i_at_group_start=data_i;
+      strat_counts_for_group.zeros();
+    }
+    // add to counts for this stratum.
+    int strat_i = strat_ptr[data_i];
+    strat_counts_for_group(strat_i)++;
+    if(data_i==N_data-1 || (data_i+1<N_data && group_ptr[data_i+1] != group)){
+      // end of a group, so use counts to determine optimal fold.
+      double best_rss_update=INFINITY;
+      int best_fold=0;
+      double best_over_ideal=0;
+      for(int fold=0; fold<N_fold; fold++){
+	double fold_over_ideal=0;
+	double fold_rss_update=0;
+	for(int strat=0; strat<N_strat; strat++){
+	  double n_hat = strat_per_fold_mat(strat, fold);
+	  double diff = n_hat-ideal_strat_counts_per_fold(strat);
+	  double n_group = strat_counts_for_group(strat);
+	  double maybe_over = n_group + diff;
+	  if(maybe_over>0)fold_over_ideal += maybe_over;
+	  fold_rss_update += (diff*2+n_group)*n_group;
+	}
+	if(fold_rss_update<best_rss_update ||
+	   (CLOSE(fold_rss_update,best_rss_update) && fold_over_ideal<best_over_ideal)
+	   ){
+	  best_fold=fold;
+	  best_rss_update = fold_rss_update;
+	  best_over_ideal = fold_over_ideal;
+	}
+      }
+      for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
+        fold_ptr[set_i] = best_fold;
+      }
+      strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
+      RSS += best_rss_update;
     }
   }
   return 0;
