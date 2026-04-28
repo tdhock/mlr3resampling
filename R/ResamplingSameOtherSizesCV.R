@@ -9,7 +9,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio = paradox::p_dbl(0,1, tags = "required"),
         sizes = paradox::p_int(-1, tags = "required"),
         ignore_subset = paradox::p_lgl(tags="required"),
-        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required")
+        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required"),
+        group_stratum_algo=paradox::p_fct(c("kaggle","rss"),tags="required")
       )
       ps$values = list(
         folds=3L,
@@ -17,7 +18,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio=0.5,
         sizes=-1L,
         ignore_subset=FALSE,
-        subsets="SOA"
+        subsets="SOA",
+        group_stratum_algo="rss"
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -112,7 +114,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         if(any(scounts$strata>1)){
           ## less efficient code for fold assignment when there are
           ## some groups in multiple strata.
-          if(FALSE){
+          if(self$param_set$values$group_stratum_algo=="kaggle"){
             table_prop <- function(x){
               stab <- table(x)
               stab/sum(stab)
