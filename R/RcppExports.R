@@ -5,7 +5,7 @@ stratified_group_cv_kaggle_interface <- function(strat_vec, group_vec, num_folds
     .Call('_mlr3resampling_stratified_group_cv_kaggle_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
 }
 
-stratified_group_cv_diff_interface <- function(strat_vec, group_vec, num_folds) {
-    .Call('_mlr3resampling_stratified_group_cv_diff_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
+stratified_group_cv_rss_interface <- function(strat_vec, group_vec, num_folds) {
+    .Call('_mlr3resampling_stratified_group_cv_rss_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
 }
 

@@ -24,23 +24,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// stratified_group_cv_diff_interface
-Rcpp::IntegerVector stratified_group_cv_diff_interface(const Rcpp::IntegerVector strat_vec, const Rcpp::IntegerVector group_vec, const int num_folds);
-RcppExport SEXP _mlr3resampling_stratified_group_cv_diff_interface(SEXP strat_vecSEXP, SEXP group_vecSEXP, SEXP num_foldsSEXP) {
+// stratified_group_cv_rss_interface
+Rcpp::IntegerVector stratified_group_cv_rss_interface(const Rcpp::IntegerVector strat_vec, const Rcpp::IntegerVector group_vec, const int num_folds);
+RcppExport SEXP _mlr3resampling_stratified_group_cv_rss_interface(SEXP strat_vecSEXP, SEXP group_vecSEXP, SEXP num_foldsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type strat_vec(strat_vecSEXP);
     Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type group_vec(group_vecSEXP);
     Rcpp::traits::input_parameter< const int >::type num_folds(num_foldsSEXP);
-    rcpp_result_gen = Rcpp::wrap(stratified_group_cv_diff_interface(strat_vec, group_vec, num_folds));
+    rcpp_result_gen = Rcpp::wrap(stratified_group_cv_rss_interface(strat_vec, group_vec, num_folds));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mlr3resampling_stratified_group_cv_kaggle_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_kaggle_interface, 3},
-    {"_mlr3resampling_stratified_group_cv_diff_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_diff_interface, 3},
+    {"_mlr3resampling_stratified_group_cv_rss_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_rss_interface, 3},
     {NULL, NULL, 0}
 };
 

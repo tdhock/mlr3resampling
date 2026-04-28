@@ -10,7 +10,7 @@ int stratified_group_cv_kaggle
  // inputs above, outputs below.
  int* fold_ptr);
 
-int stratified_group_cv_diff
+int stratified_group_cv_rss
 (const int* strat_ptr, // in 0,…,strat_max
  const int* group_ptr, // sorted, non-decreasing.
  const int N_data,

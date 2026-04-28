@@ -23,14 +23,14 @@ Rcpp::IntegerVector stratified_group_cv_kaggle_interface
 }
 
 // [[Rcpp::export]]
-Rcpp::IntegerVector stratified_group_cv_diff_interface
+Rcpp::IntegerVector stratified_group_cv_rss_interface
 (const Rcpp::IntegerVector strat_vec,
  const Rcpp::IntegerVector group_vec,
  const int num_folds
  ){
   int N_data = strat_vec.length();
   Rcpp::IntegerVector fold_vec(N_data);
-  int status = stratified_group_cv_diff
+  int status = stratified_group_cv_rss
     (strat_vec.begin(), group_vec.begin(), N_data, num_folds,
      // inputs above, outputs below.
      fold_vec.begin());

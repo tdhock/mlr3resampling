@@ -148,7 +148,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             ), by=group]
             setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
             group.row.dt[
-            , fold := stratified_group_cv_diff_interface(
+            , fold := stratified_group_cv_rss_interface(
               stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
             )+1L]
           }
