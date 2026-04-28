@@ -59,6 +59,30 @@ and must be stored in the \link[mlr3:Task]{Task} with column role
 
 }
 
+\section{Grouping and stratification}{
+
+When grouping and stratification are both used,
+computing an optimal fold assignment is a hard problem (discrete, need
+to try many potential assignments of groups to folds to find best
+solution).
+Instead of computing the optimal solution (slow), there are heuristic
+algorithms (fast), which yield approximate solutions.
+The choice of which heuristic is controlled by the
+\code{group_stratum_algo} parameter, which can take these values:
+\describe{
+  \item{\code{rss}}{Default TODO.}
+  \item{\code{kaggle}}{Similar algorithm as in scikit-learn
+    \code{StratifiedGroupKFold}, adapted from
+    \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
+    For F folds, G groups, and S strata, that algorithm is \code{O(F^2 G
+      S)} time and \code{O(G S + G F)} memory (could be problematic when G and
+    S are both large).
+    Our R/C++ implementation has the same time complexity, but is more
+    memory-efficient, \code{O(G + S + G F)}.
+}
+
+}
+
 \section{Subsets}{
 
 \code{\link{ResamplingSameOtherSizesCV}} supports training on different
