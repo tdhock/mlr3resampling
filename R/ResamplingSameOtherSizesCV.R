@@ -10,7 +10,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         sizes = paradox::p_int(-1, tags = "required"),
         ignore_subset = paradox::p_lgl(tags="required"),
         subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required"),
-        group_stratum_algo=paradox::p_fct(c("kaggle","rss"),tags="required")
+        group_stratum_algo=paradox::p_fct(c("Wasikowski","WasikowskiLinearMemory","RSS"),tags="required")
       )
       ps$values = list(
         folds=3L,
@@ -19,7 +19,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         sizes=-1L,
         ignore_subset=FALSE,
         subsets="SOA",
-        group_stratum_algo="rss"
+        group_stratum_algo="RSS"
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -114,7 +114,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         if(any(scounts$strata>1)){
           ## less efficient code for fold assignment when there are
           ## some groups in multiple strata.
-          if(self$param_set$values$group_stratum_algo=="kaggle"){
+          if(grepl("kaggle", self$param_set$values$group_stratum_algo)){
             table_prop <- function(x){
               stab <- table(x)
               stab/sum(stab)
@@ -131,8 +131,9 @@ ResamplingSameOtherSizesCV = R6::R6Class(
               g_ord = min(random_order)
             ), by=group]
             setkey(group.row.dt, neg_dev, neg_nrow, freq, g_ord)
+            ## TODO sort the same way as sklearn.
             group.row.dt[
-            , fold := stratified_group_cv_kaggle_interface(
+            , fold := stratified_group_cv_Wasikowski_interface(
               stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
             )+1L]
           }else{
@@ -148,7 +149,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             ), by=group]
             setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
             group.row.dt[
-            , fold := stratified_group_cv_rss_interface(
+            , fold := stratified_group_cv_RSS_interface(
               stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
             )+1L]
           }

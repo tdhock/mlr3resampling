@@ -79,6 +79,7 @@ The choice of which heuristic is controlled by the
     S are both large).
     Our R/C++ implementation has the same time complexity, but is more
     memory-efficient, \code{O(G + S + G F)}.
+  }
 }
 
 }
