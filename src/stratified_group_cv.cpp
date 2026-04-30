@@ -181,12 +181,10 @@ int stratified_group_cv_RSS
     strat_counts(strat)++;
     fold_ptr[data_i] = -1;
   }
-  for(int strat=0; strat<N_strat; strat++){
-    if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
-  }
   ideal_strat_counts_per_fold = strat_counts / N_fold;
   double RSS = 0;
   for(int strat=0; strat<N_strat; strat++){
+    if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
     RSS += N_fold*ideal_strat_counts_per_fold(strat);
   }
   // main fold assignment loop over data, already sorted by group.
