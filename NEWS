@@ -1,3 +1,7 @@
+Changes in version 2026.5.1 (PR#90)
+
+- ResamplingSameOtherSizesCV$instantiate() gains param group_stratum_algo. Default "RSS" uses novel C++ code, linear time heuristic for minimizing residual sum of squares (RSS), between actual and ideal counts in each stratum/fold (when there are groups in several strata). The previous method can be used via "WasikowskiLinearMemory" (named after author of Kaggle post), and is slightly slower and less accurate (in terms of RSS).
+
 Changes in version 2026.4.26 (PR#88)
 
 - ResamplingSameOtherSizesCV$instantiate() uses new C++ code, adapted from scikit-learn StratifiedGroupKFold, to assign folds, when there are groups in several strata.
