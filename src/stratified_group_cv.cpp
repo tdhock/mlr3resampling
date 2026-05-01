@@ -47,23 +47,20 @@ int stratified_group_cv_Wasikowski
   for(int strat=0; strat<N_strat; strat++){
     if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
   }
-  var_vec = arma::var(strat_per_group_mat, 0, 0);
-  arma::uvec sorted_groups = sort_index(var_vec, "descend");
-  // todo how to tie break using mean?
-  for(int group_i=0; group_i<N_group; group_i++){
-    int group=sorted_groups(group_i);
-    //std::cout << "group_i=" << group_i << "group=" << group << std::endl;      
+  for(int group=0; group<N_group; group++){
     group_vec = strat_per_group_mat.col(group);
     int best_fold=0;
-    double min_eval=INFINITY;//, min_samples_in_fold=INFINITY;
+    double min_eval=INFINITY, min_samples_in_fold=INFINITY;
     for(int fold=0; fold<N_fold; fold++){
       strat_per_fold_mat.col(fold) += group_vec;
       props = strat_per_fold_mat.each_col()/strat_counts;
       sd_vec = arma::stddev(props, 0, 1);
       strat_per_fold_mat.col(fold) -= group_vec;
       double fold_eval = arma::mean(arma::mean(sd_vec));
-      if(fold_eval<min_eval){
+      double samples_in_fold = arma::sum(strat_per_fold_mat.col(fold));
+      if(fold_eval<min_eval || (CLOSE(fold_eval,min_eval)&&samples_in_fold<min_samples_in_fold)){
 	min_eval=fold_eval;
+	min_samples_in_fold=samples_in_fold;
 	best_fold = fold;
       }
     }
@@ -97,6 +94,7 @@ int stratified_group_cv_WasikowskiLinearMemory
   int N_strat=strat_max+1;
   arma::vec
     strat_counts(N_strat, arma::fill::zeros),
+    fold_counts(N_fold, arma::fill::zeros),
     strat_counts_for_group(N_strat);
   arma::mat
     sd_vec(N_strat,1),
@@ -112,21 +110,23 @@ int stratified_group_cv_WasikowskiLinearMemory
     if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
   }
   // main fold assignment loop over data, already sorted by group.
-  int data_i_at_group_start;
+  int data_i_at_group_start, data_for_group;
   for(int data_i=0; data_i<N_data; data_i++){
     int group = group_ptr[data_i];
     if(data_i==0 || (data_i>0 && group_ptr[data_i-1] != group)){
       // start of a group, so restart counts to zero.
       data_i_at_group_start=data_i;
       strat_counts_for_group.zeros();
+      data_for_group = 0;
     }
     // add to counts for this stratum.
     int strat = strat_ptr[data_i];
     strat_counts_for_group(strat)++;
+    data_for_group++;
     if(data_i==N_data-1 || (data_i+1<N_data && group_ptr[data_i+1] != group)){
       // end of a group, so use counts to determine optimal fold.
       int best_fold=0;
-      double min_sd=INFINITY;
+      double min_sd=INFINITY, min_samples_in_fold=INFINITY;
       for(int fold=0; fold<N_fold; fold++){
         strat_per_fold_mat.col(fold) += strat_counts_for_group;
         props = strat_per_fold_mat.each_col()/strat_counts;
@@ -135,17 +135,20 @@ int stratified_group_cv_WasikowskiLinearMemory
         sd_vec = arma::stddev(props, 0, 1);
         strat_per_fold_mat.col(fold) -= strat_counts_for_group;
         double fold_sd = arma::mean(arma::mean(sd_vec));
-        if(fold_sd<min_sd){
+	double samples_in_fold = fold_counts(fold);
+        if(fold_sd<min_sd || (CLOSE(fold_sd,min_sd)||samples_in_fold<min_samples_in_fold)){
           // best fold results in the least variability between folds,
           // averaged over all strata.
-          min_sd=fold_sd;
           best_fold = fold;
+          min_sd=fold_sd;
+	  min_samples_in_fold=samples_in_fold;
         }
       }
       for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
         fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
+      fold_counts(best_fold) += data_for_group;
     }
   }
   return 0;
