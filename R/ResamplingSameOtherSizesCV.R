@@ -30,7 +30,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_var <- neg_nrow <- freq <- g_ord <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_sd <- neg_nrow <- freq <- g_ord <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
@@ -124,16 +124,16 @@ ResamplingSameOtherSizesCV = R6::R6Class(
               stratum_fac = factor(stratum)
             )][, table_prop(stratum_fac)]
             group.row.dt[, let(
-              neg_dev = -mean((table_prop(stratum_fac)-ptab)^2),
-              neg_var = -var(table(stratum_fac)),
-              neg_nrow = -.N,
-              freq = mean(ptab*table(stratum_fac)),
+              neg_sd = -sd(table(stratum_fac)),
               g_ord = min(random_order)
             ), by=group]
-            setkey(group.row.dt, neg_dev, neg_nrow, freq, g_ord)
-            ## TODO sort the same way as sklearn.
+            setkey(group.row.dt, neg_sd, g_ord)
+            fun <- get(paste0(
+              "stratified_group_cv_",
+              self$param_set$values$group_stratum_algo,
+              "_interface"))
             group.row.dt[
-            , fold := stratified_group_cv_Wasikowski_interface(
+            , fold := fun(
               stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
             )+1L]
           }else{
