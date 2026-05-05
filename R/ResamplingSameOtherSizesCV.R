@@ -114,7 +114,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         if(any(scounts$strata>1)){
           ## less efficient code for fold assignment when there are
           ## some groups in multiple strata.
-          if(grepl("kaggle", self$param_set$values$group_stratum_algo)){
+          if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
             table_prop <- function(x){
               stab <- table(x)
               stab/sum(stab)

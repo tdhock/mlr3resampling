@@ -110,19 +110,17 @@ int stratified_group_cv_WasikowskiLinearMemory
     if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
   }
   // main fold assignment loop over data, already sorted by group.
-  int data_i_at_group_start, data_for_group;
+  int data_i_at_group_start;
   for(int data_i=0; data_i<N_data; data_i++){
     int group = group_ptr[data_i];
     if(data_i==0 || (data_i>0 && group_ptr[data_i-1] != group)){
       // start of a group, so restart counts to zero.
       data_i_at_group_start=data_i;
       strat_counts_for_group.zeros();
-      data_for_group = 0;
     }
     // add to counts for this stratum.
     int strat = strat_ptr[data_i];
     strat_counts_for_group(strat)++;
-    data_for_group++;
     if(data_i==N_data-1 || (data_i+1<N_data && group_ptr[data_i+1] != group)){
       // end of a group, so use counts to determine optimal fold.
       int best_fold=0;
@@ -136,7 +134,7 @@ int stratified_group_cv_WasikowskiLinearMemory
         strat_per_fold_mat.col(fold) -= strat_counts_for_group;
         double fold_sd = arma::mean(arma::mean(sd_vec));
 	double samples_in_fold = fold_counts(fold);
-        if(fold_sd<min_sd || (CLOSE(fold_sd,min_sd)||samples_in_fold<min_samples_in_fold)){
+        if(fold_sd<min_sd || (CLOSE(fold_sd,min_sd)&&samples_in_fold<min_samples_in_fold)){
           // best fold results in the least variability between folds,
           // averaged over all strata.
           best_fold = fold;
@@ -148,7 +146,7 @@ int stratified_group_cv_WasikowskiLinearMemory
         fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
-      fold_counts(best_fold) += data_for_group;
+      fold_counts(best_fold) += data_i-data_i_at_group_start+1;
     }
   }
   return 0;
@@ -185,10 +183,8 @@ int stratified_group_cv_RSS
     fold_ptr[data_i] = -1;
   }
   ideal_strat_counts_per_fold = strat_counts / N_fold;
-  double RSS = 0;
   for(int strat=0; strat<N_strat; strat++){
     if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
-    RSS += N_fold*ideal_strat_counts_per_fold(strat);
   }
   // main fold assignment loop over data, already sorted by group.
   int data_i_at_group_start;
@@ -230,7 +226,6 @@ int stratified_group_cv_RSS
         fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
-      RSS += best_rss_update;
     }
   }
   return 0;
