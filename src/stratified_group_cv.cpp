@@ -4,7 +4,7 @@
 #define CLOSE(x,y)(ABS((x)-(y))<1e-3)
 
 // adapted from
-// https://www.Wasikowski.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
+// https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation/notebook
 // https://github.com/scikit-learn/scikit-learn/blob/fe2edb3cd/sklearn/model_selection/_split.py#L1086C1-L1106C25
 int stratified_group_cv_Wasikowski
 (const int* strat_ptr,
