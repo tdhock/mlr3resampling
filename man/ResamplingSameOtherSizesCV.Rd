@@ -74,7 +74,9 @@ The choice of which heuristic is controlled by the
     minimize the residual sum of squares, between actual and ideal
     values of the strata/fold count matrix.
     First groups are sorted by RSS (group counts - ideal counts per stratum).
-    Then groups are greedily assigned a fold; best fold results in min RSS.}
+    Then groups are greedily assigned a fold; best fold results in min RSS.
+    For N data, K folds, G groups, and S strata, that algorithm is
+    \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
   \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
     \code{StratifiedGroupKFold}, adapted from
     \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
@@ -82,7 +84,7 @@ The choice of which heuristic is controlled by the
     Then groups are greedily assigned a fold; best fold results in the
     smallest mean SD of the strata/fold count matrix (SD over folds is
     computed for each stratum, then mean of SDs, minimized over folds).
-    For K folds, G groups, and S strata, that algorithm is
+    For N data, K folds, G groups, and S strata, that algorithm is
     \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
     S are both large).}
   \item{\code{"WasikowskiLinearMemory"}}{Same logic and time complexity
