@@ -106,64 +106,34 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
         data.table(group.row.dt, fold)
       }else{
-        scounts <- group.row.dt[, .(
-          N=.N
-        ), keyby=.(group,stratum)][, .(
-          strata=.N
-        ), by=group]
-        if(any(scounts$strata>1)){
-          ## less efficient code for fold assignment when there are
-          ## some groups in multiple strata.
-          if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
-            table_prop <- function(x){
-              stab <- table(x)
-              stab/sum(stab)
-            }
-            ptab <- group.row.dt[, let(
-              random_order = sample(.N),
-              stratum_fac = factor(stratum)
-            )][, table_prop(stratum_fac)]
-            group.row.dt[, let(
-              neg_sd = -sd(table(stratum_fac)),
-              g_ord = min(random_order)
-            ), by=group]
-            setkey(group.row.dt, neg_sd, g_ord)
-            fun <- get(paste0(
-              "stratified_group_cv_",
-              self$param_set$values$group_stratum_algo,
-              "_interface"))
-            group.row.dt[
-            , fold := fun(
-              stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
-            )+1L]
-          }else{
-            ideal.tab <- group.row.dt[, let(
-              random_order = sample(.N),
-              stratum_fac = factor(stratum)
-            )][, table(stratum_fac)/n.folds]
-            group.row.dt[, let(
-              rss = sum((table(stratum_fac)-ideal.tab)^2),
-              neg_nrow = -.N,
-              freq = mean(ideal.tab*table(stratum_fac)),
-              g_ord = min(random_order)
-            ), by=group]
-            setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
-            group.row.dt[
-            , fold := stratified_group_cv_RSS_interface(
-              stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
-            )+1L]
-          }
+        group.row.dt[, let(
+          random_order = sample(.N),
+          stratum_fac = factor(stratum)
+        )]
+        if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
+          group.row.dt[, let(
+            neg_sd = -sd(table(stratum_fac)),
+            g_ord = min(random_order)
+          ), by=group]
+          setkey(group.row.dt, neg_sd, g_ord)
         }else{
-          ## more efficient code for fold assignment when each group
-          ## is in a different stratum.
-          sample.dt <- group.row.dt[
-            ## stratum, row_id, fold. (but row_id means group)
-          , private$.sample(unique(group), task=task) #assigns fold.
-          , by=stratum]
-          sample.dt[, .(
-            group=row_id, fold
-          )][group.row.dt, on="group"]
+          ideal.tab <- group.row.dt[, table(stratum_fac)/n.folds]
+          group.row.dt[, let(
+            rss = sum((table(stratum_fac)-ideal.tab)^2),
+            neg_nrow = -.N,
+            freq = mean(ideal.tab*table(stratum_fac)),
+            g_ord = min(random_order)
+          ), by=group]
+          setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
         }
+        fun <- get(paste0(
+          "stratified_group_cv_",
+          self$param_set$values$group_stratum_algo,
+          "_interface"))
+        group.row.dt[
+        , fold := fun(
+          stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
+        )+1L]
       }[order(row_id), .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets
