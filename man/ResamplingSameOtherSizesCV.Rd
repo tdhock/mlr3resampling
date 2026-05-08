@@ -62,10 +62,10 @@ and must be stored in the \link[mlr3:Task]{Task} with column role
 \section{Grouping and stratification}{
 
 When grouping and stratification are both used,
-computing an optimal fold assignment is a NP-hard problem (discrete, need
+computing an optimal fold assignment is NP-hard (discrete, need
 to try all possible assignments of groups to folds to find best
 solution).
-Instead of computing the optimal solution (slow), there are heuristic
+Instead of computing the optimal solution (slow), we implement heuristic
 algorithms (fast), which yield approximate solutions.
 The choice of which heuristic is controlled by the
 \code{group_stratum_algo} parameter, which can take these values:
