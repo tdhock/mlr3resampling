@@ -9,7 +9,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio = paradox::p_dbl(0,1, tags = "required"),
         sizes = paradox::p_int(-1, tags = "required"),
         ignore_subset = paradox::p_lgl(tags="required"),
-        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required")
+        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required"),
+        group_stratum_algo=paradox::p_fct(c("Wasikowski","WasikowskiLinearMemory","RSS"),tags="required")
       )
       ps$values = list(
         folds=3L,
@@ -17,7 +18,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio=0.5,
         sizes=-1L,
         ignore_subset=FALSE,
-        subsets="SOA"
+        subsets="SOA",
+        group_stratum_algo="RSS"
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -28,7 +30,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_var <- neg_nrow <- freq <- g_ord <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_sd <- neg_nrow <- freq <- g_ord <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
@@ -104,41 +106,34 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         }
         data.table(group.row.dt, fold)
       }else{
-        scounts <- group.row.dt[, .(
-          N=.N
-        ), keyby=.(group,stratum)][, .(
-          strata=.N
-        ), by=group]
-        if(any(scounts$strata>1)){
-          ## less efficient code for fold assignment when there are
-          ## some groups in multiple strata.
-          stab <- group.row.dt[, let(
-            random_order = sample(.N),
-            stratum_fac = factor(stratum)
-          )][, table(stratum_fac)]
-          ptab <- stab/sum(stab)
+        group.row.dt[, let(
+          random_order = sample(.N),
+          stratum_fac = factor(stratum)
+        )]
+        if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
           group.row.dt[, let(
-            neg_var = -var(table(stratum_fac)),
-            neg_nrow = -.N,
-            freq = mean(ptab*table(stratum_fac)),
+            neg_sd = -sd(table(stratum_fac)),
             g_ord = min(random_order)
           ), by=group]
-          setkey(group.row.dt, neg_var, neg_nrow, freq, g_ord)
-          group.row.dt[
-          , fold := stratified_group_cv_interface(
-            stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
-          )+1L]
+          setkey(group.row.dt, neg_sd, g_ord)
         }else{
-          ## more efficient code for fold assignment when each group
-          ## is in a different stratum.
-          sample.dt <- group.row.dt[
-            ## stratum, row_id, fold. (but row_id means group)
-          , private$.sample(unique(group), task=task) #assigns fold.
-          , by=stratum]
-          sample.dt[, .(
-            group=row_id, fold
-          )][group.row.dt, on="group"]
+          ideal.tab <- group.row.dt[, table(stratum_fac)/n.folds]
+          group.row.dt[, let(
+            rss = sum((table(stratum_fac)-ideal.tab)^2),
+            neg_nrow = -.N,
+            freq = mean(ideal.tab*table(stratum_fac)),
+            g_ord = min(random_order)
+          ), by=group]
+          setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
         }
+        fun <- get(paste0(
+          "stratified_group_cv_",
+          self$param_set$values$group_stratum_algo,
+          "_interface"))
+        group.row.dt[
+        , fold := fun(
+          stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
+        )+1L]
       }[order(row_id), .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets
@@ -222,7 +217,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           iteration = .I,
           Train_subsets = factor(train.subsets, c("all","same","other"))
         )][],
-        fold.dt=fold.dt)
+        fold.dt=fold.dt,
+        group.row.dt=group.row.dt)
     }
   )
 )

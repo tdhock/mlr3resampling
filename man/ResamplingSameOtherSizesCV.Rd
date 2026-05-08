@@ -59,6 +59,40 @@ and must be stored in the \link[mlr3:Task]{Task} with column role
 
 }
 
+\section{Grouping and stratification}{
+
+When grouping and stratification are both used,
+computing an optimal fold assignment is NP-hard (discrete, need
+to try all possible assignments of groups to folds to find best
+solution).
+Instead of computing the optimal solution (slow), we implement heuristic
+algorithms (fast), which yield approximate solutions.
+The choice of which heuristic is controlled by the
+\code{group_stratum_algo} parameter, which can take these values:
+\describe{
+  \item{\code{"RSS"}}{Default heuristic algorithm which attempts to
+    minimize the residual sum of squares, between actual and ideal
+    values of the strata/fold count matrix.
+    First groups are sorted by RSS (group counts - ideal counts per stratum).
+    Then groups are greedily assigned a fold; best fold results in min RSS.
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
+  \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
+    \code{StratifiedGroupKFold}, adapted from
+    \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
+    First groups are sorted by standard deviation over strata counts.
+    Then groups are greedily assigned a fold; best fold results in the
+    smallest mean SD of the strata/fold count matrix (SD over folds is
+    computed for each stratum, then mean of SDs, minimized over folds).
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
+    S are both large).}
+  \item{\code{"WasikowskiLinearMemory"}}{Same logic and time complexity
+    but only \code{O(N + S K)} memory.}
+}
+
+}
+
 \section{Subsets}{
 
 \code{\link{ResamplingSameOtherSizesCV}} supports training on different

@@ -2,7 +2,7 @@ library(testthat)
 library(data.table)
 if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 
-test_that("resampling error if no group", {
+test_that("resampling error if no subset", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_error({
@@ -31,7 +31,7 @@ test_that("instantiation creates instance", {
   expect_identical(same_other$instance$id.dt$g, iris.dt$g)
 })
 
-test_that("error for subset named subset", {
+test_that("error for subset col named subset", {
   iris.dt <- data.table(iris)[, subset := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "subset"
@@ -43,7 +43,7 @@ test_that("error for subset named subset", {
   }, "col with role subset must not be named subset; please fix by renaming subset col")
 })
 
-test_that("error for group named row_id", {
+test_that("error for subset col named row_id", {
   iris.dt <- data.table(iris)[, row_id := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "row_id"
@@ -55,7 +55,7 @@ test_that("error for group named row_id", {
   }, "col with role subset must not be named row_id; please fix by renaming row_id col")
 })
 
-test_that("error for group named fold", {
+test_that("error for subset col named fold", {
   iris.dt <- data.table(iris)[, fold := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "fold"
@@ -79,7 +79,7 @@ test_that("error for group named display_row", {
   }, "col with role subset must not be named display_row; please fix by renaming display_row col")
 })
 
-test_that("error for group named test", {
+test_that("error for subset col named test", {
   iris.dt <- data.table(iris)[, test := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "test"
@@ -1088,6 +1088,50 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
   fpg.dt.list <- list()
   set.seed(1)
+  grdt <- list()
+  for(algo in c("RSS", "Wasikowski", "WasikowskiLinearMemory")){
+    for(comb.i in 1:nrow(comb.dt)){
+      comb <- comb.dt[comb.i]
+      task_amr = mlr3::as_task_classif(files, target = "y")
+      if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
+      task_amr$set_col_roles("y", roles = c("target", "stratum"))
+      test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+      test.validation.resampling$param_set$values$folds <- comb$nfold
+      test.validation.resampling$param_set$values$group_stratum_algo <- algo
+      test.validation.resampling$instantiate(task_amr)
+      fold.dt <- test.validation.resampling$instance$fold.dt
+      grdt[[comb.i]] <- test.validation.resampling$instance$group.row.dt
+      fold.dt[, table(fold, stratum)]
+      fold.dt[, table(group, stratum)]
+      fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
+      fpg.dt.list[[paste(algo, comb.i)]] <- data.table(algo, comb, fpg)
+    }
+  }
+  ## calculations to see why there are not same strata counts across folds.
+  ##dcast(melt(dcast(grdt[[3]][, .(row=.I, fold, y, g_ord)][, r := min(row), by=g_ord], r ~ fold+y), id="r")[, cum := cumsum(value), by=variable], r ~ variable, value.var="cum")
+  ## 69:   137       45      1       45      1       44      2
+  ## 70:   139       46      2       45      1       44      2
+  ideal <- c(45,5)
+  ideal-c(45,1)#16
+  ideal-c(46,2)#10
+  ideal-c(44,2)#10
+  ideal-c(45,3)#4
+  fpg.dt <- rbindlist(fpg.dt.list)
+  expect_equal(fpg.dt[algo=="RSS" & nfold==3, sort(N)], rep(c(5,45),each=6))
+  expect_equal(fpg.dt[algo=="RSS" & nfold==5, sort(N)], rep(c(3,27),each=10))
+})
+
+test_that("deterministic fold assignment for unique group sizes with multiple strata", {
+  files <- rbind(
+    data.table(g="f1g1", y=c(1,2)),
+    data.table(g="f1g2", y=c(2,2)),
+    data.table(g="f2g1", y=c(1,2,2)),
+    data.table(g="f2g2", y=c(2)),
+    data.table(g="f3g1", y=c(1,2,2,2)))
+  ideal <- as.numeric(files[, table(y)]/3)
+  files[, table(g, y)]
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
+  fpg.dt.list <- list()
   for(comb.i in 1:nrow(comb.dt)){
     comb <- comb.dt[comb.i]
     task_amr = mlr3::as_task_classif(files, target = "y")
@@ -1095,15 +1139,35 @@ test_that("prop sizes for regular sized groups with multiple strata", {
     task_amr$set_col_roles("y", roles = c("target", "stratum"))
     task_amr$col_roles
     test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
-    test.validation.resampling$param_set$values$folds <- comb$nfold
     test.validation.resampling$instantiate(task_amr)
     fold.dt <- test.validation.resampling$instance$fold.dt
-    fold.dt[, table(fold, stratum)]
-    fold.dt[, table(group, stratum)]
-    fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
+    expect_equal(sum(fold.dt[, t(table(fold, stratum))]==ideal), 6)
+    fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
     fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
   }
   fpg.dt <- rbindlist(fpg.dt.list)
-  expect_equal(fpg.dt[nfold==3, sort(N)], rep(c(5,45),each=6))
-  expect_equal(fpg.dt[nfold==5, sort(N)], rep(c(3,27),each=10))
+  folds <- dcast(fpg.dt, set_group + group ~ run, value.var="fold")
+  expect_false(folds[set_group==FALSE, identical(run1, run2)])
+  ## the groups are all different, so different variance, same sort
+  ## order, no randomness between runs.
+  folds[set_group==TRUE,  expect_identical(run1, run2)]
+})
+
+test_that("folds ok for AZtrees", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$group <- "polygon"
+  trees_task$col_roles$stratum <- "y"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  computed.mean <- with(olist, mean(groups==groups[,1]))
+  expect_lt(computed.mean, 1)
 })
