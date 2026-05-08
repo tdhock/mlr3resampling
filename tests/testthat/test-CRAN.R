@@ -2,7 +2,7 @@ library(testthat)
 library(data.table)
 if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 
-test_that("resampling error if no group", {
+test_that("resampling error if no subset", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_error({
@@ -31,7 +31,7 @@ test_that("instantiation creates instance", {
   expect_identical(same_other$instance$id.dt$g, iris.dt$g)
 })
 
-test_that("error for subset named subset", {
+test_that("error for subset col named subset", {
   iris.dt <- data.table(iris)[, subset := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "subset"
@@ -43,7 +43,7 @@ test_that("error for subset named subset", {
   }, "col with role subset must not be named subset; please fix by renaming subset col")
 })
 
-test_that("error for group named row_id", {
+test_that("error for subset col named row_id", {
   iris.dt <- data.table(iris)[, row_id := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "row_id"
@@ -55,7 +55,7 @@ test_that("error for group named row_id", {
   }, "col with role subset must not be named row_id; please fix by renaming row_id col")
 })
 
-test_that("error for group named fold", {
+test_that("error for subset col named fold", {
   iris.dt <- data.table(iris)[, fold := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "fold"
@@ -79,7 +79,7 @@ test_that("error for group named display_row", {
   }, "col with role subset must not be named display_row; please fix by renaming display_row col")
 })
 
-test_that("error for group named test", {
+test_that("error for subset col named test", {
   iris.dt <- data.table(iris)[, test := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "test"
@@ -1153,3 +1153,21 @@ test_that("deterministic fold assignment for unique group sizes with multiple st
   folds[set_group==TRUE,  expect_identical(run1, run2)]
 })
 
+test_that("folds ok for AZtrees", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$group <- "polygon"
+  trees_task$col_roles$stratum <- "y"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  computed.mean <- with(olist, mean(groups==groups[,1]))
+  expect_lt(computed.mean, 1)
+})
