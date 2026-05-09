@@ -14,7 +14,7 @@ litedown::reactor(
 data.table::setDTthreads(1)
 ```
 
-In `mlr3` a data set is represented as a `Task` with meta-data called roles which define how columns should be used for learning and evaluation.
+In `mlr3`, a data set is represented as a `Task` with meta-data called roles which define how columns should be used for learning and evaluation.
 The goal of this vignette is to explain how to use the new `subset` role with previous `group` and `stratum` roles.
 
 # Introduction: role definitions
@@ -92,7 +92,7 @@ trees()
 
 We see in above that 
 
-* in `rows`, there are about the same label distribution per fold (plus or minus 10 or 20 labels across folds), but not exactly the same (this can be achieved by setting `stratum` role). In `TOTAL` row we see the same number of rows per fold (plus or minus 1 because the total number of rows has a remainder when divided into the number of folds).
+* in `rows`, there is about the same label distribution per fold (plus or minus 10 or 20 labels across folds), but not exactly the same (this can be achieved by setting `stratum` role). In `TOTAL` row we see the same number of rows per fold (plus or minus 1 because the total number of rows has a remainder when divided into the number of folds).
 * in `groups`, rows from some polygons have been split into several different folds (`1,2` etc.), which is undesirable (and can be avoided by setting `group` role).
 
 Below we do it again to emphasize the random variation that can occur (especially in label counts) when roles are not set:
@@ -120,7 +120,7 @@ trees(stratum="y")
 Above we see that
 
 * in `rows`, both the label counts, and the `TOTAL`, are consistent across folds (plus or minus 1).
-* in `groups`, there is large variation across folds, and some polygons have been split into different folds (columnn named `1,2` etc.).
+* in `groups`, there is large variation across folds, and some polygons have been split into different folds (column named `1,2` etc.).
 
 Below we run the previous `mlr3` method for comparison.
 
@@ -140,7 +140,7 @@ trees(group="polygon")
 
 Above we see 
 
-* in `rows`, there is substantial label distribution variation across folds (count differences of about 100, which can be avoided by setting `stratum` role). We see the `TOTAL` number of rows is equal across folds (again plus or minus 1).
+* in `rows`, there is substantial label distribution variation across folds (which can be avoided by setting `stratum` role). We see the `TOTAL` number of rows is equal across folds (again plus or minus 1).
 * in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
 
 Below we do it again to emphasize the random variation that can occur (especially in label counts) in this case:
@@ -181,7 +181,7 @@ trees(stratum="y", group="polygon")
 
 Above we see
 
-* in `rows`, there labels and `TOTAL` are consistent across folds (again plus or minus 1).
+* in `rows`, the labels counts and `TOTAL` are consistent across folds (again plus or minus 1).
 * in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
 
 Below we do it again to emphasize the random variation that does not occur in this case:
@@ -190,7 +190,7 @@ Below we do it again to emphasize the random variation that does not occur in th
 trees(stratum="y", group="polygon")
 ```
 
-Above we see consistent counts (no variation in counts across random seeds).
+Above we see consistent counts (no variation in counts across random seeds in these data).
 
 Next, we try regular CV from mlr3,
 
@@ -222,6 +222,9 @@ trees_task$col_roles$stratum <- c("region3","y")
 trees_task$col_roles$group <- "polygon"
 ```
 
+Note above that there are two strata variables: the subset variable `region3`, and the target variable `y`.
+In general, both the target and subset variables should be used for `stratum`, so that folds are as balanced as possible.
+
 Below we compute the row and group counts by label, fold, and subset.
 
 ```{r}
@@ -240,6 +243,60 @@ out_list
 ```
 
 Above we see that the label row counts in NE and NW are very similar across folds, but subset S is more variable, because there are so few polygons (two folds with only one negative polygon).
+
+# Example using respiratory data
+
+These are medical data,
+
+* with a binary target `outcome` (values 0 or 1),
+* person `id` used for group.
+
+First we define a helper function,
+
+```{r}
+resp_counts <- function(Subset)if(requireNamespace("geepack")){
+  data(respiratory, package="geepack")
+  resp_dt <- data.table(respiratory)[, person := paste(center, id)]
+  resp_task <- mlr3::as_task_classif(resp_dt, target="outcome")
+  resp_task$col_roles$subset <- Subset
+  resp_task$col_roles$stratum <- c(Subset, "outcome")
+  resp_task$col_roles$group <- "person"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  cv$instantiate(resp_task)
+  role_dt <- data.table(respiratory, cv$instance$fold.dt)[, subval := get(Subset)]
+  in_list <- list(
+    rows=role_dt,
+    groups=role_dt[, .(rows=.N), by=.(outcome, id, fold, subval)])
+  out_list <- list()
+  for(unit in names(in_list)){
+    in_dt <- in_list[[unit]][, fsub := paste0(subval, "_fold", fold)]
+    out_list[[unit]] <- rbind(in_dt[, table(outcome, fsub)], TOTAL=in_dt[, table(fsub)])
+  }
+  out_list
+}
+```
+
+## Are models consistent across sex?
+
+To see if we can learn a model which can combine data across sex, or predict well on one sex after training on the other, we can use sex as `subset` role.
+
+```{r}
+resp_counts("sex")
+```
+
+The results above show row and group counts per label, sex, and fold.
+We see that the code works well for generating balanced folds.
+
+## Are models consistent across centers?
+
+To see if we can learn a model which can combine data across centers, or predict well on one center after training on the other, we can use center as `subset` role.
+
+```{r}
+resp_counts("center")
+```
+
+The results above show row and group counts per label, center, and fold.
+We see that the code works well for generating balanced folds.
 
 # Conclusion
 
