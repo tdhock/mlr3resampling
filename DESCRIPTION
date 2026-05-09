@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.5.1
+Version: 2026.5.9
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -66,6 +66,7 @@ Imports:
     Rcpp
 Suggests:
     pbdMPI,
+    geepack,
     ggplot2,
     animint2,
     mlr3tuning,
