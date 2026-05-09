@@ -1153,12 +1153,14 @@ test_that("deterministic fold assignment for unique group sizes with multiple st
   folds[set_group==TRUE,  expect_identical(run1, run2)]
 })
 
-test_that("folds ok for AZtrees", {
+test_that("folds ok for AZtrees(group,stratum)", {
   data(AZtrees, package="mlr3resampling")
   trees_task <- mlr3::as_task_classif(AZtrees, target="y")
   trees_task$col_roles$group <- "polygon"
   trees_task$col_roles$stratum <- "y"
   cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 2
+  cv$param_set$values$folds <- folds
   cv$instantiate(trees_task)
   glist <- list(
     rows=cv$instance$fold.dt,
@@ -1168,6 +1170,53 @@ test_that("folds ok for AZtrees", {
     idt <- glist[[item]]
     olist[[item]] <- idt[, table(stratum, fold)]
   }
+  olist
   computed.mean <- with(olist, mean(groups==groups[,1]))
   expect_lt(computed.mean, 1)
+  rows.per.fold <- as.numeric(table(AZtrees$y))/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds*length(rows.per.fold))
+})
+
+test_that("folds ok for AZtrees(group)", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$group <- "polygon"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 4
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  olist
+  computed.mean <- with(olist, mean(groups==groups[1]))
+  expect_lt(computed.mean, 1)
+  rows.per.fold <- nrow(AZtrees)/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds)
+})
+
+test_that("folds ok for AZtrees(stratum)", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$stratum <- "y"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 2
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  rows.per.fold <- as.numeric(table(AZtrees$y))/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds*length(rows.per.fold))
+  expect_equal(sum(olist$groups==rows.per.fold), folds*length(rows.per.fold))
 })
