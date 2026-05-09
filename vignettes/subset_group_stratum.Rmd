@@ -1,0 +1,137 @@
+---
+vignette: >
+  %\VignetteIndexEntry{Using subset with group and stratum}
+  %\VignetteEngine{litedown::vignette}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+litedown::reactor(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width=10,
+  fig.height=6)
+data.table::setDTthreads(1)
+```
+
+In `mlr3` a data set is represented as a `Task` with meta-data called roles which define how columns should be used for learning and evaluation.
+The goal of this vignette is to explain how to use the new `subset` role with previous `group` and `stratum` roles.
+
+# Introduction: role definitions
+
+Previous column roles in `mlr3` are:
+
+* `stratum`: proportions should be respected when splitting.
+* `group`: rows that must stay together when splitting.
+
+New column role proposed in `mlr3resampling` is:
+
+* `subset`: one value is test, same/other/all values are train.
+
+# Example using AZtrees data
+
+The `AZtrees` data represent an image segmentation problem.
+Each row is a pixel, which we want to classify as tree or not (`stratum` role).
+Data were labeled by drawing polygons on a map (`group` role).
+Data are divided into either 3 or 4 regions (`subset` role).
+
+```{r}
+data(AZtrees, package="mlr3resampling")
+library(data.table)
+options(datatable.print.keys=FALSE, datatable.print.class=FALSE)
+AZtrees[, .(region3, polygon, y)]
+```
+
+Above we see the three columns that are relevant for these roles in these data.
+Below we define a helper function which creates a `Task` and assigns roles based on arguments.
+
+```{r}
+trees <- function(..., cv=NULL, folds=3L){
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  role_list <- list(...)
+  for(role in names(role_list)){
+    trees_task$col_roles[[role]] <- role_list[[role]]
+  }
+  if(is.null(cv))cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  role_dt <- data.table(AZtrees)
+  for(fold in 1:folds){
+    set(role_dt, cv$test_set(fold), "fold", fold)
+  }
+  setkey(role_dt, polygon, fold)
+  in_list <- list(
+    rows=role_dt,
+    groups=role_dt[, .(fold=paste(unique(fold), collapse=",")), by=.(y,polygon)])
+  out_list <- list()
+  for(unit in names(in_list)){
+    in_dt <- in_list[[unit]]
+    out_list[[unit]] <- rbind(in_dt[, table(y, fold)], TOTAL=in_dt[, table(fold)])
+  }
+  out_list
+}
+set.seed(1)
+```
+
+Above we set the seed to obtain reproducible results below (fold assignment is random).
+
+## Cross-validation with no column roles
+
+Below we show counts of rows and groups in each fold, when no column roles are set:
+
+```{r}
+trees()
+```
+
+We see in above that 
+
+* in `rows`, there are about the same label distribution per fold (plus or minus 10 or 20 labels across folds), but not exactly the same (this can be achieved by setting `stratum` role). In `TOTAL` row we see the same number of rows per fold (plus or minus 1 because the total number of rows has a remainder when divided into the number of folds).
+* in `groups`, rows from some polygons have been split into several different folds (`1,2` etc.), which is undesirable (and can be avoided by setting `group` role).
+
+Below we do it again to emphasize the random variation that can occur (especially in label counts) when roles are not set:
+
+```{r}
+trees()
+```
+
+Below we compare with the previous `mlr3` code:
+
+```{r}
+trees(cv=mlr3::rsmp("cv"))
+```
+
+When no column roles are set, results are similar between previous `mlr3` and proposed `mlr3resampling`.
+
+## Cross-validation on polygons
+
+Below we compute counts when setting `group` role to `polygon`:
+
+```{r}
+trees(group="polygon")
+```
+
+Above we see 
+
+* in `rows`, there is substantial label distribution variation across folds (count differences of about 100, which can be avoided by setting `stratum` role). We see the `TOTAL` number of rows is equal across folds (again plus or minus 1).
+* in `group_counts` 
+* in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
+
+Below we do it again to emphasize the random variation that can occur (especially in label counts) in this case:
+
+```{r}
+trees(group="polygon")
+```
+
+Above we see `TOTAL` is the same, but label counts per fold have changed.
+
+Next, we try regular CV from mlr3,
+
+```{r}
+trees(group="polygon", cv=mlr3::rsmp("cv"))
+```
+
+We see a very different pattern: `TOTAL=63` polygons per group, but there is large variation in the number of rows per fold.
+
+This comparison shows that the proposed `mlr3resampling` provides a new method for fold assignment using groups, that was not previously available in `mlr3`.
+
+
