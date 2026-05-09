@@ -1,3 +1,7 @@
+Changes in version 2026.5.1 (PR#91)
+
+- New subset_group_stratum vignette, with analysis of counts per fold, using column roles group, stratum, subset.
+
 Changes in version 2026.5.1 (PR#90)
 
 - ResamplingSameOtherSizesCV$instantiate() gains param group_stratum_algo, which is used to determine the fold assignment algorithm for Tasks with groups and strata (even if each group is in only one stratum). Default "RSS" uses novel C++ code, linear time heuristic for minimizing residual sum of squares (RSS), between actual and ideal counts in each stratum/fold. The previous method can be used via "WasikowskiLinearMemory" (named after author of Kaggle post), and is slightly slower and less accurate (in terms of RSS).
