@@ -2,7 +2,7 @@
 \alias{ResamplingSameOtherSizesCV}
 \title{Resampling for comparing train subsets and sizes}
 \description{
-  \code{\link{ResamplingSameOtherSizesCV}}
+  \code{ResamplingSameOtherSizesCV}
   defines how a task is partitioned for
   resampling, for example in
   \code{\link[mlr3:resample]{resample()}} or
@@ -42,61 +42,32 @@
 }
 \section{Stratification}{
 
-\code{\link{ResamplingSameOtherSizesCV}} supports stratified sampling.
+\code{ResamplingSameOtherSizesCV} supports stratified sampling.
 The stratification variables are assumed to be discrete,
-and must be stored in the \link[mlr3:Task]{Task} with column role \code{"stratum"}.
+and must be stored in the \link[mlr3:Task]{Task} with column role
+\code{"stratum"}.
+If that role is not set, then all data are assigned to one stratum.
 In case of multiple stratification variables,
-each combination of the values of the stratification variables forms a stratum.
+each combination of the values of the stratification variables forms a
+stratum.
+Downsampling attempts to preserve proportions in each stratum.
 }
 
 \section{Grouping}{
 
-\code{\link{ResamplingSameOtherSizesCV}} supports grouping of
+\code{ResamplingSameOtherSizesCV} supports grouping of
 observations that will not be split in cross-validation.
 The grouping variable is assumed to be discrete,
 and must be stored in the \link[mlr3:Task]{Task} with column role
 \code{"group"}.
-
-}
-
-\section{Grouping and stratification}{
-
-When grouping and stratification are both used,
-computing an optimal fold assignment is NP-hard (discrete, need
-to try all possible assignments of groups to folds to find best
-solution).
-Instead of computing the optimal solution (slow), we implement heuristic
-algorithms (fast), which yield approximate solutions.
-The choice of which heuristic is controlled by the
-\code{group_stratum_algo} parameter, which can take these values:
-\describe{
-  \item{\code{"RSS"}}{Default heuristic algorithm which attempts to
-    minimize the residual sum of squares, between actual and ideal
-    values of the strata/fold count matrix.
-    First groups are sorted by RSS (group counts - ideal counts per stratum).
-    Then groups are greedily assigned a fold; best fold results in min RSS.
-    For N data, K folds, G groups, and S strata, the algorithm is
-    \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
-  \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
-    \code{StratifiedGroupKFold}, adapted from
-    \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
-    First groups are sorted by standard deviation over strata counts.
-    Then groups are greedily assigned a fold; best fold results in the
-    smallest mean SD of the strata/fold count matrix (SD over folds is
-    computed for each stratum, then mean of SDs, minimized over folds).
-    For N data, K folds, G groups, and S strata, the algorithm is
-    \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
-    S are both large).}
-  \item{\code{"WasikowskiLinearMemory"}}{Same logic and time complexity
-    but only \code{O(N + S K)} memory.}
-}
+If that role is not set, then each row is assigned to a different group.
 
 }
 
 \section{Subsets}{
 
-\code{\link{ResamplingSameOtherSizesCV}} supports training on different
-subsets of observations.
+\code{ResamplingSameOtherSizesCV} supports fixing a test subset,
+then training on same/other/all subsets.
 The subset variable is assumed to be discrete,
 and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"}.
 
@@ -132,13 +103,43 @@ interest: \code{"S"} (same),
 \code{"O"} (other), \code{"A"} (all), \code{"SO"}, \code{"SA"},
 \code{"SOA"} (default).
 
-In each subset, there will be about an equal number of observations
-assigned to each of the K folds.
+We want to assign folds such that groups are not split (hard
+constraint), and strata proportions are preserved (objective to optimize).
+Computing an optimal fold assignment is NP-hard (discrete, need
+to try all possible assignments of groups to folds to find best
+solution).
+Instead of computing the optimal solution (slow), we implement heuristic
+algorithms (fast), which yield approximate solutions.
+The choice of which heuristic is controlled by the
+\code{group_stratum_algo} parameter, which can take these values:
+\describe{
+  \item{\code{"RSS"}}{Default heuristic algorithm which attempts to
+    minimize the residual sum of squares, between actual and ideal
+    values of the strata/fold count matrix.
+    First groups are sorted by RSS (group counts - ideal counts per stratum).
+    Then groups are greedily assigned a fold; best fold results in min RSS.
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
+  \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
+    \code{StratifiedGroupKFold}, adapted from
+    \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
+    First groups are sorted by standard deviation over strata counts.
+    Then groups are greedily assigned a fold; best fold results in the
+    smallest mean SD of the strata/fold count matrix (SD over folds is
+    computed for each stratum, then mean of SDs, minimized over folds).
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
+    S are both large).}
+  \item{\code{"WasikowskiLinearMemory"}}{Same logic and time complexity
+    but only \code{O(N + S K)} memory.}
+}
+
 The train/test splits are defined by all possible combinations of
 test subset, test fold, train subsets (same/other/all), down-sampling
 sizes, and random seeds.
 The splits are stored in
 \verb{$instance$iteration.dt}.
+
 }
 
 \examples{
