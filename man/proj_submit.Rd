@@ -86,10 +86,12 @@ mlr3resampling::proj_grid(
   reg.task.list,
   reg.learner.list,
   SOAK,
-  order_jobs = function(DT)1:2, # for CRAN.
   score_args=mlr3::msrs(c("regr.rmse", "regr.mae")))
+
+\dontrun{
 if(requireNamespace("future.apply"))future::plan("multisession")
 mlr3resampling::proj_compute_all(pkg.proj.dir)
 if(requireNamespace("future.apply"))future::plan("sequential")
+}
 
 }
