@@ -43,6 +43,13 @@ AZtrees[, .(region3, polygon, y)]
 ```
 
 Above we see the three columns that are relevant for these roles in these data.
+Below we count the number of rows for each polygon,
+
+```{r}
+dcast(AZtrees, polygon ~ y, length)[order(`Not tree`, -Tree)]
+```
+
+Above we see that there are several big polygons with no trees (hundreds of rows), whereas the polygons for presence of trees are smaller (max 45 rows).
 Below we define a helper function which creates a `Task` and assigns roles based on arguments.
 
 ```{r}
@@ -102,6 +109,27 @@ trees(cv=mlr3::rsmp("cv"))
 
 When no column roles are set, results are similar between previous `mlr3` and proposed `mlr3resampling`.
 
+## Cross-validation using strata
+
+Next, we illustrate the `stratum` column role.
+
+```{r}
+trees(stratum="y")
+```
+
+Above we see that
+
+* in `rows`, both the label counts, and the `TOTAL`, are consistent across folds (plus or minus 1).
+* in `groups`, there is large variation across folds, and some polygons have been split into different folds (columnn named `1,2` etc.).
+
+Below we run the previous `mlr3` method for comparison.
+
+```{r}
+trees(stratum="y", cv=mlr3::rsmp("cv"))
+```
+
+Above we see the same patterns, except `rows` `TOTAL` is slightly less consistent (plus or minus 2 instead of 1).
+
 ## Cross-validation on polygons
 
 Below we compute counts when setting `group` role to `polygon`:
@@ -113,7 +141,6 @@ trees(group="polygon")
 Above we see 
 
 * in `rows`, there is substantial label distribution variation across folds (count differences of about 100, which can be avoided by setting `stratum` role). We see the `TOTAL` number of rows is equal across folds (again plus or minus 1).
-* in `group_counts` 
 * in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
 
 Below we do it again to emphasize the random variation that can occur (especially in label counts) in this case:
@@ -132,6 +159,88 @@ trees(group="polygon", cv=mlr3::rsmp("cv"))
 
 We see a very different pattern: `TOTAL=63` polygons per group, but there is large variation in the number of rows per fold.
 
-This comparison shows that the proposed `mlr3resampling` provides a new method for fold assignment using groups, that was not previously available in `mlr3`.
+Finally, we compare results for a larger number of folds.
 
+```{r}
+more.folds <- 5
+trees(group="polygon", folds=more.folds)
+trees(group="polygon", folds=more.folds, cv=mlr3::rsmp("cv"))
+```
 
+Above we see that `mlr3resampling` results in a fold with one polygon and one class (unusable), whereas `mlr3` yields both classes in every fold. This kind of failure only happens in data sets where the total number of rows is small, there is a very large group, a large number of folds, and `stratum` role not set (see fix below).
+
+This section showed that the proposed `mlr3resampling` provides a new method for fold assignment using groups (total row counts equalized across folds), that is not the same as the previous method available in `mlr3` (group counts equalized across folds).
+
+## Cross-validation on polygons with strata
+
+Below we compute counts when setting `stratum` and `group` roles.
+
+```{r}
+trees(stratum="y", group="polygon")
+```
+
+Above we see
+
+* in `rows`, there labels and `TOTAL` are consistent across folds (again plus or minus 1).
+* in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
+
+Below we do it again to emphasize the random variation that does not occur in this case:
+
+```{r}
+trees(stratum="y", group="polygon")
+```
+
+Above we see consistent counts (no variation in counts across random seeds).
+
+Next, we try regular CV from mlr3,
+
+```{r error=TRUE, purl=FALSE}
+trees(stratum="y", group="polygon", cv=mlr3::rsmp("cv"))
+```
+
+Above we see an error, because `mlr3` does not implement the heuristic fold assignment algorithm for the case of groups and strata at the same time.
+
+Finally, we compare results for a larger number of folds.
+
+```{r}
+trees(stratum="y", group="polygon", folds=more.folds)
+```
+
+We see above thet all folds have some data from both classes.
+One fold is much larger than the others, because there is one group that is very large.
+
+This comparison shows that the proposed `mlr3resampling` provides a new method for fold assignment using groups and strata, that was not previously available in `mlr3`.
+
+## Cross-validation with subsets, strata, and groups
+
+Below we define a task with all three roles:
+
+```{r}
+trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+trees_task$col_roles$subset <- "region3"
+trees_task$col_roles$stratum <- c("region3","y")
+trees_task$col_roles$group <- "polygon"
+```
+
+Below we compute the row and group counts by label, fold, and subset.
+
+```{r}
+cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+cv$instantiate(trees_task)
+role_dt <- data.table(AZtrees, cv$instance$fold.dt)
+in_list <- list(
+  rows=role_dt,
+  groups=role_dt[, .(rows=.N), by=.(y, polygon, test.subset, fold)])
+out_list <- list()
+for(unit in names(in_list)){
+  in_dt <- in_list[[unit]][, fsub := paste0(test.subset, fold)]
+  out_list[[unit]] <- rbind(in_dt[, table(y, fsub)], TOTAL=in_dt[, table(fsub)])
+}
+out_list
+```
+
+Above we see that the label row counts in NE and NW are very similar across folds, but subset S is more variable, because there are so few polygons (two folds with only one negative polygon).
+
+# Conclusion
+
+Overall these results show that the proposed resampling methods can handle complex cross-validation experiments, including previous roles (`group` and `stratum`) and a new `subset` role.
