@@ -10,7 +10,7 @@
 
   Resampling objects can be instantiated on a
   \code{\link[mlr3:Task]{Task}},
-  which can use the \code{subset} role.
+  which can use two new roles: \code{subset} and \code{fold}.
   
   After instantiation, sets can be accessed via
   \verb{$train_set(i)} and
@@ -103,6 +103,10 @@ interest: \code{"S"} (same),
 \code{"O"} (other), \code{"A"} (all), \code{"SO"}, \code{"SA"},
 \code{"SOA"} (default).
 
+If \code{fold} column role is set, then that column will be used for
+non-random fold assignment (see Reproducibility vignette).
+Otherwise, the \code{group_stratum_algo} parameter controls the algorithm used for
+random fold assignment.
 We want to assign folds such that groups are not split (hard
 constraint), and strata proportions are preserved (objective to optimize).
 Computing an optimal fold assignment is NP-hard (discrete, need
@@ -113,20 +117,25 @@ algorithms (fast), which yield approximate solutions.
 The choice of which heuristic is controlled by the
 \code{group_stratum_algo} parameter, which can take these values:
 \describe{
-  \item{\code{"RSS"}}{Default heuristic algorithm which attempts to
+  \item{\code{"RSS"}}{Default, novel heuristic algorithm which attempts to
     minimize the residual sum of squares, between actual and ideal
     values of the strata/fold count matrix.
-    First groups are sorted by RSS (group counts - ideal counts per stratum).
-    Then groups are greedily assigned a fold; best fold results in min RSS.
+    First groups are sorted by RSS (group counts - ideal counts per
+    stratum); ties are broken using number of samples in group,
+    mean(ideal*actual) counts (mean over strata), random group order.
+    Then each group is greedily assigned a fold in order; best fold
+    results in min RSS, ties broken using total counts above ideal.
     For N data, K folds, G groups, and S strata, the algorithm is
     \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
   \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
     \code{StratifiedGroupKFold}, adapted from
     \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
-    First groups are sorted by standard deviation over strata counts.
-    Then groups are greedily assigned a fold; best fold results in the
+    First groups are sorted by standard deviation over strata counts;
+    ties are broken by random group order.
+    Then each group is greedily assigned a fold in order; best fold results in the
     smallest mean SD of the strata/fold count matrix (SD over folds is
-    computed for each stratum, then mean of SDs, minimized over folds).
+    computed for each stratum, then mean of SDs, minimized over folds),
+    ties broken using number of samples in fold.
     For N data, K folds, G groups, and S strata, the algorithm is
     \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
     S are both large).}
