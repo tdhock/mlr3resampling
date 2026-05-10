@@ -45,12 +45,16 @@
 \code{ResamplingSameOtherSizesCV} supports stratified sampling.
 The stratification variables are assumed to be discrete,
 and must be stored in the \link[mlr3:Task]{Task} with column role
-\code{"stratum"}.
+\code{stratum}.
 If that role is not set, then all data are assigned to one stratum.
 In case of multiple stratification variables,
 each combination of the values of the stratification variables forms a
 stratum.
-Downsampling attempts to preserve proportions in each stratum.
+When \code{fold} role is set, \code{stratum} role is not used for fold
+assignment (folds are taken from \code{fold} column in that case).
+When \code{sizes} param is at least 0, then downsampled train sets are
+created, and if \code{stratum} role is set, we will attempt to preserve
+strata proportions in downsampled train sets.
 }
 
 \section{Grouping}{
@@ -59,7 +63,7 @@ Downsampling attempts to preserve proportions in each stratum.
 observations that will not be split in cross-validation.
 The grouping variable is assumed to be discrete,
 and must be stored in the \link[mlr3:Task]{Task} with column role
-\code{"group"}.
+\code{group}.
 If that role is not set, then each row is assigned to a different group.
 
 }
@@ -69,7 +73,7 @@ If that role is not set, then each row is assigned to a different group.
 \code{ResamplingSameOtherSizesCV} supports fixing a test subset,
 then training on same/other/all subsets.
 The subset variable is assumed to be discrete,
-and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"}.
+and must be stored in the \link[mlr3:Task]{Task} with column role \code{subset}.
 
 }
 
