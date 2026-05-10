@@ -41,11 +41,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         "learner", "learner_id", "resampling", "resampling_id",
         "prediction")
       subset.vec <- task$col_roles[["subset"]]
+      if(length(subset.vec)>1)stop("subset role must be length 0 or 1")
       subset.dt <- data.table(
         test.subset=if(self$param_set$values$ignore_subset || length(subset.vec)==0){
           rep("full", task$nrow)
         }else{
-          bad.names <- subset.vec[subset.vec %in% reserved.names]
+          bad.names <- intersect(subset.vec, reserved.names)
           if(length(bad.names)){
             first.bad <- bad.names[1]
             stop(sprintf("col with role subset must not be named %s; please fix by renaming %s col", first.bad, first.bad))
@@ -68,7 +69,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         task$data(cols=acol)[[acol]]
       }else{
         1:task$nrow
-      }
+      }#mlr3 errors for group length>1.
       subset.groupic <- unique(data.table(subset.dt, group=avec))
       train.counts.wide <- subset.groupic[, .(
         full=.N

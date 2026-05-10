@@ -1241,3 +1241,18 @@ test_that("error for fold length 2",{
   kfold$instantiate(spam_with_fold)
   expect_is(kfold$instance, "list")
 })
+
+test_that("ResamplingSameOtherSizesCV error for 2 subset vars", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$subset <- c("random_group", "agroup")
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_error({
+    kfold$instantiate(reg.task)
+  }, "subset role must be length 0 or 1")
+  expect_null(kfold$instance)
+  reg.task$col_roles$subset <- "random_group"
+  kfold$instantiate(spam_with_fold)
+  expect_is(kfold$instance, "list")
+})
