@@ -23,14 +23,14 @@ Rcpp::IntegerVector stratified_group_cv_Wasikowski_interface
 }
 
 // [[Rcpp::export]]
-Rcpp::IntegerVector stratified_group_cv_WasikowskiLinearMemory_interface
+Rcpp::IntegerVector stratified_group_cv_WasikowskiLimitedMemory_interface
 (Rcpp::IntegerVector strat_vec,
  Rcpp::IntegerVector group_vec,
  int num_folds
  ){
   int N_data = strat_vec.length();
   Rcpp::IntegerVector fold_vec(N_data);
-  int status = stratified_group_cv_WasikowskiLinearMemory
+  int status = stratified_group_cv_WasikowskiLimitedMemory
     (strat_vec.begin(), group_vec.begin(), N_data, num_folds,
      // inputs above, outputs below.
      fold_vec.begin());

@@ -1,3 +1,7 @@
+Changes in version 2026.5.10
+
+- WasikowskiLinearMemory changed to WasikowskiLimitedMemory.
+
 Changes in version 2026.5.1 (PR#91)
 
 - New subset_group_stratum vignette, with analysis of counts per fold, using column roles group, stratum, subset.

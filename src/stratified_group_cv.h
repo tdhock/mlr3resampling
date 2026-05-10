@@ -12,7 +12,7 @@ int stratified_group_cv_Wasikowski
  // inputs above, outputs below.
  int* fold_ptr);
 
-int stratified_group_cv_WasikowskiLinearMemory
+int stratified_group_cv_WasikowskiLimitedMemory
 (const int* strat_ptr,
  const int* group_ptr,
  const int N_data,

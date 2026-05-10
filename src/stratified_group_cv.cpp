@@ -74,7 +74,7 @@ int stratified_group_cv_Wasikowski
   return 0;
 }
 
-int stratified_group_cv_WasikowskiLinearMemory
+int stratified_group_cv_WasikowskiLimitedMemory
 (const int* strat_ptr, // in 0,…,strat_max
  const int* group_ptr, // sorted, non-decreasing.
  const int N_data,

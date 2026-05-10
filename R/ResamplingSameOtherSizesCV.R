@@ -10,7 +10,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         sizes = paradox::p_int(-1, tags = "required"),
         ignore_subset = paradox::p_lgl(tags="required"),
         subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required"),
-        group_stratum_algo=paradox::p_fct(c("Wasikowski","WasikowskiLinearMemory","RSS"),tags="required")
+        group_stratum_algo=paradox::p_fct(c("Wasikowski","WasikowskiLimitedMemory","RSS"),tags="required")
       )
       ps$values = list(
         folds=3L,

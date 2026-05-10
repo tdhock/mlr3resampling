@@ -148,7 +148,7 @@ The choice of which heuristic is controlled by the
     For N data, K folds, G groups, and S strata, the algorithm is
     \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
     S are both large).}
-  \item{\code{"WasikowskiLinearMemory"}}{Same logic and time complexity
+  \item{\code{"WasikowskiLimitedMemory"}}{Same logic and time complexity
     but only \code{O(N + S K)} memory.}
 }
 

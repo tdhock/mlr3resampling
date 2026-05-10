@@ -1089,7 +1089,7 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   fpg.dt.list <- list()
   set.seed(1)
   grdt <- list()
-  for(algo in c("RSS", "Wasikowski", "WasikowskiLinearMemory")){
+  for(algo in c("RSS", "Wasikowski", "WasikowskiLimitedMemory")){
     for(comb.i in 1:nrow(comb.dt)){
       comb <- comb.dt[comb.i]
       task_amr = mlr3::as_task_classif(files, target = "y")

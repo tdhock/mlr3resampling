@@ -5,8 +5,8 @@ stratified_group_cv_Wasikowski_interface <- function(strat_vec, group_vec, num_f
     .Call('_mlr3resampling_stratified_group_cv_Wasikowski_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
 }
 
-stratified_group_cv_WasikowskiLinearMemory_interface <- function(strat_vec, group_vec, num_folds) {
-    .Call('_mlr3resampling_stratified_group_cv_WasikowskiLinearMemory_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
+stratified_group_cv_WasikowskiLimitedMemory_interface <- function(strat_vec, group_vec, num_folds) {
+    .Call('_mlr3resampling_stratified_group_cv_WasikowskiLimitedMemory_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
 }
 
 stratified_group_cv_RSS_interface <- function(strat_vec, group_vec, num_folds) {
