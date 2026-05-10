@@ -157,8 +157,8 @@ sizes, and random seeds.
 After \code{$instantiate()} is called,
 \code{$instance} is a list of data about the splits, with elements:
 \describe{
-  \item{iteration.dt} data table with one row per split.
-  \item{fold.dt} data table with same number of rows as task data.
+  \item{iteration.dt}{data table with one row per split.}
+  \item{fold.dt}{data table with same number of rows as task data.}
 }
 
 }
