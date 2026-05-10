@@ -53,7 +53,7 @@ stratum.
 When \code{fold} role is set, \code{stratum} role is not used for fold
 assignment (folds are taken from \code{fold} column in that case).
 When \code{sizes} param is at least 0, then downsampled train sets are
-created, and if \code{stratum} role is set, we will attempt to preserve
+created, and if \code{stratum} role is set, we attempt to preserve
 strata proportions in downsampled train sets.
 }
 
@@ -67,7 +67,7 @@ If that role is not set, then each row is assigned to a different group.
 When \code{fold} role is set, \code{group} role is not used for fold
 assignment (folds are taken from \code{fold} column in that case).
 When \code{sizes} param is at least 0, then downsampled train sets are
-created, and if \code{group} role is set, we will keep groups together
+created, and if \code{group} role is set, we keep groups together
 in downsampled train sets.
 }
 
@@ -83,25 +83,24 @@ and must be stored in the \link[mlr3:Task]{Task} with column role \code{subset}.
 The number of cross-validation folds K should be defined as the
 \code{fold} parameter, default 3.
 
-The number of random seeds for down-sampling should be defined as the
+The number of random seeds for downsampling should be defined as the
 \code{seeds} parameter, default 1.
 
-The ratio for down-sampling should be defined as the \code{ratio}
-parameter, default 0.5. The min size of same and other sets is
-repeatedly multiplied by this ratio, to obtain smaller sample sizes.
-
-The number of down-sampling sizes/multiplications should be defined as
+The number of downsampling train set sizes should be defined as
 the \code{sizes} parameter, which can also take two special values:
-default -1 means no down-sampling at all, and 0 means only down-sampling
-to the sizes of the same/other sets.
+default -1 means no downsampling at all, and 0 means only downsampling
+to the min of same/other sets (in units of groups).
+
+The ratio for downsampling should be defined as the \code{ratio}
+parameter, default 0.5. The min size of same and other sets is
+repeatedly multiplied by this ratio, to obtain smaller sizes (in units
+of groups).
 
 The \code{ignore_subset} parameter should be either \code{TRUE} or
 \code{FALSE} (default), whether to ignore the \code{subset}
 role. \code{TRUE} only creates splits for same subset (even if task
 defines \code{subset} role), and is useful for subtrain/validation
-splits (hyper-parameter learning). Note that this feature will work on a
-task with both \code{stratum} and \code{group} roles (unlike
-\code{ResamplingCV}).
+splits (hyper-parameter learning).
 
 The \code{subsets} parameter should specify the train subsets of
 interest: \code{"S"} (same),
@@ -113,7 +112,11 @@ non-random fold assignment (see Reproducibility vignette).
 Otherwise, the \code{group_stratum_algo} parameter controls the algorithm used for
 random fold assignment.
 We want to assign folds such that groups are not split (hard
-constraint), and strata proportions are preserved (objective to optimize).
+constraint), and strata proportions are preserved (objective to
+optimize).
+Note that this feature works on a
+task with both \code{stratum} and \code{group} roles (unlike
+\code{ResamplingCV}).
 Computing an optimal fold assignment is NP-hard (discrete, need
 to try all possible assignments of groups to folds to find best
 solution).
@@ -149,10 +152,14 @@ The choice of which heuristic is controlled by the
 }
 
 The train/test splits are defined by all possible combinations of
-test subset, test fold, train subsets (same/other/all), down-sampling
+test subset, test fold, train subsets (same/other/all), downsampling
 sizes, and random seeds.
-The splits are stored in
-\verb{$instance$iteration.dt}.
+After \code{$instantiate()} is called,
+\code{$instance} is a list of data about the splits, with elements:
+\describe{
+  \item{iteration.dt} data table with one row per split.
+  \item{fold.dt} data table with same number of rows as task data.
+}
 
 }
 

@@ -92,11 +92,11 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       }else{
         data.table(stratum=rep(1L, task$nrow))
       }
-      group.row.dt <- data.table(
+      fold.dt <- data.table(
         ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
       fcol <- task$col_roles$fold
-      fold.dt <- if(length(fcol)==1){
+      if(length(fcol)==1){
         fold <- task$data(cols=fcol)[[fcol]]
         if(length(acol)==1){
           group.fold.dt <- unique(data.table(group=avec, fold))
@@ -104,39 +104,40 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             stop("task$col_roles$fold must be constant within each group")
           }
         }
-        data.table(group.row.dt, fold)
+        set(fold.dt, j="fold", value=fold)
       }else if(length(fcol)==0){
-        group.row.dt[, let(
+        fold.dt[, let(
           random_order = sample(.N),
           stratum_fac = factor(stratum)
         )]
         if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
-          group.row.dt[, let(
+          fold.dt[, let(
             neg_sd = -sd(table(stratum_fac)),
             g_ord = min(random_order)
           ), by=group]
-          setkey(group.row.dt, neg_sd, g_ord)
+          setkey(fold.dt, neg_sd, g_ord)
         }else{
-          ideal.tab <- group.row.dt[, table(stratum_fac)/n.folds]
-          group.row.dt[, let(
+          ideal.tab <- fold.dt[, table(stratum_fac)/n.folds]
+          fold.dt[, let(
             rss = sum((table(stratum_fac)-ideal.tab)^2),
             neg_nrow = -.N,
             freq = mean(ideal.tab*table(stratum_fac)),
             g_ord = min(random_order)
           ), by=group]
-          setkey(group.row.dt, rss, neg_nrow, freq, g_ord)
+          setkey(fold.dt, rss, neg_nrow, freq, g_ord)
         }
         fun <- get(paste0(
           "stratified_group_cv_",
           self$param_set$values$group_stratum_algo,
           "_interface"))
-        group.row.dt[
+        fold.dt[
         , fold := fun(
           stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
         )+1L]
       }else{
         stop("fold role must have length 0 or 1")
-      }[order(row_id), .(group, fold, test.subset, stratum, row_id)]
+      }
+      setkey(fold.dt, row_id)
       train.test.subset <- setkey(data.table(
         train.subsets
       )[
@@ -219,8 +220,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           iteration = .I,
           Train_subsets = factor(train.subsets, c("all","same","other"))
         )][],
-        fold.dt=fold.dt,
-        group.row.dt=group.row.dt)
+        fold.dt=fold.dt)
     }
   )
 )

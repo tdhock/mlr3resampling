@@ -1100,7 +1100,7 @@ test_that("prop sizes for regular sized groups with multiple strata", {
       test.validation.resampling$param_set$values$group_stratum_algo <- algo
       test.validation.resampling$instantiate(task_amr)
       fold.dt <- test.validation.resampling$instance$fold.dt
-      grdt[[comb.i]] <- test.validation.resampling$instance$group.row.dt
+      grdt[[comb.i]] <- fold.dt
       fold.dt[, table(fold, stratum)]
       fold.dt[, table(group, stratum)]
       fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
