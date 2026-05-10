@@ -51,7 +51,7 @@ In case of multiple stratification variables,
 each combination of the values of the stratification variables forms a
 stratum.
 When \code{fold} role is set, \code{stratum} role is not used for fold
-assignment (folds are taken from \code{fold} column in that case).
+assignment (folds are taken from \code{fold} role in that case).
 When \code{sizes} param is at least 0, then downsampled train sets are
 created, and if \code{stratum} role is set, we attempt to preserve
 strata proportions in downsampled train sets.
@@ -65,7 +65,7 @@ and must be stored in the \link[mlr3:Task]{Task} with column role
 \code{group}.
 If that role is not set, then each row is assigned to a different group.
 When \code{fold} role is set, \code{group} role is not used for fold
-assignment (folds are taken from \code{fold} column in that case).
+assignment (folds are taken from \code{fold} role in that case).
 When \code{sizes} param is at least 0, then downsampled train sets are
 created, and if \code{group} role is set, we keep groups together
 in downsampled train sets.
@@ -114,9 +114,10 @@ random fold assignment.
 We want to assign folds such that groups are not split (hard
 constraint), and strata proportions are preserved (objective to
 optimize).
-Note that this feature works on a
-task with both \code{stratum} and \code{group} roles (unlike
-\code{ResamplingCV}).
+To see exemples of how this works,
+read the vignette, Using subset with group and stratum.
+Note that this feature works on tasks with both \code{stratum} and
+\code{group} roles (unlike \code{ResamplingCV}).
 Computing an optimal fold assignment is NP-hard (discrete, need
 to try all possible assignments of groups to folds to find best
 solution).
