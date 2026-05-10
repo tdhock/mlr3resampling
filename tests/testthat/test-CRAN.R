@@ -1220,3 +1220,24 @@ test_that("folds ok for AZtrees(stratum)", {
   expect_equal(sum(olist$rows==rows.per.fold), folds*length(rows.per.fold))
   expect_equal(sum(olist$groups==rows.per.fold), folds*length(rows.per.fold))
 })
+
+test_that("error for fold length 2",{
+  spam <- mlr3::tsk("spam")
+  spam$col_roles$stratum <- "type"
+  sdata <- data.table(
+    spam$data(),
+    myfold=rep(1:3, length.out = spam$nrow),
+    Fold=rep(1:3, length.out = spam$nrow))
+  spam_with_fold <- mlr3::TaskClassif$new(
+    "spam_with_fold", sdata, target="type")
+  spam_with_fold$col_roles$fold <- c("Fold","myfold")
+  spam_with_fold$col_roles$feature <- spam$col_roles$feature
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_error({
+    kfold$instantiate(spam_with_fold)
+  }, "fold role must have length 0 or 1")
+  expect_null(kfold$instance)
+  spam_with_fold$col_roles$fold <- "Fold"
+  kfold$instantiate(spam_with_fold)
+  expect_is(kfold$instance, "list")
+})

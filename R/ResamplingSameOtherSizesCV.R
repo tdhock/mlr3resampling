@@ -105,7 +105,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           }
         }
         data.table(group.row.dt, fold)
-      }else{
+      }else if(length(fcol)==0){
         group.row.dt[, let(
           random_order = sample(.N),
           stratum_fac = factor(stratum)
@@ -134,6 +134,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         , fold := fun(
           stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
         )+1L]
+      }else{
+        stop("fold role must have length 0 or 1")
       }[order(row_id), .(group, fold, test.subset, stratum, row_id)]
       train.test.subset <- setkey(data.table(
         train.subsets
