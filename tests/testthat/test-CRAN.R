@@ -1253,6 +1253,6 @@ test_that("ResamplingSameOtherSizesCV error for 2 subset vars", {
   }, "subset role must be length 0 or 1")
   expect_null(kfold$instance)
   reg.task$col_roles$subset <- "random_group"
-  kfold$instantiate(spam_with_fold)
+  kfold$instantiate(reg.task)
   expect_is(kfold$instance, "list")
 })
