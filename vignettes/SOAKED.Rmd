@@ -34,6 +34,9 @@ standard.deviation.vec <- c(
   hard=1.7)
 ```
 
+There are two standard deviation parameters for the simulation: easy (small noise) and hard (large noise).
+Below we simulate and plot the data.
+
 ```{r}
 reg.data.list <- list()
 grid.signal.dt.list <- list()
@@ -50,8 +53,8 @@ for(difficulty in names(standard.deviation.vec)){
     x=grid.dt$x,
     y=sim_fun(grid.dt$x))
 }
-(reg.data <- rbindlist(reg.data.list))
-(grid.signal.dt <- rbindlist(grid.signal.dt.list))
+reg.data <- rbindlist(reg.data.list)
+grid.signal.dt <- rbindlist(grid.signal.dt.list)
 algo.colors <- c(
   featureless="blue",
   rpart="red",
@@ -73,18 +76,23 @@ if(require(ggplot2)){
 }
 ```
 
+Above we see the simulated data, which represent regression problems in 1D.
+There is a panel for each difficulty level, with a grey dot for each training data point, and a black curve that represents the ideal prediction function (same in both difficulty levels).
+
 ## mlr3 benchmark
 
-```{r}
-(reg.learner.list <- list(
-  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
-  mlr3::LearnerRegrFeatureless$new()))
+In this section, we define a benchmark using these simulated data.
+First, we create the SOAKED instance by setting `sizes=0`, and we use 10-fold CV.
 
+```{r}
 SOAKED <- mlr3resampling::ResamplingSameOtherSizesCV$new()
 SOAKED$param_set$values$sizes <- 0
 SOAKED$param_set$values$folds <- 10
-SOAKED$param_set$values$seeds <- 1
+```
 
+Next, we create and visualize two Tasks:
+
+```{r}
 set.seed(1)
 sim.meta.list <- list(
   different=rbind(
@@ -107,9 +115,10 @@ for(sim.name in names(sim.meta.list)){
   d_task_list[[sim.name]] <- sub_task
   if(require("ggplot2")){
     gg_list[[sim.name]] <- ggplot()+
-      ggtitle(paste("Simulation:", sim.name))+
+      ggtitle(paste("Task:", sim.name))+
       geom_point(aes(
         x, y),
+        shape=21,
         color="black",
         fill="white",
         data=sim.i.dt)+
@@ -123,7 +132,15 @@ for(sim.name in names(sim.meta.list)){
 gg_list
 ```
 
+The figures above show the two Tasks.
+Each Task has two subsets: large and small.
+
+* `iid_easy` has TODO
+
 ```{r}
+reg.learner.list <- list(
+  if(requireNamespace("rpart"))mlr3::LearnerRegrRpart$new(),
+  mlr3::LearnerRegrFeatureless$new())
 (reg.bench.grid <- mlr3::benchmark_grid(
   d_task_list,
   reg.learner.list,
