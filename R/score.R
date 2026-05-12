@@ -27,21 +27,9 @@ plot.score <- function(x, ..., value.var=NULL){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
     }
-    train_subsets <- levels(factor(x$Train_subsets))
-    subset_levels <- c(
-      c("all", "other", "same")[c("all", "other", "same") %in% train_subsets],
-      setdiff(train_subsets, c("all", "other", "same"))
-    )
-    dt <- data.table(x)[
-    , Train_subsets := factor(Train_subsets, subset_levels)
-    ][, value := get(value.var)][
-    order(Train_subsets, -n.train.groups)
-    ][, y.label := paste(Train_subsets, n.train.groups)][
-    , y.label := factor(y.label, unique(y.label))
-    ][]
     ggplot2::ggplot()+
       ggplot2::geom_point(ggplot2::aes(
-        value, y.label),
+        value, paste(Train_subsets, n.train.groups)),
         shape=1,
         data=dt)+
       ggplot2::facet_grid(
