@@ -2,23 +2,14 @@
 \alias{ResamplingSameOtherCV}
 \title{Resampling for comparing training on same or other subsets}
 \description{
-  \code{\link{ResamplingSameOtherCV}}
-  defines how a task is partitioned for
-  resampling, for example in
-  \code{\link[mlr3:resample]{resample()}} or
-  \code{\link[mlr3:benchmark]{benchmark()}}.
-
-  Resampling objects can be instantiated on a
-  \code{\link[mlr3:Task]{Task}},
-  which should define at least one subset variable.
-  
-  After instantiation, sets can be accessed via
-  \verb{$train_set(i)} and
-  \verb{$test_set(i)}, respectively. 
+  This is an old implementation of SOAK, Same/Other/All K-fold
+  cross-validation; see \code{\link{ResamplingSameOtherSizesCV}}
+  for the recommended implementation.
+  Use this only for visualization purposes
+  (see vignette, Older resamplers).
 }
 \details{
-  This provides an implementation of SOAK, Same/Other/All K-fold
-  cross-validation. After instantiation, this class provides information
+  After instantiation, this class provides information
   in \verb{$instance} that can be used for visualizing the
   splits, as shown in the vignette. Most typical machine learning users
   should instead use

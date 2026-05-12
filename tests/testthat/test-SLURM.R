@@ -29,7 +29,7 @@ if(requireNamespace("rpart")){
   reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
 }
 
-test_that("submit works", {
+if(requireNamespace("pbdMPI"))test_that("submit works", {
   pkg.proj.dir <- if(interactive())"~/mlr3resampling-test" else tempfile()
   unlink(pkg.proj.dir, recursive = TRUE)
   mlr3resampling::proj_grid(

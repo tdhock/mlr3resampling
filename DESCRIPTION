@@ -1,7 +1,7 @@
 Package: mlr3resampling
 Type: Package
 Title: Resampling Algorithms for 'mlr3' Framework
-Version: 2026.4.13
+Version: 2026.5.9
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -54,6 +54,7 @@ Description: A supervised learning algorithm inputs a train set,
 License: LGPL-3
 URL: https://github.com/tdhock/mlr3resampling
 BugReports: https://github.com/tdhock/mlr3resampling/issues
+LinkingTo: Rcpp, RcppArmadillo
 Imports:
     data.table,
     R6,
@@ -61,15 +62,18 @@ Imports:
     paradox,
     mlr3 (>= 1.0.0),
     mlr3misc,
-    methods
+    methods,
+    Rcpp
 Suggests:
     pbdMPI,
+    geepack,
     ggplot2,
     animint2,
     mlr3tuning,
     lgr,
     future, future.apply,
     testthat,
+    WeightedROC,
     nc,
     rpart,
     directlabels,

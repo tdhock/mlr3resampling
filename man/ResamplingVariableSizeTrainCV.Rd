@@ -1,19 +1,12 @@
 \name{ResamplingVariableSizeTrainCV}
 \alias{ResamplingVariableSizeTrainCV}
-\title{Resampling for comparing training on same or other groups}
+\title{Resampling with variable size train sets}
 \description{
-  \code{\link{ResamplingVariableSizeTrainCV}}
-  defines how a task is partitioned for
-  resampling, for example in
-  \code{\link[mlr3:resample]{resample()}} or
-  \code{\link[mlr3:benchmark]{benchmark()}}.
-
-  Resampling objects can be instantiated on a
-  \code{\link[mlr3:Task]{Task}}.
-
-  After instantiation, sets can be accessed via
-  \verb{$train_set(i)} and
-  \verb{$test_set(i)}, respectively. 
+  This is an old implementation of downsampling;
+  see \code{\link{ResamplingSameOtherSizesCV}}
+  for the recommended implementation.
+  Use this only for visualization purposes
+  (see vignette, Older resamplers).
 }
 \details{
   A supervised learning algorithm inputs a train set, and outputs a

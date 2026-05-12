@@ -2,7 +2,7 @@
 \alias{ResamplingSameOtherSizesCV}
 \title{Resampling for comparing train subsets and sizes}
 \description{
-  \code{\link{ResamplingSameOtherSizesCV}}
+  \code{ResamplingSameOtherSizesCV}
   defines how a task is partitioned for
   resampling, for example in
   \code{\link[mlr3:resample]{resample()}} or
@@ -10,7 +10,7 @@
 
   Resampling objects can be instantiated on a
   \code{\link[mlr3:Task]{Task}},
-  which can use the \code{subset} role.
+  which can use two new roles: \code{subset} and \code{fold}.
   
   After instantiation, sets can be accessed via
   \verb{$train_set(i)} and
@@ -40,32 +40,42 @@
   which are older and should only be preferred
   for visualization purposes.
 }
-\section{Stratification}{
 
-\code{\link{ResamplingSameOtherSizesCV}} supports stratified sampling.
+\section{Stratification}{
+\code{ResamplingSameOtherSizesCV} supports stratified sampling.
 The stratification variables are assumed to be discrete,
-and must be stored in the \link[mlr3:Task]{Task} with column role \code{"stratum"}.
+and must be stored in the \link[mlr3:Task]{Task} with column role
+\code{stratum}.
+If that role is not set, then all data are assigned to one stratum.
 In case of multiple stratification variables,
-each combination of the values of the stratification variables forms a stratum.
+each combination of the values of the stratification variables forms a
+stratum.
+When \code{fold} role is set, \code{stratum} role is not used for fold
+assignment (folds are taken from \code{fold} role in that case).
+When \code{sizes} param is at least 0, then downsampled train sets are
+created, and if \code{stratum} role is set, we attempt to preserve
+strata proportions in downsampled train sets.
 }
 
 \section{Grouping}{
-
-\code{\link{ResamplingSameOtherSizesCV}} supports grouping of
+\code{ResamplingSameOtherSizesCV} supports grouping of
 observations that will not be split in cross-validation.
 The grouping variable is assumed to be discrete,
 and must be stored in the \link[mlr3:Task]{Task} with column role
-\code{"group"}.
-
+\code{group}.
+If that role is not set, then each row is assigned to a different group.
+When \code{fold} role is set, \code{group} role is not used for fold
+assignment (folds are taken from \code{fold} role in that case).
+When \code{sizes} param is at least 0, then downsampled train sets are
+created, and if \code{group} role is set, we keep groups together
+in downsampled train sets.
 }
 
 \section{Subsets}{
-
-\code{\link{ResamplingSameOtherSizesCV}} supports training on different
-subsets of observations.
+\code{ResamplingSameOtherSizesCV} supports fixing a test subset,
+then training on same/other/all subsets.
 The subset variable is assumed to be discrete,
-and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"}.
-
+and must be stored in the \link[mlr3:Task]{Task} with column role \code{subset}.
 }
 
 \section{Parameters}{
@@ -73,38 +83,85 @@ and must be stored in the \link[mlr3:Task]{Task} with column role \code{"subset"
 The number of cross-validation folds K should be defined as the
 \code{fold} parameter, default 3.
 
-The number of random seeds for down-sampling should be defined as the
+The number of random seeds for downsampling should be defined as the
 \code{seeds} parameter, default 1.
 
-The ratio for down-sampling should be defined as the \code{ratio}
-parameter, default 0.5. The min size of same and other sets is
-repeatedly multiplied by this ratio, to obtain smaller sample sizes.
-
-The number of down-sampling sizes/multiplications should be defined as
+The number of downsampling train set sizes should be defined as
 the \code{sizes} parameter, which can also take two special values:
-default -1 means no down-sampling at all, and 0 means only down-sampling
-to the sizes of the same/other sets.
+default -1 means no downsampling at all, and 0 means only downsampling
+to the min of same/other sets (in units of groups).
+
+The ratio for downsampling should be defined as the \code{ratio}
+parameter, default 0.5. The min size of same and other sets is
+repeatedly multiplied by this ratio, to obtain smaller sizes (in units
+of groups).
 
 The \code{ignore_subset} parameter should be either \code{TRUE} or
 \code{FALSE} (default), whether to ignore the \code{subset}
 role. \code{TRUE} only creates splits for same subset (even if task
 defines \code{subset} role), and is useful for subtrain/validation
-splits (hyper-parameter learning). Note that this feature will work on a
-task with both \code{stratum} and \code{group} roles (unlike
-\code{ResamplingCV}).
+splits (hyper-parameter learning).
 
 The \code{subsets} parameter should specify the train subsets of
 interest: \code{"S"} (same),
 \code{"O"} (other), \code{"A"} (all), \code{"SO"}, \code{"SA"},
 \code{"SOA"} (default).
 
-In each subset, there will be about an equal number of observations
-assigned to each of the K folds.
+If \code{fold} column role is set, then that column will be used for
+non-random fold assignment (see Reproducibility vignette).
+Otherwise, the \code{group_stratum_algo} parameter controls the algorithm used for
+random fold assignment.
+We want to assign folds such that groups are not split (hard
+constraint), and strata proportions are preserved (objective to
+optimize).
+To see exemples of how this works,
+read the vignette, Using subset with group and stratum.
+Note that this feature works on tasks with both \code{stratum} and
+\code{group} roles (unlike \code{ResamplingCV}).
+Computing an optimal fold assignment is NP-hard (discrete, need
+to try all possible assignments of groups to folds to find best
+solution).
+Instead of computing the optimal solution (slow), we implement heuristic
+algorithms (fast), which yield approximate solutions.
+The choice of which heuristic is controlled by the
+\code{group_stratum_algo} parameter, which can take these values:
+\describe{
+  \item{\code{"RSS"}}{Default, novel heuristic algorithm which attempts to
+    minimize the residual sum of squares, between actual and ideal
+    values of the strata/fold count matrix.
+    First groups are sorted by RSS (group counts - ideal counts per
+    stratum); ties are broken using number of samples in group,
+    mean(ideal*actual) counts (mean over strata), random group order.
+    Then each group is greedily assigned a fold in order; best fold
+    results in min RSS, ties broken using total counts above ideal.
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K G S)} time and \code{O(N + S K)} memory.}
+  \item{\code{"Wasikowski"}}{Same heuristic algorithm as in scikit-learn
+    \code{StratifiedGroupKFold}, adapted from
+    \url{https://www.kaggle.com/code/jakubwasikowski/stratified-group-k-fold-cross-validation}.
+    First groups are sorted by standard deviation over strata counts;
+    ties are broken by random group order.
+    Then each group is greedily assigned a fold in order; best fold results in the
+    smallest mean SD of the strata/fold count matrix (SD over folds is
+    computed for each stratum, then mean of SDs, minimized over folds),
+    ties broken using number of samples in fold.
+    For N data, K folds, G groups, and S strata, the algorithm is
+    \code{O(N + K^2 G S)} time and \code{O(N + S K + S G)} memory (could be problematic when G and
+    S are both large).}
+  \item{\code{"WasikowskiLimitedMemory"}}{Same logic and time complexity
+    but only \code{O(N + S K)} memory.}
+}
+
 The train/test splits are defined by all possible combinations of
-test subset, test fold, train subsets (same/other/all), down-sampling
+test subset, test fold, train subsets (same/other/all), downsampling
 sizes, and random seeds.
-The splits are stored in
-\verb{$instance$iteration.dt}.
+After \code{$instantiate()} is called,
+\code{$instance} is a list of data about the splits, with elements:
+\describe{
+  \item{iteration.dt}{data table with one row per split.}
+  \item{fold.dt}{data table with same number of rows as task data.}
+}
+
 }
 
 \examples{

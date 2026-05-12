@@ -2,7 +2,7 @@ library(testthat)
 library(data.table)
 if(requireNamespace("lgr"))lgr::get_logger("mlr3")$set_threshold("warn")
 
-test_that("resampling error if no group", {
+test_that("resampling error if no subset", {
   itask <- mlr3::TaskClassif$new("iris", iris, target="Species")
   same_other <- mlr3resampling::ResamplingSameOtherCV$new()
   expect_error({
@@ -31,7 +31,7 @@ test_that("instantiation creates instance", {
   expect_identical(same_other$instance$id.dt$g, iris.dt$g)
 })
 
-test_that("error for subset named subset", {
+test_that("error for subset col named subset", {
   iris.dt <- data.table(iris)[, subset := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "subset"
@@ -43,7 +43,7 @@ test_that("error for subset named subset", {
   }, "col with role subset must not be named subset; please fix by renaming subset col")
 })
 
-test_that("error for group named row_id", {
+test_that("error for subset col named row_id", {
   iris.dt <- data.table(iris)[, row_id := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "row_id"
@@ -55,7 +55,7 @@ test_that("error for group named row_id", {
   }, "col with role subset must not be named row_id; please fix by renaming row_id col")
 })
 
-test_that("error for group named fold", {
+test_that("error for subset col named fold", {
   iris.dt <- data.table(iris)[, fold := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "fold"
@@ -79,7 +79,7 @@ test_that("error for group named display_row", {
   }, "col with role subset must not be named display_row; please fix by renaming display_row col")
 })
 
-test_that("error for group named test", {
+test_that("error for subset col named test", {
   iris.dt <- data.table(iris)[, test := rep(1:3, l=.N)]
   itask <- mlr3::TaskClassif$new("iris", iris.dt, target="Species")
   itask$col_roles$subset <- "test"
@@ -171,15 +171,15 @@ N <- 2100
 abs.x <- 20
 set.seed(1)
 x.vec <- sort(runif(N, -abs.x, abs.x))
-(task.dt <- data.table(
+task.dt <- data.table(
   x=x.vec,
-  y = sin(x.vec)+rnorm(N,sd=0.5)))
+  y = sin(x.vec)+rnorm(N,sd=0.5))
 atomic.group.size <- 2
-task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)][]
+task.dt[, agroup := rep(seq(1, N/atomic.group.size), each=atomic.group.size)]
 task.dt[, random_group := rep(
   rep(c("A","B","B","C","C","C","C"), each=atomic.group.size),
   l=.N
-)][]
+)]
 group.tab <- table(task.dt$random_group)
 get_props <- function(x)x/sum(x)
 prop.tab <- get_props(group.tab)
@@ -980,7 +980,7 @@ test_that("fold role is checked", {
   group.dt <- data.table(
     x=1:6,
     y=factor(rep(c("a", "b"), each=3)),
-    grp=c(1, 1, 2, 2, 3, 3),
+    grp=c(1, 1, 2, 3, 3, 4),
     Fold=c(1, 2, 1, 1, 2, 2))
   group.task <- mlr3::TaskClassif$new("group_fold_bad", group.dt, target="y")
   group.task$col_roles$feature <- "x"
@@ -990,4 +990,269 @@ test_that("fold role is checked", {
   expect_error({
     soak$instantiate(group.task)
   }, "task$col_roles$fold must be constant within each group", fixed=TRUE)
+})
+
+if(requireNamespace("mlr3learners"))test_that("cv.glmnet same result between two tests", {
+  spam <- mlr3::tsk("spam")
+  spam$col_roles$stratum <- "type"
+  sdata <- data.table(spam$data(), Fold=rep(1:3, length.out = spam$nrow))
+  spam_with_fold <- mlr3::TaskClassif$new(
+    "spam_with_fold", sdata, target="type")
+  spam_with_fold$col_roles$stratum <- c("type","Fold")
+  spam_with_fold$col_roles$fold <- "Fold"
+  spam_with_fold$col_roles$feature <- spam$col_roles$feature
+  L <- list(
+    mlr3learners::LearnerClassifCVGlmnet$new(),
+    mlr3::LearnerClassifRpart$new())
+  for(learner.i in seq_along(L)){
+    L[[learner.i]]$predict_type <- "prob"
+  }
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  pdir <- if(interactive())"~/pdir" else tempfile()
+  task_list <- list(spam, spam_with_fold)
+  ## test 1 default set train seed.
+  unlink(pdir, recursive = TRUE)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"))
+  set.seed(1)#needed to avoid spurious err in checks.
+  test_res_list <- list()
+  for(run.num in 1:2){
+    tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+    test_res_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), tres$results.csv)
+  }
+  test_res <- rbindlist(test_res_list)[
+  , algorithm := sub("classif.", "", learner_id)]
+  test_wide <- dcast(
+    test_res, task_id + algorithm ~ run, value.var="classif.auc")
+  test_wide[, expect_identical(run1, run2)]
+  ## test 2 train_seed=NA means do not set seed.
+  unlink(pdir, recursive = TRUE)
+  mlr3resampling::proj_grid(pdir, task_list, L, kfold, score_args=mlr3::msrs("classif.auc"), train_seed=NA_integer_)
+  set.seed(1)#needed to avoid spurious err in checks.
+  test_res_list <- list()
+  for(run.num in 1:2){
+    tres <- mlr3resampling::proj_test(pdir, min_samples_per_stratum = 20)
+    test_res_list[[run.num]] <- data.table(
+      run=paste0("run", run.num), tres$results.csv)
+  }
+  test_res <- rbindlist(test_res_list)[
+  , algorithm := sub("classif.", "", learner_id)]
+  test_wide <- dcast(
+    test_res, task_id + algorithm ~ run, value.var="classif.auc")
+  test_wide[, expect_identical(run1, run2)]
+})
+
+test_that("random folds for irregular sized groups with multiple strata", {
+  ## https://github.com/tdhock/mlr3resampling/issues/86
+  set.seed(123)
+  n = 20
+  files <- data.table(
+    PID = sample(1:10, n, replace = TRUE),   # ID for Grouping
+    y = factor(ifelse(rbinom(n, size = 1, prob = 0.2) == 1, "A", "B")),
+    feature1 = rnorm(n, mean = 0, sd = 1),
+    feature2 = rnorm(n, mean = 5, sd = 2),
+    feature3 = rnorm(n, mean = 100, sd = 15))
+  files[, table(PID, y)]
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
+  fpg.dt.list <- list()
+  for(comb.i in 1:nrow(comb.dt)){
+    comb <- comb.dt[comb.i]
+    task_amr = mlr3::as_task_classif(files, target = "y")
+    task_amr$positive = "A"
+    if(comb$set_group)task_amr$set_col_roles("PID", roles = "group")
+    task_amr$set_col_roles("y", roles = c("target", "stratum"))
+    task_amr$col_roles
+    test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$instantiate(task_amr)
+    fold.dt <- test.validation.resampling$instance$fold.dt
+    fold.dt[, table(fold, stratum)]
+    fold.dt[, table(group, stratum)]
+    fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
+    fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
+  }
+  fpg.dt <- rbindlist(fpg.dt.list)
+  folds <- dcast(fpg.dt, set_group + group ~ run, value.var="fold")
+  expect_false(folds[set_group==FALSE, identical(run1, run2)])
+  expect_false(folds[set_group==TRUE,  identical(run1, run2)])
+})
+
+test_that("prop sizes for regular sized groups with multiple strata", {
+  ## https://github.com/tdhock/mlr3resampling/issues/86
+  files <- data.table(g=1:75)[
+  , if(g<=5)data.table(y=c("rare","rare"))
+    else if(g<=10)data.table(y=c("rare","common"))
+    else data.table(y=c("common","common"))
+  , by=g]
+  files[, table(g, y)]
+  files[, table(y)]
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
+  fpg.dt.list <- list()
+  set.seed(1)
+  grdt <- list()
+  for(algo in c("RSS", "Wasikowski", "WasikowskiLimitedMemory")){
+    for(comb.i in 1:nrow(comb.dt)){
+      comb <- comb.dt[comb.i]
+      task_amr = mlr3::as_task_classif(files, target = "y")
+      if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
+      task_amr$set_col_roles("y", roles = c("target", "stratum"))
+      test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+      test.validation.resampling$param_set$values$folds <- comb$nfold
+      test.validation.resampling$param_set$values$group_stratum_algo <- algo
+      test.validation.resampling$instantiate(task_amr)
+      fold.dt <- test.validation.resampling$instance$fold.dt
+      grdt[[comb.i]] <- fold.dt
+      fold.dt[, table(fold, stratum)]
+      fold.dt[, table(group, stratum)]
+      fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
+      fpg.dt.list[[paste(algo, comb.i)]] <- data.table(algo, comb, fpg)
+    }
+  }
+  ## calculations to see why there are not same strata counts across folds.
+  ##dcast(melt(dcast(grdt[[3]][, .(row=.I, fold, y, g_ord)][, r := min(row), by=g_ord], r ~ fold+y), id="r")[, cum := cumsum(value), by=variable], r ~ variable, value.var="cum")
+  ## 69:   137       45      1       45      1       44      2
+  ## 70:   139       46      2       45      1       44      2
+  ideal <- c(45,5)
+  ideal-c(45,1)#16
+  ideal-c(46,2)#10
+  ideal-c(44,2)#10
+  ideal-c(45,3)#4
+  fpg.dt <- rbindlist(fpg.dt.list)
+  expect_equal(fpg.dt[algo=="RSS" & nfold==3, sort(N)], rep(c(5,45),each=6))
+  expect_equal(fpg.dt[algo=="RSS" & nfold==5, sort(N)], rep(c(3,27),each=10))
+})
+
+test_that("deterministic fold assignment for unique group sizes with multiple strata", {
+  files <- rbind(
+    data.table(g="f1g1", y=c(1,2)),
+    data.table(g="f1g2", y=c(2,2)),
+    data.table(g="f2g1", y=c(1,2,2)),
+    data.table(g="f2g2", y=c(2)),
+    data.table(g="f3g1", y=c(1,2,2,2)))
+  ideal <- as.numeric(files[, table(y)]/3)
+  files[, table(g, y)]
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
+  fpg.dt.list <- list()
+  for(comb.i in 1:nrow(comb.dt)){
+    comb <- comb.dt[comb.i]
+    task_amr = mlr3::as_task_classif(files, target = "y")
+    if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
+    task_amr$set_col_roles("y", roles = c("target", "stratum"))
+    task_amr$col_roles
+    test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$instantiate(task_amr)
+    fold.dt <- test.validation.resampling$instance$fold.dt
+    expect_equal(sum(fold.dt[, t(table(fold, stratum))]==ideal), 6)
+    fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
+    fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
+  }
+  fpg.dt <- rbindlist(fpg.dt.list)
+  folds <- dcast(fpg.dt, set_group + group ~ run, value.var="fold")
+  expect_false(folds[set_group==FALSE, identical(run1, run2)])
+  ## the groups are all different, so different variance, same sort
+  ## order, no randomness between runs.
+  folds[set_group==TRUE,  expect_identical(run1, run2)]
+})
+
+test_that("folds ok for AZtrees(group,stratum)", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$group <- "polygon"
+  trees_task$col_roles$stratum <- "y"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 2
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  olist
+  computed.mean <- with(olist, mean(groups==groups[,1]))
+  expect_lt(computed.mean, 1)
+  rows.per.fold <- as.numeric(table(AZtrees$y))/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds*length(rows.per.fold))
+})
+
+test_that("folds ok for AZtrees(group)", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$group <- "polygon"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 4
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  olist
+  computed.mean <- with(olist, mean(groups==groups[1]))
+  expect_lt(computed.mean, 1)
+  rows.per.fold <- nrow(AZtrees)/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds)
+})
+
+test_that("folds ok for AZtrees(stratum)", {
+  data(AZtrees, package="mlr3resampling")
+  trees_task <- mlr3::as_task_classif(AZtrees, target="y")
+  trees_task$col_roles$stratum <- "y"
+  cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  folds <- 2
+  cv$param_set$values$folds <- folds
+  cv$instantiate(trees_task)
+  glist <- list(
+    rows=cv$instance$fold.dt,
+    groups=cv$instance$fold.dt[, .(rows=.N), by=.(group, stratum, fold)])
+  olist <- list()
+  for(item in names(glist)){
+    idt <- glist[[item]]
+    olist[[item]] <- idt[, table(stratum, fold)]
+  }
+  rows.per.fold <- as.numeric(table(AZtrees$y))/folds
+  expect_equal(sum(olist$rows==rows.per.fold), folds*length(rows.per.fold))
+  expect_equal(sum(olist$groups==rows.per.fold), folds*length(rows.per.fold))
+})
+
+test_that("error for fold length 2",{
+  spam <- mlr3::tsk("spam")
+  spam$col_roles$stratum <- "type"
+  sdata <- data.table(
+    spam$data(),
+    myfold=rep(1:3, length.out = spam$nrow),
+    Fold=rep(1:3, length.out = spam$nrow))
+  spam_with_fold <- mlr3::TaskClassif$new(
+    "spam_with_fold", sdata, target="type")
+  spam_with_fold$col_roles$fold <- c("Fold","myfold")
+  spam_with_fold$col_roles$feature <- spam$col_roles$feature
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_error({
+    kfold$instantiate(spam_with_fold)
+  }, "fold role must have length 0 or 1")
+  expect_null(kfold$instance)
+  spam_with_fold$col_roles$fold <- "Fold"
+  kfold$instantiate(spam_with_fold)
+  expect_is(kfold$instance, "list")
+})
+
+test_that("ResamplingSameOtherSizesCV error for 2 subset vars", {
+  reg.task <- mlr3::TaskRegr$new(
+    "sin", task.dt, target="y")
+  reg.task$col_roles$feature <- "x"
+  reg.task$col_roles$subset <- c("random_group", "agroup")
+  kfold <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+  expect_error({
+    kfold$instantiate(reg.task)
+  }, "subset role must be length 0 or 1")
+  expect_null(kfold$instance)
+  reg.task$col_roles$subset <- "random_group"
+  kfold$instantiate(reg.task)
+  expect_is(kfold$instance, "list")
 })

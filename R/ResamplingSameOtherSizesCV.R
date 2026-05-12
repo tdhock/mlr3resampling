@@ -9,7 +9,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio = paradox::p_dbl(0,1, tags = "required"),
         sizes = paradox::p_int(-1, tags = "required"),
         ignore_subset = paradox::p_lgl(tags="required"),
-        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required")
+        subsets = paradox::p_fct(c("S","O","A","SO","SA","SOA"),tags="required"),
+        group_stratum_algo=paradox::p_fct(c("Wasikowski","WasikowskiLimitedMemory","RSS"),tags="required")
       )
       ps$values = list(
         folds=3L,
@@ -17,7 +18,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         ratio=0.5,
         sizes=-1L,
         ignore_subset=FALSE,
-        subsets="SOA"
+        subsets="SOA",
+        group_stratum_algo="RSS"
       )
       super$initialize(
         id = "same_other_sizes_cv",
@@ -28,7 +30,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_sd <- neg_nrow <- freq <- g_ord <- rss <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
@@ -39,11 +41,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         "learner", "learner_id", "resampling", "resampling_id",
         "prediction")
       subset.vec <- task$col_roles[["subset"]]
+      if(length(subset.vec)>1)stop("subset role must be length 0 or 1")
       subset.dt <- data.table(
         test.subset=if(self$param_set$values$ignore_subset || length(subset.vec)==0){
           rep("full", task$nrow)
         }else{
-          bad.names <- subset.vec[subset.vec %in% reserved.names]
+          bad.names <- intersect(subset.vec, reserved.names)
           if(length(bad.names)){
             first.bad <- bad.names[1]
             stop(sprintf("col with role subset must not be named %s; please fix by renaming %s col", first.bad, first.bad))
@@ -66,7 +69,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         task$data(cols=acol)[[acol]]
       }else{
         1:task$nrow
-      }
+      }#mlr3 errors for group length>1.
       subset.groupic <- unique(data.table(subset.dt, group=avec))
       train.counts.wide <- subset.groupic[, .(
         full=.N
@@ -90,11 +93,11 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       }else{
         data.table(stratum=rep(1L, task$nrow))
       }
-      group.row.dt <- data.table(
+      fold.dt <- data.table(
         ## test.subset, stratum, group, row_id.
         subset.dt, strata.dt, group=avec, row_id=task$row_ids)
       fcol <- task$col_roles$fold
-      fold.dt <- if(length(fcol)==1){
+      if(length(fcol)==1){
         fold <- task$data(cols=fcol)[[fcol]]
         if(length(acol)==1){
           group.fold.dt <- unique(data.table(group=avec, fold))
@@ -102,16 +105,40 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             stop("task$col_roles$fold must be constant within each group")
           }
         }
-        data.table(group.row.dt, fold)
+        set(fold.dt, j="fold", value=fold)
+      }else if(length(fcol)==0){
+        fold.dt[, let(
+          random_order = sample(.N),
+          stratum_fac = factor(stratum)
+        )]
+        if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
+          fold.dt[, let(
+            neg_sd = -sd(table(stratum_fac)),
+            g_ord = min(random_order)
+          ), by=group]
+          setkey(fold.dt, neg_sd, g_ord)
+        }else{
+          ideal.tab <- fold.dt[, table(stratum_fac)/n.folds]
+          fold.dt[, let(
+            rss = sum((table(stratum_fac)-ideal.tab)^2),
+            neg_nrow = -.N,
+            freq = mean(ideal.tab*table(stratum_fac)),
+            g_ord = min(random_order)
+          ), by=group]
+          setkey(fold.dt, rss, neg_nrow, freq, g_ord)
+        }
+        fun <- get(paste0(
+          "stratified_group_cv_",
+          self$param_set$values$group_stratum_algo,
+          "_interface"))
+        fold.dt[
+        , fold := fun(
+          stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
+        )+1L]
       }else{
-        sample.dt <- group.row.dt[
-          ## stratum, row_id, fold. (but row_id means group)
-        , private$.sample(unique(group), task=task) #assigns fold.
-        , by=stratum]
-        sample.dt[, .(
-          group=row_id, fold
-        )][group.row.dt, on="group"]
-      }[, .(group, fold, test.subset, stratum, row_id)]
+        stop("fold role must have length 0 or 1")
+      }
+      setkey(fold.dt, row_id)
       train.test.subset <- setkey(data.table(
         train.subsets
       )[

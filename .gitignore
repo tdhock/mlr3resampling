@@ -1,5 +1,8 @@
+*.dll
 *__files/
 site/doc
 site/manual
 site/*html
 *~
+*.o
+*.so
