@@ -22,11 +22,12 @@ score <- function(bench.result, ...){
 }
 
 plot.score <- function(x, ..., value.var=NULL){
-  value <- Train_subsets <- n.train.groups <- y.label <- NULL
+  value <- Train_subsets <- n.train.groups <- NULL
   if(requireNamespace("ggplot2")){
     if(is.null(value.var)){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
     }
+    dt <- data.table(x)[, value := get(value.var)][]
     ggplot2::ggplot()+
       ggplot2::geom_point(ggplot2::aes(
         value, paste(Train_subsets, n.train.groups)),
