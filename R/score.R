@@ -28,6 +28,7 @@ plot.score <- function(x, ..., value.var=NULL){
       value.var <- grep("classif|regr", names(x), value=TRUE)[1]
     }
     dt <- data.table(x)[
+      ## to sort train subsets on Y axis in same order as P-value plots.
     , sub.fac := factor(Train_subsets, c("all", "same", "other"))
     ][
       order(sub.fac, n.train.groups)
