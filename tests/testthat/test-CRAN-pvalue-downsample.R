@@ -40,10 +40,9 @@ test_that("pvalue_downsample returns strict S3 object", {
 
 test_that("pvalue_downsample picks first row subset when multiple subsets exist", {
   score_in <- score.dt[algorithm == model_name]
-  expect_warning(
-    down.list <- mlr3resampling::pvalue_downsample(score_in),
-    "duplicate row/column combinations"
-  )
+  expect_message({
+    down.list <- mlr3resampling::pvalue_downsample(score_in)
+  }, "scores contain several combinations of task_id, algorithm, test.subset, so only computing P-values for first combination: toy_soak, featureless, Female cohort with long text")
   expect_s3_class(down.list, "pvalue_downsample")
 })
 
@@ -111,8 +110,8 @@ test_that("plot.score orders y axis by subset and sample size", {
   score.plot <- plot(score_in)
   expect_s3_class(score.plot, "ggplot")
   expect_identical(
-    levels(score.plot$layers[[1]]$data$y.label),
-    c("all 360", "all 36", "other 72", "other 36", "same 360", "same 72")
+    levels(score.plot$layers[[1]]$data$y.fac),
+    c("all 36", "all 360", "same 72", "same 360", "other 36", "other 72")
   )
 })
 
@@ -235,7 +234,9 @@ test_that("pvalue_downsample works in simulation", {
   if(interactive())plot(plist)
   expect_equal(nrow(plist$pvalues), 4)
   expect_equal(nrow(plist$stats), 6)
-  dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  expect_message({
+    dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  }, "scores contain several combinations of task_id, algorithm, test.subset, so only computing P-values for first combination: iid_easy, rpart, large")
   if(interactive())plot(dlist)
   expect_equal(nrow(dlist$pvalues), 4)
   expect_equal(nrow(dlist$stats), 6)
