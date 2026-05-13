@@ -135,7 +135,10 @@ gg_list
 The figures above show the two Tasks.
 Each Task has two subsets: large and small.
 
-* `iid_easy` has TODO
+* The two subsets in `iid_easy` have the same noise level, so we expect to see significant test error differences only when training using different numbers of samples.
+* The two subsets in `different` have different noise levels, so we expect to see significant differences when training using either the same or different numbers of samples.
+
+Below we create the benchmark grid.
 
 ```{r}
 reg.learner.list <- list(
@@ -145,22 +148,33 @@ reg.learner.list <- list(
   d_task_list,
   reg.learner.list,
   SOAKED))
+```
 
+The benchmark includes both data sets, and two learners: rpart decision tree and featureless baseline.
+
+```{r}
 if(require(future))plan("multisession")
 if(require(lgr))get_logger("mlr3")$set_threshold("warn")
 (reg.bench.result <- mlr3::benchmark(reg.bench.grid))
-
 score_dt <- mlr3resampling::score(
   reg.bench.result, mlr3::msr("regr.rmse"))
 plot(score_dt)
 ```
+
+The figure above shows one dot for every train/test split.
+There are five rows of data per panel, because we train same/other/all at full sample size, and two downsampled models (all and same or other).
+Below we compute P-values using the full sample sizes.
 
 ```{r}
 plist <- mlr3resampling::pvalue(score_dt)
 plot(plist)
 ```
 
+Above we see that for the rpart learner, there are significant differences between same and other/all.
+
 ## Downsample analysis
+
+In this section, we do downsample analysis to determine if the differences observed at full sample size are due to the different sample sizes, or distributional differences between subsets.
 
 ### iid easy subsets
 
@@ -169,6 +183,9 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="iid_easy" & test.subset=="large"])
 plot(dlist)
 ```
+
+In both test subsets (above and below), we see significant differences at full sample size, that disappear at smallest sample size.
+This is a clear sample size effect (no distributional difference between subsets), as expected for the `iid_easy` task.
 
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
@@ -184,10 +201,14 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)
 ```
 
+Especially above, we see that significant differences persist after downsampling, which is a clear indication of a distributional difference between subsets, as expected for the `different` task.
+
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="different" & test.subset=="small"])
 plot(dlist)
 ```
 
+## Conclusion
 
+We have shown how SOAKED (cross-validation with subsets and downsampling) can be used to determine if there are differences in learnable and predictable patterns between subsets.
