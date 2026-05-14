@@ -1,5 +1,6 @@
 Changes in version 2025.5.14
 
+- pvalue()$pvalues table no longer has diff_mean column (was negative of mean_diff column, and potentially confusing).
 - pvalue_downsample() stops if downsample results are missing, and messages if there are several combinations of task_id, algorithm, test.subset.
 - plot.score() sorts y axis by Train_subsets and n.train.groups.
 - add SOAKED vignette with two Tasks of simulated data (iid_easy has sample size effect, different has subset effect).

@@ -252,7 +252,9 @@ test_that("pvalue_downsample works in simulation", {
   if(interactive())plot(plist)
   expect_equal(nrow(plist$pvalues), 2)
   expect_equal(nrow(plist$stats), 3)
-  dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  expect_silent({
+    dlist <- mlr3resampling::pvalue_downsample(score_dt)
+  })
   if(interactive())plot(dlist)
   expect_equal(nrow(dlist$pvalues), 4)
   expect_equal(nrow(dlist$stats), 6)

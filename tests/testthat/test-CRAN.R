@@ -472,6 +472,7 @@ test_that("hjust correct for two algos far apart", {
       regr.rmse=c(8.1,9,12.2,13,22.3,23),
       train.subsets=c("all","all","other","other","same","same")))
   bench.plist <- mlr3resampling::pvalue(bench.score)
+  expect_null(bench.plist$pvalues[["diff_mean"]])
   expect_equal(bench.plist$pvalues[algorithm=="featureless", hjust], c(1,1))
   expect_equal(bench.plist$pvalues[algorithm=="rpart", hjust], c(0,0))
   expect_equal(bench.plist$stats[algorithm=="featureless", hjust], c(1,1,1))
