@@ -15,7 +15,9 @@ pvalue_prepare <- function(
   if(nrow(score_dt) == 0L){
     stop("score_in must have at least one row")
   }
-  value.var <- if(is.null(value.var)) grep("classif|regr", names(score_dt), value=TRUE)[1] else value.var
+  if(is.null(value.var)){
+    value.var <- grep("classif|regr", names(score_dt), value=TRUE)[1]
+  }
   if(!is.character(value.var) || length(value.var) != 1L || is.na(value.var) || !value.var %in% names(score_dt)){
     stop("value.var must be a single existing metric column (or NULL to auto-select first classif|regr column)")
   }
@@ -223,7 +225,7 @@ pvalue_downsample <- function(
   value.var=NULL,
   digits=3
 ){
-  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- NULL
+  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- . <- .NATURAL <- NULL
   prep <- pvalue_prepare(
     score_in=score_in,
     value.var=value.var,
@@ -238,6 +240,16 @@ pvalue_downsample <- function(
       "score_in is missing required columns: ",
       paste(missing.cols, collapse=", ")
     )
+  }
+  if(!any(prep$score_dt$n.train.groups < prep$score_dt$groups)){
+    stop("no downsample results, please set SOAK$param_set$sizes=0 and re-run benchmark")
+  }
+  count.dt <- prep$score_dt[, .(rows=.N), by=.(task_id, algorithm, test.subset)]
+  if(nrow(count.dt)>1){
+    first.comb <- count.dt[1]
+    first.comb[, message(sprintf("scores contain several combinations of task_id, algorithm, test.subset, so only computing P-values for first combination: %s, %s, %s", task_id, algorithm, test.subset))]
+    prep$score_dt <- prep$score_dt[first.comb[, .(
+      task_id, algorithm, test.subset)], on=.NATURAL]
   }
   ss_levs <- c("full", min(prep$score_dt[["groups"]]))
   score_panels <- data.table(sample_size=factor(ss_levs, ss_levs))[
