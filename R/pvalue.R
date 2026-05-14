@@ -225,7 +225,7 @@ pvalue_downsample <- function(
   value.var=NULL,
   digits=3
 ){
-  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- NULL
+  task_id <- algorithm <- test.subset <- sample_size <- groups <- n.train.groups <- train.subsets <- text_label <- . <- .NATURAL <- NULL
   prep <- pvalue_prepare(
     score_in=score_in,
     value.var=value.var,
