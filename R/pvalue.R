@@ -99,7 +99,6 @@ pvalue_compute <- function(
     unpaired <- try.test(value, same, paired=FALSE)
     data.table(
       mean_diff=paired$estimate,
-      diff_mean=diff(unpaired$estimate),
       p.paired=paired$p.value,
       p.unpaired=unpaired$p.value,
       same_mean=mean(same),
