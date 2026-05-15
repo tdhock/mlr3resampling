@@ -135,8 +135,8 @@ gg_list
 The figures above show the two Tasks.
 Each Task has two subsets: large and small.
 
-* The two subsets in `iid_easy` have the same noise level, so we expect to see significant test error differences only when training using different numbers of samples.
 * The two subsets in `different` have different noise levels, so we expect to see significant differences when training using either the same or different numbers of samples.
+* The two subsets in `iid_easy` have the same noise level, so we expect to see significant test error differences only when training using different numbers of samples.
 
 Below we create the benchmark grid.
 
