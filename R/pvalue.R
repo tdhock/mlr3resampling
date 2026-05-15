@@ -267,7 +267,7 @@ pvalue_downsample <- function(
     value.var=prep$value.var,
     label_order=compute$label_order,
     caption=sprintf(
-      "Test %s (mean \u00B1 sd), task_id: %s, subset: %s, algo: %s, %d folds",
+      "Test %s (mean \u00B1 sd), task: %s, subset: %s, algo: %s, %d folds",
       prep$value.var,
       score_in$task_id[[1]],
       score_in$test.subset[[1]],
