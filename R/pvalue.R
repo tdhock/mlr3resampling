@@ -267,8 +267,9 @@ pvalue_downsample <- function(
     value.var=prep$value.var,
     label_order=compute$label_order,
     caption=sprintf(
-      "%s (mean \u00B1 sd) | subset: %s | model: %s | %d test folds",
+      "Test %s (mean \u00B1 sd), task_id: %s, subset: %s, algo: %s, %d folds",
       prep$value.var,
+      score_in$task_id[[1]],
       score_in$test.subset[[1]],
       score_in$algorithm[[1]],
       length(unique(score_in$test.fold))
@@ -285,7 +286,7 @@ plot.pvalue_downsample <- function(x, ...){
         sample_size=function(v)ifelse(
           v == "full",
           "sample_size: full",
-          paste0("sample_size: smallest = ", v))),
+          paste0("sample_size: smallest N = ", v))),
       scales="free")+
     ggplot2::scale_x_continuous(
       x$caption)
