@@ -171,6 +171,13 @@ plot(plist)
 ```
 
 Above we see that for the rpart learner, there are significant differences between same and other/all.
+Comparing same and other, we consistently see better predictions (smaller error values) for models with more training data.
+There are two possible explanations
+
+* sample size effect: there is no distributional difference between subsets. The predictions are more accurate because the learning algorithm has seen more relevant training data.
+* subset effect: there is a distributional difference between subsets that makes learning and prediction easier in the larger subset.
+
+In the next section, we show how downsampling can be used to determine which of these interpretations is consistent with the data.
 
 ## Downsample analysis
 
