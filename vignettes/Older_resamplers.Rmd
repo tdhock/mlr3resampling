@@ -110,7 +110,7 @@ The table above is a more convenient form for the visualization which we create 
 
 ```{r fig.height=7}
 if(require(animint2)){
-  print_theme <- theme_bw(20)
+  print_theme <- theme_bw(15)
   ggplot()+
     print_theme+
     geom_point(aes(
