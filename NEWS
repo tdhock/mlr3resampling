@@ -1,3 +1,8 @@
+Changes in version 2025.5.15
+
+- remove animint2 from Suggests, remove Older resamplers vignette.
+- figure and text size fixes in vignettes.
+
 Changes in version 2025.5.14
 
 - pvalue()$pvalues table no longer has diff_mean column (was negative of mean_diff column, and potentially confusing).
