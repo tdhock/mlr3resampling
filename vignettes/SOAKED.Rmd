@@ -7,6 +7,7 @@ vignette: >
 
 ```{r setup, include = FALSE}
 litedown::reactor(
+  print=NA,
   collapse = TRUE,
   comment = "#>",
   fig.width=10,
