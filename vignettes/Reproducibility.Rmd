@@ -1,6 +1,6 @@
 ---
 vignette: >
-  %\VignetteIndexEntry{Reproducible benchmarks}
+  %\VignetteIndexEntry{4 Reproducible benchmarks}
   %\VignetteEngine{litedown::vignette}
   %\VignetteEncoding{UTF-8}
 ---

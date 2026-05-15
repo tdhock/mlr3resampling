@@ -1,6 +1,6 @@
 ---
 vignette: >
-  %\VignetteIndexEntry{2 Benchmarking projects}
+  %\VignetteIndexEntry{3 Benchmarking projects}
   %\VignetteEngine{litedown::vignette}
   %\VignetteEncoding{UTF-8}
 ---

@@ -1,6 +1,6 @@
 ---
 vignette: >
-  %\VignetteIndexEntry{Older resamplers}
+  %\VignetteIndexEntry{6 Older resamplers}
   %\VignetteEngine{litedown::vignette}
   %\VignetteEncoding{UTF-8}
 ---
