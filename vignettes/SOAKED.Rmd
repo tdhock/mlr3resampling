@@ -60,8 +60,8 @@ algo.colors <- c(
   featureless="blue",
   rpart="red",
   ideal="black")
-my_theme <- theme_bw(15)
 if(require(ggplot2)){
+  my_theme <- theme_bw(15)
   ggplot()+
     my_theme+
     theme(panel.spacing=grid::unit(1, "cm"))+
