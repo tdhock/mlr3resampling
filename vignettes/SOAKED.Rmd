@@ -183,7 +183,9 @@ In the next section, we show how downsampling can be used to determine which of 
 
 In this section, we do downsample analysis to determine if the differences observed at full sample size are due to the different sample sizes, or distributional differences between subsets.
 
-### iid easy subsets
+### iid easy task
+
+In this simulation, we want to verify that SOAKED can detect that the two subsets are iid from the same distribution.
 
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
@@ -191,7 +193,7 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)
 ```
 
-In both test subsets (above and below), we see significant differences at full sample size, that disappear at smallest sample size.
+In both test subsets (above and below), we see significant differences at full sample size (left), that disappear at smallest sample size (right).
 This is a clear sample size effect (no distributional difference between subsets), as expected for the `iid_easy` task.
 
 ```{r}
@@ -200,7 +202,9 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)
 ```
 
-### different subsets
+### different task
+
+In this simulation, we want to verify that SOAKED can detect that the two subsets are iid have a real distributional difference that makes it easier to learn using data from the larger subset.
 
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
@@ -208,7 +212,7 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)
 ```
 
-Especially above, we see that significant differences persist after downsampling, which is a clear indication of a distributional difference between subsets, as expected for the `different` task.
+Both above and below (but especially above), we see significant differences at full sample size (left), that persist after downsampling (right), which is a clear indication of a distributional difference between subsets, as expected for the `different` task.
 
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
