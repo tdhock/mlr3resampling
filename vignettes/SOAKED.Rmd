@@ -1,6 +1,6 @@
 ---
 vignette: >
-  %\VignetteIndexEntry{SOAKED}
+  %\VignetteIndexEntry{1 Demonstration of SOAKED on simulations}
   %\VignetteEngine{litedown::vignette}
   %\VignetteEncoding{UTF-8}
 ---
