@@ -22,7 +22,7 @@ and [[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
 
 *** SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets
 
-See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/Newer_resamplers.html][Newer resamplers vignette]] and data viz for
+See examples in [[https://mlr3resampling.netlify.app/doc/newer_resamplers][Newer resamplers vignette]] and data viz for
 [[https://tdhock.github.io/2023-12-13-train-predict-subsets-regression/][regression]] and [[https://tdhock.github.io/2023-12-13-train-predict-subsets-classification/][classification]].
 
 A supervised learning algorithm inputs a train set, and outputs a
@@ -140,7 +140,7 @@ Code to re-run:
 
 *** Algorithm 2: cross-validation for comparing different sized train sets
 
-See examples in [[https://cloud.r-project.org/web/packages/mlr3resampling/vignettes/Newer_resamplers.html][Newer Resamplers vignette]] and data viz for
+See examples in [[https://mlr3resampling.netlify.app/doc/newer_resamplers][Newer Resamplers vignette]] and data viz for
 [[https://tdhock.github.io/2023-12-26-train-sizes-regression/][regression]] and [[https://tdhock.github.io/2023-12-27-train-sizes-classification/][classification]].
 
 How many train samples are required to get accurate predictions on a
@@ -220,5 +220,6 @@ Code to re-run:
   via [[https://scikit-learn.org/stable/modules/cross_validation.html#group-k-fold][GroupKFold]] (keeping samples together when splitting) but not
   subsets (test data come from one subset, train data come from
   Same/Other/All subsets).
+- [[https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedGroupKFold.html][StratifiedGroupKFold]] in scikit-learn implements a heuristic for assigning folds that attempts to minimize standard deviation between folds (averaged over classes/strata). This heuristic is implemented in mlr3resampling as ResamplingSameOtherSizes with =group_stratum_algo= set to Wasikowski.
 - [[https://github.com/mlr-org/mlr3spatiotempcv][mlr3spatiotempcv]] provides a common interface to several R packages which compute spatial blocks, which could in principle be used as column role=group in SOAK/mlr3resampling, but not in practice because [[https://github.com/mlr-org/mlr3spatiotempcv/issues/251][the block variable is not public]]. Such spatial blocks are typically assigned using a grid or randomly (k-means), and these block ID numbers (1,2,…) could be used as column role=subset in SOAK/mlr3resampling (as long as the blocks are big enough to train the Same model), but it is typically better to assign column role=subset to a more interpretable categorical variable (city, state, province, country, etc.).
 - My PHD student Tung Nguyen wrote [[https://github.com/lamtung16/soak_regression?tab=readme-ov-file#usage][python code for SOAK]].
