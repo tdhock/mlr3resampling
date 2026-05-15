@@ -35,7 +35,7 @@ library(data.table)
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
 if(require(ggplot2)){
-  text.size <- 6
+  text.size <- 5
   my_theme <- theme_bw(15)
   ggplot()+
     my_theme+
@@ -408,7 +408,7 @@ The output above shows a difference of zero, indicating that the error rates are
 
 To investigate down-sampling in the context of training on same/other/all subsets, we first generate some new data (smaller than previously).
 
-```{r simulationShort}
+```{r simulationShort, fig.height=2}
 N <- 600
 abs.x <- 20
 set.seed(1)
@@ -744,7 +744,7 @@ if(require(ggplot2)){
     gg <- gg+geom_dl(aes(
       xcoord, ycoord, label=paste("polygon",polygon)),
       data=AZdt,
-      method=list(cex=2, "smart.grid"))
+      method=list(cex=1, "smart.grid"))
   }
   gg
 }
