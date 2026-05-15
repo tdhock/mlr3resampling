@@ -7,10 +7,11 @@ vignette: >
 
 ```{r setup, include = FALSE}
 litedown::reactor(
+  print=NA,
   collapse = TRUE,
   comment = "#>",
   fig.width=10,
-  fig.height=6)
+  fig.height=3)
 data.table::setDTthreads(1)
 ```
 
@@ -60,8 +61,10 @@ algo.colors <- c(
   rpart="red",
   ideal="black")
 if(require(ggplot2)){
+  my_theme <- theme_bw(15)
   ggplot()+
-    theme_bw()+
+    my_theme+
+    theme(panel.spacing=grid::unit(1, "cm"))+
     geom_point(aes(
       x, y),
       fill="white",
@@ -92,7 +95,7 @@ SOAKED$param_set$values$folds <- 10
 
 Next, we create and visualize two Tasks:
 
-```{r}
+```{r fig.height=4}
 set.seed(1)
 sim.meta.list <- list(
   different=rbind(
@@ -115,6 +118,7 @@ for(sim.name in names(sim.meta.list)){
   d_task_list[[sim.name]] <- sub_task
   if(require("ggplot2")){
     gg_list[[sim.name]] <- ggplot()+
+      my_theme+
       ggtitle(paste("Task:", sim.name))+
       geom_point(aes(
         x, y),
@@ -152,22 +156,22 @@ reg.learner.list <- list(
 
 The benchmark includes both data sets, and two learners: rpart decision tree and featureless baseline.
 
-```{r}
+```{r fig.height=6}
 if(require(future))plan("multisession")
 if(require(lgr))get_logger("mlr3")$set_threshold("warn")
 (reg.bench.result <- mlr3::benchmark(reg.bench.grid))
 score_dt <- mlr3resampling::score(
   reg.bench.result, mlr3::msr("regr.rmse"))
-plot(score_dt)
+plot(score_dt)+my_theme
 ```
 
 The figure above shows one dot for every train/test split.
 There are five rows of data per panel, because we train same/other/all at full sample size, and two downsampled models (all and same or other).
 Below we compute P-values using the full sample sizes.
 
-```{r}
+```{r fig.height=5}
 plist <- mlr3resampling::pvalue(score_dt)
-plot(plist)
+plot(plist)+my_theme
 ```
 
 Above we see that for the rpart learner, there are significant differences between same and other/all.
@@ -190,7 +194,7 @@ In this simulation, we want to verify that SOAKED can detect that the two subset
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="iid_easy" & test.subset=="large"])
-plot(dlist)
+plot(dlist)+my_theme
 ```
 
 In both test subsets (above and below), we see significant differences at full sample size (left), that disappear at smallest sample size (right).
@@ -199,7 +203,7 @@ This is a clear sample size effect (no distributional difference between subsets
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="iid_easy" & test.subset=="small"])
-plot(dlist)
+plot(dlist)+my_theme
 ```
 
 ### different task
@@ -209,7 +213,7 @@ In this simulation, we want to verify that SOAKED can detect that the two subset
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="different" & test.subset=="large"])
-plot(dlist)
+plot(dlist)+my_theme
 ```
 
 Both above and below (but especially above), we see significant differences at full sample size (left), that persist after downsampling (right), which is a clear indication of a distributional difference between subsets, as expected for the `different` task.
@@ -217,7 +221,7 @@ Both above and below (but especially above), we see significant differences at f
 ```{r}
 dlist <- mlr3resampling::pvalue_downsample(score_dt[
   algorithm=="rpart" & task_id=="different" & test.subset=="small"])
-plot(dlist)
+plot(dlist)+my_theme
 ```
 
 ## Conclusion

@@ -7,6 +7,7 @@ vignette: >
 
 ```{r setup, include = FALSE}
 litedown::reactor(
+  print=NA,
   collapse = TRUE,
   comment = "#>",
   fig.width=10,
@@ -34,10 +35,10 @@ library(data.table)
   x=x.vec,
   y = sin(x.vec)+rnorm(N,sd=0.5)))
 if(require(ggplot2)){
-  text.size <- 6
-  my_theme <- theme_bw(20)
-  theme_set(my_theme)
+  text.size <- 5
+  my_theme <- theme_bw(15)
   ggplot()+
+    my_theme+
     geom_point(aes(
       x, y),
       shape=1,
@@ -137,6 +138,7 @@ soak_default_score[, n.train := sapply(train, length)]
 soak_default_score[1]
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       regr.rmse, train.subsets, color=algorithm),
       shape=1,
@@ -164,6 +166,7 @@ soak_default_wide <- dcast(
   value.var="regr.rmse")
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_segment(aes(
       regr.rmse_mean+regr.rmse_sd, train.subsets,
       xend=regr.rmse_mean-regr.rmse_sd, yend=train.subsets,
@@ -221,6 +224,7 @@ Below we visualize test error as a function of train size.
 ```{r}
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     theme(legend.position=c(0.85,0.85))+
     geom_line(aes(
       n.train, regr.rmse,
@@ -295,6 +299,7 @@ five_smaller_sizes_score <- mlr3resampling::score(
 five_smaller_sizes_score[1]
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_line(aes(
       n.train, regr.rmse,
       color=algorithm,
@@ -403,7 +408,7 @@ The output above shows a difference of zero, indicating that the error rates are
 
 To investigate down-sampling in the context of training on same/other/all subsets, we first generate some new data (smaller than previously).
 
-```{r simulationShort}
+```{r simulationShort, fig.height=2}
 N <- 600
 abs.x <- 20
 set.seed(1)
@@ -415,6 +420,7 @@ library(data.table)
   y = sin(x.vec)+rnorm(N,sd=0.5)))
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       x, y),
       shape=1,
@@ -472,12 +478,13 @@ The plot below shows the same results (no down-sampling) as if we did
 
 ```{r fig.height=2}
 if(require(ggplot2)){
-ggplot()+
-  geom_point(aes(
-    regr.rmse, train.subsets, color=algorithm),
-    shape=1,
-    data=soak_sizes_score[groups==n.train.groups])+
-  facet_grid(. ~ test.subset, labeller=label_both)
+  ggplot()+
+    my_theme+
+    geom_point(aes(
+      regr.rmse, train.subsets, color=algorithm),
+      shape=1,
+      data=soak_sizes_score[groups==n.train.groups])+
+    facet_grid(. ~ test.subset, labeller=label_both)
 }
 ```
 
@@ -490,6 +497,7 @@ soak_sizes_score[, subset.N := paste(train.subsets, n.train.groups)]
 soak_sizes_score[, subset.N.fac := factor(subset.N, levs)]
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       regr.rmse, subset.N.fac, color=algorithm),
       shape=1,
@@ -500,6 +508,7 @@ if(require(ggplot2)){
 soak_sizes_score[, N.subset.fac := factor(subset.N, levs)]
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       regr.rmse, N.subset.fac, color=algorithm),
       shape=1,
@@ -515,6 +524,7 @@ the plots below.
 ```{r fig.height=5}
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       n.train.groups, regr.rmse,
       color=train.subsets),
@@ -531,6 +541,7 @@ if(require(ggplot2)){
 rpart.score <- soak_sizes_score[algorithm=="rpart" & train.subsets != "other"]
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       n.train.groups, regr.rmse,
       color=train.subsets),
@@ -628,6 +639,7 @@ same.other.wide <- dcast(
   value.var="regr.rmse")
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_segment(aes(
       regr.rmse_mean+regr.rmse_sd, train.subsets,
       xend=regr.rmse_mean-regr.rmse_sd, yend=train.subsets),
@@ -696,6 +708,7 @@ if(require(ggplot2)){
   tree.fill.scale <- scale_fill_manual(
     values=c(Tree="black", "Not tree"="white"))
   ggplot()+
+    my_theme+
     tree.fill.scale+
     geom_rect(aes(
       xmin=xmin, xmax=xmax, ymin=ymin,ymax=ymax),
@@ -716,6 +729,7 @@ Note the red square in the plot above. Below we zoom into that square.
 ```{r}
 if(require(ggplot2)){
   gg <- ggplot()+
+    my_theme+
     tree.fill.scale+
     geom_point(aes(
       xcoord, ycoord, fill=y),
@@ -730,7 +744,7 @@ if(require(ggplot2)){
     gg <- gg+geom_dl(aes(
       xcoord, ycoord, label=paste("polygon",polygon)),
       data=AZdt,
-      method=list(cex=2, "smart.grid"))
+      method=list(cex=1, "smart.grid"))
   }
   gg
 }
@@ -757,6 +771,7 @@ Below we plot the same data, but this time colored by region.
 region.colors <- c(NW="#1B9E77", NE="#D95F02", S="#7570B3")
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     tree.fill.scale+
     scale_color_manual(
       values=region.colors)+
@@ -857,6 +872,7 @@ score.long <- melt(
   measure.vars=measure(variable, pattern="classif.(acc|auc)"))
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       value, train.subsets, color=algorithm),
       data=score.long)+
@@ -881,6 +897,7 @@ score.wide <- dcast(
   value.var="value")
 if(require(ggplot2)){
   ggplot()+
+    my_theme+
     geom_point(aes(
       value_mean, train.subsets, color=algorithm),
       size=3,
