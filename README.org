@@ -15,9 +15,10 @@ mlr3resampling provides new cross-validation algorithms for the mlr3 framework i
 ** Description
 
 For an overview of functionality,
-[[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]], the
-[[https://onlinelibrary.wiley.com/doi/10.1002/sam.70055][SOAK paper]], and 
-[[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
+[[https://tdhock.github.io/blog/2024/cv-all-same-new/][please read my recent blog post]],
+[[https://mlr3resampling.netlify.app/articles][package vignettes]],
+the [[https://onlinelibrary.wiley.com/doi/10.1002/sam.70055][SOAK paper]],
+and [[https://github.com/tdhock/mlr3resampling/wiki/Articles][other articles]].
 
 *** SOAK: Same/Other/All K-fold cross-validation for estimating similarity of patterns in data subsets
 
