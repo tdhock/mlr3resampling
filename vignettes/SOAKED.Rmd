@@ -17,7 +17,7 @@ data.table::setDTthreads(1)
 
 The goal of this vignette is explain how SOAKED (Same/Other/All K-fold cross-validation Extension Downsampling) can be used with `ResamplingSameOtherSizesCV` to determine why there is a difference between Same/Other/All models.
 
-## Simulations
+# Simulations
 
 We begin by simulating some regression data according to two different patterns.
 
@@ -82,7 +82,7 @@ if(require(ggplot2)){
 Above we see the simulated data, which represent regression problems in 1D.
 There is a panel for each difficulty level, with a grey dot for each training data point, and a black curve that represents the ideal prediction function (same in both difficulty levels).
 
-## mlr3 benchmark
+# mlr3 benchmark
 
 In this section, we define a benchmark using these simulated data.
 First, we create the SOAKED instance by setting `sizes=0`, and we use 10-fold CV.
@@ -183,11 +183,11 @@ There are two possible explanations
 
 In the next section, we show how downsampling can be used to determine which of these interpretations is consistent with the data.
 
-## Downsample analysis
+# Downsample analysis
 
 In this section, we do downsample analysis to determine if the differences observed at full sample size are due to the different sample sizes, or distributional differences between subsets.
 
-### iid easy task
+## iid easy task
 
 In this simulation, we want to verify that SOAKED can detect that the two subsets are iid from the same distribution.
 
@@ -206,7 +206,7 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)+my_theme
 ```
 
-### different task
+## different task
 
 In this simulation, we want to verify that SOAKED can detect that the two subsets are iid have a real distributional difference that makes it easier to learn using data from the larger subset.
 
@@ -224,6 +224,14 @@ dlist <- mlr3resampling::pvalue_downsample(score_dt[
 plot(dlist)+my_theme
 ```
 
-## Conclusion
+# Conclusion
 
 We have shown how SOAKED (cross-validation with subsets and downsampling) can be used to determine if there are differences in learnable and predictable patterns between subsets.
+
+# Stop future background workers
+
+This code is needed to avoid R CMD check NOTE about detritus in the temp directory.
+
+```{r}
+if(require(future))plan("sequential")
+```

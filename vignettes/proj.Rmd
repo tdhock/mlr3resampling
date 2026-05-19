@@ -217,7 +217,7 @@ For some small benchmarks, you may want to compute all results on your local mac
 For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
 
 ```{r}
-if(interactive())future::plan("multisession")
+if(require(future))plan("multisession")
 ```
 
 The previous approach uses the code below:
@@ -480,3 +480,11 @@ The output above shows that there are at least 30 data per class in the down-sam
 # Conclusion
 
 We compared `mlr3resampling::proj_*()` functions to their analogs in `batchtools` and `mlr3batchmark`. We saw that the interface is similar, with some convenience features for quick testing, and for efficient model interpretation.
+
+# Stop future background workers
+
+This code is needed to avoid R CMD check NOTE about detritus in the temp directory.
+
+```{r}
+if(require(future))plan("sequential")
+```
