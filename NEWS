@@ -1,3 +1,7 @@
+Changes in version 2025.5.19
+
+- remove ResamplingSameOtherCV and ResamplingVariableSizeTrainCV.
+
 Changes in version 2025.5.15
 
 - remove animint2 from Suggests, remove Older resamplers vignette.

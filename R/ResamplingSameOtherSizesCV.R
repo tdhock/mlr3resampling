@@ -1,6 +1,11 @@
 ResamplingSameOtherSizesCV = R6::R6Class(
   "ResamplingSameOtherSizesCV",
-  inherit=ResamplingBase,
+  inherit=mlr3::Resampling,
+  active = list(
+    iters = function(rhs) {
+      nrow(self$instance$iteration.dt)
+    }
+  ),
   public = list(
     initialize = function() {
       ps = paradox::ps(
@@ -26,6 +31,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         param_set = ps,
         label = "Compare Same/Other and Sizes Cross-Validation",
         man = "ResamplingSameOtherSizesCV")
+    },
+    train_set = function(i) {
+      self$instance$iteration.dt$train[[i]]
+    },
+    test_set = function(i) {
+      self$instance$iteration.dt$test[[i]]
     }
   ),
   private = list(
