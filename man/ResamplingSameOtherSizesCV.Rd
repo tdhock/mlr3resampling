@@ -33,12 +33,6 @@
   test accuracy for each subset; other is usually somewhat less accurate
   than same; other can be just as bad as featureless baseline when the
   subsets have different patterns).
-
-  This class has more parameters/potential applications than
-  \code{\link{ResamplingSameOtherCV}} and
-  \code{\link{ResamplingVariableSizeTrainCV}},
-  which are older and should only be preferred
-  for visualization purposes.
 }
 
 \section{Stratification}{
