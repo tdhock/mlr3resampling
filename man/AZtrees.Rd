@@ -46,6 +46,7 @@
 }
 \examples{
 
+data.table::setDTthreads(1L)
 data(AZtrees)
 task.obj <- mlr3::TaskClassif$new("AZtrees3", AZtrees, target="y")
 task.obj$col_roles$feature <- grep("SAMPLE", names(AZtrees), value=TRUE)

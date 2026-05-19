@@ -43,34 +43,32 @@ Non-negative integer number of digits to print in mean/SD text labels.
 Daniel Agyapong
 }
 \examples{
+
+data.table::setDTthreads(1L)
 library(data.table)
-set.seed(1)
-N <- 120L
+set.seed(2)
+N <- 150L
 x <- runif(N, -3, 3)
 sim.dt <- data.table(
   x = x,
-  y = sin(x) + rnorm(N, sd = 0.3),
-  Subset = rep(c("large", "large", "small"), length.out = N)
-)
-task <- mlr3::TaskRegr$new("iid_easy", sim.dt, target = "y")
-task$col_roles$feature <- "x"
-task$col_roles$subset <- "Subset"
+  y = sin(x) + rnorm(N, sd = 0.5),
+  Subset = rep(c("large", "large", "small"), length.out = N))
+sim.task <- mlr3::TaskRegr$new("iid_easy", sim.dt, target = "y")
+sim.task$col_roles$feature <- "x"
+sim.task$col_roles$subset <- "Subset"
 soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-soak$param_set$values$folds <- 2L
-soak$param_set$values$seeds <- 1L
+soak$param_set$values$folds <- 5L
 soak$param_set$values$sizes <- 0L
-if(requireNamespace("rpart", quietly = TRUE)){
-  grid <- mlr3::benchmark_grid(task, list(mlr3::lrn("regr.rpart")), soak)
-  result <- mlr3::benchmark(grid)
-  score.dt <- mlr3resampling::score(result)[, .(
-    task_id, test.subset, test.fold, train.subsets,
-    groups, n.train.groups, algorithm, RMSE = sqrt(regr.mse)
-  )]
-  down.list <- mlr3resampling::pvalue_downsample(
-    score.dt[task_id == "iid_easy" & test.subset == "small" & algorithm == "rpart"],
-    value.var = "RMSE",
-    digits = 3
-  )
-  if(requireNamespace("ggplot2", quietly = TRUE)) plot(down.list)
-}
+learner_list <- list(
+  mlr3::lrn("regr.featureless"),
+  if(requireNamespace("rpart"))mlr3::lrn("regr.rpart"))
+bgrid <- mlr3::benchmark_grid(sim.task, learner_list, soak)
+result <- mlr3::benchmark(bgrid)
+score.dt <- mlr3resampling::score(result, mlr3::msr("regr.rmse"))
+if(requireNamespace("ggplot2")) plot(score.dt)
+
+down.list <- mlr3resampling::pvalue_downsample(score.dt[
+  task_id == "iid_easy" & test.subset == "large" & algorithm == "rpart"])
+if(requireNamespace("ggplot2")) plot(down.list)
+
 }

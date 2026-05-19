@@ -43,6 +43,7 @@ Toby Dylan Hocking
 }
 \examples{
 
+data.table::setDTthreads(1L)
 library(data.table)
 N <- 8000
 set.seed(1)

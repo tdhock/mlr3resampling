@@ -33,40 +33,29 @@ Toby Dylan Hocking
 
 \examples{
 
-N <- 80
+data.table::setDTthreads(1L)
 library(data.table)
-set.seed(1)
-reg.dt <- data.table(
-  x=runif(N, -2, 2),
-  person=rep(1:2, each=0.5*N))
-reg.pattern.list <- list(
-  easy=function(x, person)x^2,
-  impossible=function(x, person)(x^2)*(-1)^person)
-SOAK <- mlr3resampling::ResamplingSameOtherSizesCV$new()
-reg.task.list <- list()
-for(pattern in names(reg.pattern.list)){
-  f <- reg.pattern.list[[pattern]]
-  yname <- paste0("y_",pattern)
-  reg.dt[, (yname) := f(x,person)+rnorm(N, sd=0.5)][]
-  task.dt <- reg.dt[, c("x","person",yname), with=FALSE]
-  task.obj <- mlr3::TaskRegr$new(
-    pattern, task.dt, target=yname)
-  task.obj$col_roles$stratum <- "person"
-  task.obj$col_roles$subset <- "person"
-  reg.task.list[[pattern]] <- task.obj
-}
-reg.learner.list <- list(
-  mlr3::LearnerRegrFeatureless$new())
-if(requireNamespace("rpart")){
-  reg.learner.list$rpart <- mlr3::LearnerRegrRpart$new()
-}
-(bench.grid <- mlr3::benchmark_grid(
-  reg.task.list,
-  reg.learner.list,
-  SOAK))
-bench.result <- mlr3::benchmark(bench.grid)
-bench.score <- mlr3resampling::score(bench.result, mlr3::msr("regr.rmse"))
-bench.plist <- mlr3resampling::pvalue(bench.score)
-plot(bench.plist)
+set.seed(2)
+N <- 150L
+x <- runif(N, -3, 3)
+sim.dt <- data.table(
+  x = x,
+  y = sin(x) + rnorm(N, sd = 0.5),
+  Subset = rep(c("large", "large", "small"), length.out = N))
+sim.task <- mlr3::TaskRegr$new("iid_easy", sim.dt, target = "y")
+sim.task$col_roles$feature <- "x"
+sim.task$col_roles$subset <- "Subset"
+soak <- mlr3resampling::ResamplingSameOtherSizesCV$new()
+soak$param_set$values$folds <- 5L
+learner_list <- list(
+  mlr3::lrn("regr.featureless"),
+  if(requireNamespace("rpart"))mlr3::lrn("regr.rpart"))
+bgrid <- mlr3::benchmark_grid(sim.task, learner_list, soak)
+result <- mlr3::benchmark(bgrid)
+score.dt <- mlr3resampling::score(result, mlr3::msr("regr.rmse"))
+if(requireNamespace("ggplot2")) plot(score.dt)
+
+p.list <- mlr3resampling::pvalue(score.dt)
+if(requireNamespace("ggplot2")) plot(p.list)
 
 }
