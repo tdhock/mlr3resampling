@@ -1,13 +1,13 @@
-Changes in version 2025.5.19
+Changes in version 2026.5.19
 
 - remove ResamplingSameOtherCV and ResamplingVariableSizeTrainCV.
 
-Changes in version 2025.5.15
+Changes in version 2026.5.15
 
 - remove animint2 from Suggests, remove Older resamplers vignette.
 - figure and text size fixes in vignettes.
 
-Changes in version 2025.5.14
+Changes in version 2026.5.14
 
 - pvalue()$pvalues table no longer has diff_mean column (was negative of mean_diff column, and potentially confusing).
 - pvalue_downsample() stops if downsample results are missing, and messages if there are several combinations of task_id, algorithm, test.subset.
