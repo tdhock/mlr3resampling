@@ -59,9 +59,9 @@ int stratified_group_cv_Wasikowski
       double fold_eval = arma::mean(arma::mean(sd_vec));
       double samples_in_fold = arma::sum(strat_per_fold_mat.col(fold));
       if(fold_eval<min_eval || (CLOSE(fold_eval,min_eval)&&samples_in_fold<min_samples_in_fold)){
-	min_eval=fold_eval;
-	min_samples_in_fold=samples_in_fold;
-	best_fold = fold;
+        min_eval=fold_eval;
+        min_samples_in_fold=samples_in_fold;
+        best_fold = fold;
       }
     }
     fold_for_group(group) = best_fold;
@@ -133,13 +133,13 @@ int stratified_group_cv_WasikowskiLimitedMemory
         sd_vec = arma::stddev(props, 0, 1);
         strat_per_fold_mat.col(fold) -= strat_counts_for_group;
         double fold_sd = arma::mean(arma::mean(sd_vec));
-	double samples_in_fold = fold_counts(fold);
+        double samples_in_fold = fold_counts(fold);
         if(fold_sd<min_sd || (CLOSE(fold_sd,min_sd)&&samples_in_fold<min_samples_in_fold)){
           // best fold results in the least variability between folds,
           // averaged over all strata.
           best_fold = fold;
           min_sd=fold_sd;
-	  min_samples_in_fold=samples_in_fold;
+          min_samples_in_fold=samples_in_fold;
         }
       }
       for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
@@ -204,23 +204,23 @@ int stratified_group_cv_RSS
       int best_fold=0;
       double best_over_ideal=0;
       for(int fold=0; fold<N_fold; fold++){
-	double fold_over_ideal=0;
-	double fold_rss_update=0;
-	for(int strat=0; strat<N_strat; strat++){
-	  double n_hat = strat_per_fold_mat(strat, fold);
-	  double diff = n_hat-ideal_strat_counts_per_fold(strat);
-	  double n_group = strat_counts_for_group(strat);
-	  double maybe_over = n_group + diff;
-	  if(maybe_over>0)fold_over_ideal += maybe_over;
-	  fold_rss_update += (diff*2+n_group)*n_group;
-	}
-	if(fold_rss_update<best_rss_update ||
-	   (CLOSE(fold_rss_update,best_rss_update) && fold_over_ideal<best_over_ideal)
-	   ){
-	  best_fold=fold;
-	  best_rss_update = fold_rss_update;
-	  best_over_ideal = fold_over_ideal;
-	}
+        double fold_over_ideal=0;
+        double fold_rss_update=0;
+        for(int strat=0; strat<N_strat; strat++){
+          double n_hat = strat_per_fold_mat(strat, fold);
+          double diff = n_hat-ideal_strat_counts_per_fold(strat);
+          double n_group = strat_counts_for_group(strat);
+          double maybe_over = n_group + diff;
+          if(maybe_over>0)fold_over_ideal += maybe_over;
+          fold_rss_update += (diff*2+n_group)*n_group;
+        }
+        if(fold_rss_update<best_rss_update ||
+           (CLOSE(fold_rss_update,best_rss_update) && fold_over_ideal<best_over_ideal)
+           ){
+          best_fold=fold;
+          best_rss_update = fold_rss_update;
+          best_over_ideal = fold_over_ideal;
+        }
       }
       for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
         fold_ptr[set_i] = best_fold;
