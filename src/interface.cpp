@@ -15,10 +15,12 @@ Rcpp::IntegerVector stratified_group_cv_Wasikowski_interface
      fold_vec.begin());
   if(status==ERROR_STRATA_MUST_BE_NON_NEGATIVE)
     Rcpp::stop("strata must be non-negative");
-  if(status==ERROR_GROUP_MUST_BE_NON_DECREASING)
-    Rcpp::stop("group must be non-decreasing");
+  if(status==ERROR_GROUPS_MUST_BE_NON_NEGATIVE)
+    Rcpp::stop("groups must be non-negative");
   if(status==ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX)
     Rcpp::stop("need at least one of each stratum from zero to max");
+  if(status==ERROR_NEED_AT_LEAST_ONE_OF_EACH_GROUP_FROM_ZERO_TO_MAX)
+    Rcpp::stop("need at least one of each group from zero to max");
   return fold_vec;
 }
 
@@ -36,12 +38,10 @@ Rcpp::IntegerVector stratified_group_cv_WasikowskiLimitedMemory_interface
      fold_vec.begin());
   if(status==ERROR_STRATA_MUST_BE_NON_NEGATIVE)
     Rcpp::stop("strata must be non-negative");
-  if(status==ERROR_GROUPS_MUST_BE_NON_NEGATIVE)
-    Rcpp::stop("groups must be non-negative");
+  if(status==ERROR_GROUP_MUST_BE_NON_DECREASING)
+    Rcpp::stop("group must be non-decreasing");
   if(status==ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX)
     Rcpp::stop("need at least one of each stratum from zero to max");
-  if(status==ERROR_NEED_AT_LEAST_ONE_OF_EACH_GROUP_FROM_ZERO_TO_MAX)
-    Rcpp::stop("need at least one of each group from zero to max");
   return fold_vec;
 }
 
