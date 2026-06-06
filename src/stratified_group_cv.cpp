@@ -200,25 +200,25 @@ int stratified_group_cv_RSS
     strat_counts_for_group(strat_i)++;
     if(data_i==N_data-1 || (data_i+1<N_data && group_ptr[data_i+1] != group)){
       // end of a group, so use counts to determine optimal fold.
-      double best_rss_update=INFINITY;
+      double best_rss_crit=INFINITY;
       int best_fold=0;
       double best_over_ideal=0;
       for(int fold=0; fold<N_fold; fold++){
         double fold_over_ideal=0;
-        double fold_rss_update=0;
+        double fold_rss_crit=0;
         for(int strat=0; strat<N_strat; strat++){
           double n_hat = strat_per_fold_mat(strat, fold);
           double diff = n_hat-ideal_strat_counts_per_fold(strat);
           double n_group = strat_counts_for_group(strat);
           double maybe_over = n_group + diff;
           if(maybe_over>0)fold_over_ideal += maybe_over;
-          fold_rss_update += (diff*2+n_group)*n_group;
+          fold_rss_crit += n_hat*n_group;
         }
-        if(fold_rss_update<best_rss_update ||
-           (CLOSE(fold_rss_update,best_rss_update) && fold_over_ideal<best_over_ideal)
+        if(fold_rss_crit<best_rss_crit ||
+           (CLOSE(fold_rss_crit,best_rss_crit) && fold_over_ideal<best_over_ideal)
            ){
           best_fold=fold;
-          best_rss_update = fold_rss_update;
+          best_rss_crit = fold_rss_crit;
           best_over_ideal = fold_over_ideal;
         }
       }
