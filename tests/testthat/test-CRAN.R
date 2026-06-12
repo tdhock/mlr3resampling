@@ -1101,3 +1101,14 @@ test_that("ResamplingSameOtherSizesCV error for 2 subset vars", {
   kfold$instantiate(reg.task)
   expect_is(kfold$instance, "list")
 })
+
+test_that("plot method works with ResamplingCV", {
+  spam <- mlr3::tsk("spam")
+  fless <- mlr3::lrn("classif.featureless")
+  fless$predict_type <- "prob"
+  bgrid <- mlr3::benchmark_grid(spam, fless, cv)
+  bres <- mlr3::benchmark(bgrid)
+  score_ob = mlr3resampling::score(bres, mlr3::msrs('classif.auc'))
+  gg <- plot(score_ob)
+  expect_is(gg, "ggplot")
+})
