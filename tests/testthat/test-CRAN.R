@@ -919,6 +919,15 @@ test_that("prop sizes for regular sized groups with multiple strata", {
     else if(g<=10)data.table(y=c("rare","common"))
     else data.table(y=c("common","common"))
   , by=g]
+  expect_error({
+    files[, mlr3resampling:::stratified_group_cv_Wasikowski_interface(as.integer(factor(y))-1L, g, 2)]
+  }, "need at least one of each group from zero to max")
+  expect_error({
+    files[, mlr3resampling:::stratified_group_cv_Wasikowski_interface(as.integer(factor(y)), g-1L, 2)]
+  }, "need at least one of each stratum from zero to max")
+  fold.vec <- files[, mlr3resampling:::stratified_group_cv_Wasikowski_interface(as.integer(factor(y))-1L, g-1L, 2)]
+  fold.tab <- table(fold.vec)
+  expect_identical(names(fold.tab), c("0","1"))
   files[, table(g, y)]
   files[, table(y)]
   comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
