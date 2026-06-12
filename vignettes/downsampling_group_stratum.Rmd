@@ -98,7 +98,7 @@ trees()
 We see in above that 
 
 * in `rows`, there is about the same label distribution per fold (plus or minus 10 or 20 labels across folds), but not exactly the same (this can be achieved by setting `stratum` role). In `TOTAL` row we see the same number of rows per fold (plus or minus 1 because the total number of rows has a remainder when divided into the number of folds).
-* in `groups`, rows from some polygons have been split into several different folds (`1,2` etc.), which is undesirable (and can be avoided by setting `group` role).
+* in `groups`, rows from some polygons have been split into several different folds (`ignored,train` etc.), which is undesirable (and can be avoided by setting `group` role).
 
 ## Cross-validation using strata
 
@@ -111,7 +111,7 @@ trees(stratum="y")
 Above we see that
 
 * in `rows`, both the label counts, and the `TOTAL`, are consistent across folds (plus or minus 1).
-* in `groups`, there is large variation across folds, and some polygons have been split into different folds (column named `1,2` etc.).
+* in `groups`, there is large variation across folds, and some polygons have been split into different folds (column named `ignored,train` etc.).
 
 ## Cross-validation on polygons
 
@@ -124,7 +124,7 @@ trees(group="polygon")
 Above we see 
 
 * in `rows`, there is substantial label distribution variation across folds (which can be avoided by setting `stratum` role). We see the `TOTAL` number of rows is equal across folds (again plus or minus 1).
-* in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
+* in `groups`, each polygon has been assigned to one fold (no `ignored,train` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
 
 ## Cross-validation on polygons with strata
 
@@ -136,7 +136,7 @@ trees(stratum="y", group="polygon")
 
 Above we see
 
-* in `rows`, the labels counts and `TOTAL` are consistent across folds (again plus or minus 1).
+* in `rows`, the labels counts and `TOTAL` are consistent across folds (again plus or minus 1). TODO this is not true, need to fix code.
 * in `groups`, each polygon has been assigned to one fold (no `1,2` etc.), which is desirable. We see different numbers of `TOTAL` groups per fold, which is expected, because the algorithm attempts to equalize number or rows per fold, and there are different numbers or rows per group.
 
 # Example using respiratory data
