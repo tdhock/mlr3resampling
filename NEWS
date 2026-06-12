@@ -1,3 +1,7 @@
+Changes in version 2026.6.12
+
+- plot.score() works with ResamplingCV, thanks to Zina Randria for reporting the issue.
+
 Changes in version 2026.6.5
 
 - stratified_group_cv_Wasikowski*() error for invalid inputs.
