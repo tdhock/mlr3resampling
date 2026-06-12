@@ -1111,4 +1111,5 @@ test_that("plot method works with ResamplingCV", {
   score_ob = mlr3resampling::score(bres, mlr3::msrs('classif.auc'))
   gg <- plot(score_ob)
   expect_is(gg, "ggplot")
+  print(gg)
 })

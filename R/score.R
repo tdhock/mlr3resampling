@@ -13,8 +13,17 @@ score <- function(bench.result, ...){
   out.dt.list <- list()
   for(score.i in 1:nrow(bench.score)){
     bench.row <- bench.score[score.i]
-    it.dt <- bench.row$resampling[[1]]$instance$iteration.dt
-    out.dt.list[[score.i]] <- it.dt[bench.row, on="iteration"]
+    rsobj <- bench.row$resampling[[1]]
+    it.dt <- rsobj$instance$iteration.dt
+    out.dt.list[[score.i]] <- if(is.null(it.dt)){
+      data.table(
+        bench.row,
+        Train_subsets="same",
+        test.subset="full",
+        n.train.groups="full")
+    }else{
+      it.dt[bench.row, on="iteration"]
+    }
   }
   out <- add_algorithm(rbindlist(out.dt.list))
   setattr(out, "class", c("score", class(out)))
