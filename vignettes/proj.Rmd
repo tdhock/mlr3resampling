@@ -395,12 +395,20 @@ if(requireNamespace("torch") && torch::torch_is_installed()){
       self$weight(x)
     }
   )
-  learners_new$torch <- mlr3resampling::AutoTunerTorch_epochs$new(
-    "torch_linear",
+  learners_new$batch=mlr3resampling::AutoTunerTorch_epochs$new(
+    "torch_linear_batch",
     module_generator=gen_linear,
     max_epochs=1000,
     batch_size=10,
     measure_list=mlr3::msrs("classif.auc")
+  )
+  learners_new$strat=mlr3resampling::AutoTunerTorch_epochs$new(
+    "torch_linear_stratified",
+    module_generator=gen_linear,
+    max_epochs=1000,
+    batch_size=10,
+    measure_list=mlr3::msrs("classif.auc"),
+    batch_sampler=mlr3torchAUM::batch_sampler_stratified(1)
   )
 }
 if(requireNamespace("glmnet")){
