@@ -220,6 +220,7 @@ Code to re-run:
 |splitTools| yes   | yes    | no     | no              | no                       |
 | origami  | yes   | yes    | no     | leakage/random  | no                       |
 | caret    | yes   | yes    | no     | no              | no                       |
+| rsample  | yes   | yes    | no     | 1 stratum per group   | no                       |
 | sklearn  | yes   | yes    | no     | yes             | no                       |
 | soakpy   | no    | no     | yes    | no              | no                       |
 |mlr3resampling|yes|yes     | yes    | yes             | yes                      |
