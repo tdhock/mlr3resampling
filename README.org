@@ -214,6 +214,15 @@ Code to re-run:
 
 ** Related work
 
+| Software | group | strata | subset | group + stratum | group + stratum + subset |
+|----------|-------|--------|--------|-----------------|--------------------------|
+| mlr3     | yes   | yes    | no     | no              | no                       |
+|splitTools| yes   | yes    | no     | no              | no                       |
+| origami  | yes   | yes    | no     | leakage/random  | no                       |
+| sklearn  | yes   | yes    | no     | yes             | no                       |
+| soakpy   | no    | no     | yes    | no              | no                       |
+|mlr3resampling|yes|yes     | yes    | yes             | yes                      |
+
 - mlr3resampling code was copied/modified from Resampling and
   ResamplingCV classes in the excellent [[https://github.com/mlr-org/mlr3][mlr3]] package.
 - As of Oct 2024, scikit-learn in python implements support for groups
