@@ -217,10 +217,11 @@ Code to re-run:
 | Software | group | strata | subset | group + stratum | group + stratum + subset |
 |----------|-------|--------|--------|-----------------|--------------------------|
 | mlr3     | yes   | yes    | no     | no              | no                       |
-|splitTools| yes   | yes    | no     | no              | no                       |
-| origami  | yes   | yes    | no     | leakage/random  | no                       |
 | caret    | yes   | yes    | no     | no              | no                       |
-| rsample  | yes   | yes    | no     | 1 stratum per group   | no                       |
+|splitTools| yes   | yes    | no     | no              | no                       |
+| origami  | yes   | yes    | no     | random+leakage (only 1 stratum per group)   | no                       |
+| rsample  | yes   | yes    | no     | random (only 1 stratum per group)   | no                       |
+| bioLeak  | yes   | yes    | no     | random             | no                       |     |
 | sklearn  | yes   | yes    | no     | yes             | no                       |
 | soakpy   | no    | no     | yes    | no              | no                       |
 |mlr3resampling|yes|yes     | yes    | yes             | yes                      |
