@@ -214,6 +214,8 @@ Code to re-run:
 
 ** Related work
 
+See my [[https://docs.google.com/presentation/d/1gXEqaPQBdJxA39iLqy6SlpA1LZGHcOOgJ1dT1_lzVlo/edit?slide=id.g3ef515ab464_0_0#slide=id.g3ef515ab464_0_0][slides]] for empirical comparisons of different packages which implement stratified CV with groups.
+
 | Software | group | strata | subset | group + stratum | group + stratum + subset |
 |----------|-------|--------|--------|-----------------|--------------------------|
 | mlr3     | yes   | yes    | no     | no              | no                       |
