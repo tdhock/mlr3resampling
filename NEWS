@@ -1,3 +1,7 @@
+Changes in version 2026.6.27
+
+- ResamplingSameOtherSizesCV saves time by omitting un-necessary sort by freq.
+
 Changes in version 2026.6.12
 
 - plot.score() works with ResamplingCV, thanks to Zina Randria for reporting the issue.

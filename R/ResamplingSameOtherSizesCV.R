@@ -133,10 +133,9 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           fold.dt[, let(
             rss = sum((table(stratum_fac)-ideal.tab)^2),
             neg_nrow = -.N,
-            freq = mean(ideal.tab*table(stratum_fac)),
             g_ord = min(random_order)
           ), by=group]
-          setkey(fold.dt, rss, neg_nrow, freq, g_ord)
+          setkey(fold.dt, rss, neg_nrow, g_ord)
         }
         fun <- get(paste0(
           "stratified_group_cv_",
