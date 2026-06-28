@@ -998,6 +998,50 @@ test_that("deterministic fold assignment for unique group sizes with multiple st
   folds[set_group==TRUE,  expect_identical(run1, run2)]
 })
 
+test_that("deterministic fold assignment for ties ideal 6 5", {
+  gid <- 0
+  g <- function(...){
+    times <- c(...)
+    y <- rep(1:2, times)
+    p <- paste(times, collapse=",")
+    gid <<- gid+1
+    g <- paste0(p, "_", gid)
+    data.table(g, y)
+  }
+  files <- rbind(
+    g(5,3),
+    g(3,0),
+    g(1,2),
+    g(1,2),
+    g(1,2),
+    g(1,1))
+  files[, table(y)]
+  task_amr = mlr3::as_task_classif(files, target = "y")
+  task_amr$set_col_roles("g", roles = "group")
+  task_amr$set_col_roles("y", roles = c("target", "stratum"))
+  test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+  test.validation.resampling$param_set$values$folds <- 2
+  test.validation.resampling$instantiate(task_amr)
+  fold.dt <- test.validation.resampling$instance$fold.dt
+  stab <- sort(fold.dt[, table(stratum, fold)])
+  expect_equal(stab, c(5,5,6,6))
+  for(fsign in c(-1, 1)){
+    fold.ord <- fold.dt[order(rss, neg_nrow, fsign*neg_freq)][, let(
+      g.int = as.integer(factor(group, unique(group))),
+      Stratum = paste0("s", stratum)
+    )][]
+    fold.out <- fold.ord[, mlr3resampling:::stratified_group_cv_RSS_interface(stratum-1, g.int, 2L)+1L]
+    fwide <- dcast(data.table(fold.ord, fold.out), g.int + fold.out ~ Stratum, length)
+    for(f in 1:2){
+      fwide[
+      , paste0("f", f, "s", 1:2) := lapply(.SD, function(x)cumsum(ifelse(fold.out==f, x, 0)))
+      , .SDcols=paste0("s", 1:2)][]
+    }
+    print(fwide)
+    print(table(fold.ord$stratum, fold.out))
+  }
+})
+
 test_that("folds ok for AZtrees(group,stratum)", {
   data(AZtrees, package="mlr3resampling")
   trees_task <- mlr3::as_task_classif(AZtrees, target="y")
