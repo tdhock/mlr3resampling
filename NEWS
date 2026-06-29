@@ -1,3 +1,7 @@
+Changes in version 2026.6.28
+
+- Add test case for ResamplingSameOtherSizesCV, group_stratum_algo=RSS, which requires key/sort by neg_freq for tie-breaking.
+
 Changes in version 2026.6.12
 
 - plot.score() works with ResamplingCV, thanks to Zina Randria for reporting the issue.
