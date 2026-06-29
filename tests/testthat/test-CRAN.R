@@ -966,13 +966,24 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   expect_equal(fpg.dt[algo=="RSS" & nfold==5, sort(N)], rep(c(3,27),each=10))
 })
 
-test_that("deterministic fold assignment for unique group sizes with multiple strata", {
-  files <- rbind(
-    data.table(g="f1g1", y=c(1,2)),
-    data.table(g="f1g2", y=c(2,2)),
-    data.table(g="f2g1", y=c(1,2,2)),
-    data.table(g="f2g2", y=c(2)),
-    data.table(g="f3g1", y=c(1,2,2,2)))
+gdt <- function(..., strata=2){
+  m <- matrix(c(...), ncol=strata, byrow=TRUE)
+  data.table(row.i=1:nrow(m))[, {
+    times <- m[row.i,]
+    y <- rep(1:strata, times)
+    p <- paste(times, collapse=",")
+    g <- paste0(row.i, "_", p)
+    data.table(g, y)
+  }, by=row.i]
+}
+
+test_that("deterministic optimal fold assignment for unique group sizes with multiple strata", {
+  files <- gdt(
+    1,1,
+    0,2,
+    1,2,
+    0,1,
+    1,3)
   ideal <- as.numeric(files[, table(y)]/3)
   files[, table(g, y)]
   comb.dt <- CJ(set_group=c(TRUE,FALSE), run=paste0("run", 1:2))
@@ -984,8 +995,10 @@ test_that("deterministic fold assignment for unique group sizes with multiple st
     task_amr$set_col_roles("y", roles = c("target", "stratum"))
     task_amr$col_roles
     test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$param_set$values$group_stratum_algo <- "RSS"
     test.validation.resampling$instantiate(task_amr)
     fold.dt <- test.validation.resampling$instance$fold.dt
+    fold.dt[, table(y, fold)]
     expect_equal(sum(fold.dt[, t(table(fold, stratum))]==ideal), 6)
     fpg <- fold.dt[, .(N=.N), by=.(fold, group)]
     fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
@@ -998,23 +1011,46 @@ test_that("deterministic fold assignment for unique group sizes with multiple st
   folds[set_group==TRUE,  expect_identical(run1, run2)]
 })
 
-test_that("deterministic fold assignment for ties ideal 6 5", {
-  gid <- 0
-  g <- function(...){
-    times <- c(...)
-    y <- rep(1:2, times)
-    p <- paste(times, collapse=",")
-    gid <<- gid+1
-    g <- paste0(p, "_", gid)
-    data.table(g, y)
+test_that("compare assignment for five unique group sizes with multiple strata", {
+  files <- gdt(
+    1,1,
+    0,2,
+    1,2,
+    0,1,
+    1,3)
+  ideal <- as.numeric(files[, table(y)]/3)
+  files[, table(g, y)]
+  tab.list <- list()
+  for(group_stratum_algo in c("Wasikowski","RSS")){
+    set.seed(1)
+    task_amr = mlr3::as_task_classif(files, target = "y")
+    task_amr$set_col_roles("g", roles = "group")
+    task_amr$set_col_roles("y", roles = c("target", "stratum"))
+    test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$param_set$values$group_stratum_algo <- group_stratum_algo
+    test.validation.resampling$instantiate(task_amr)
+    fold.dt <- test.validation.resampling$instance$fold.dt[
+    , var := var(table(y))
+    , by=group][]
+    group.dt <- fold.dt[, .SD[1], by=group][, counts := sub(".*_", "", group)]
+    print(if("rss" %in% names(fold.dt))group.dt[
+      order(rss), .(counts, fold, rss)
+    ] else group.dt[
+      order(neg_sd, g_ord),  .(counts, fold, var=neg_sd^2, g_ord)])
+    print(tab.list[[group_stratum_algo]] <- fold.dt[, table(y, fold)])
   }
-  files <- rbind(
-    g(5,3),
-    g(3,0),
-    g(1,2),
-    g(1,2),
-    g(1,2),
-    g(1,1))
+  expect_equal(sort(tab.list$Wasikowski), c(1,1,1,2,3,4))
+  expect_equal(sort(tab.list$RSS), c(1,1,1,3,3,3))
+})
+
+test_that("deterministic fold assignment for ties ideal 6 5", {
+  files <- gdt(
+    5,3,
+    3,0,
+    1,2,
+    1,2,
+    1,2,
+    1,1)
   files[, table(y)]
   task_amr = mlr3::as_task_classif(files, target = "y")
   task_amr$set_col_roles("g", roles = "group")
@@ -1023,6 +1059,13 @@ test_that("deterministic fold assignment for ties ideal 6 5", {
   test.validation.resampling$param_set$values$folds <- 2
   test.validation.resampling$instantiate(task_amr)
   fold.dt <- test.validation.resampling$instance$fold.dt
+  fold.dt[
+  , sd := sd(table(y))
+  , by=group][
+  , .SD[1]
+  , by=group][, .(
+    counts=sub(".*_", "", group),
+    sd, rss, nrow=-neg_nrow, freq=-neg_freq)]
   stab <- sort(fold.dt[, table(stratum, fold)])
   expect_equal(stab, c(5,5,6,6))
   for(fsign in c(-1, 1)){
@@ -1037,7 +1080,13 @@ test_that("deterministic fold assignment for ties ideal 6 5", {
       , paste0("f", f, "s", 1:2) := lapply(.SD, function(x)cumsum(ifelse(fold.out==f, x, 0)))
       , .SDcols=paste0("s", 1:2)][]
     }
-    print(fwide)
+    p <- function(...)apply(cbind(...), 1, paste, collapse=",")
+    print(fwide[, .(
+      group=p(s1,s2),
+      fold=fold.out,
+      fold1=p(f1s1,f1s2),
+      fold2=p(f2s1,f2s2)
+    )])
     print(table(fold.ord$stratum, fold.out))
   }
 })
