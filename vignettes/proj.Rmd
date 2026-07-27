@@ -12,6 +12,7 @@ litedown::reactor(
   comment = "#>",
   fig.width=10,
   fig.height=6)
+options(width=100)
 data.table::setDTthreads(1)
 ```
 
@@ -201,7 +202,7 @@ if(requireNamespace("mlr3batchmark")){
 }
 ```
 
-The result above includes test AUC and accuracy values, which are more convincing test (but this involves actually submitting jobs on the cluster).
+The result above includes test AUC and accuracy values, which are more convincing (but this involves actually submitting jobs on the cluster).
 
 Our proposed way to test is via:
 
@@ -214,7 +215,7 @@ The results above include test AUC and accuracy, but with different values becau
 # Running all jobs locally (small benchmarks)
 
 For some small benchmarks, you may want to compute all results on your local machine (not a cluster).
-For both the previous and proposed approaches, we use the code below to enable computation in parallel using all the CPUs on the local machine.
+For both the previous and proposed approaches, we use the multisession plan for parallel computation using all local CPUs.
 
 ```{r}
 if(require(future))plan("multisession")
@@ -419,7 +420,7 @@ system.time({
 ```
 
 Notice how fast the above code is.
-Even though the torch learner has max 1000 epochs, it is reduced to only 2 epoch when running `proj_test()`.
+Even though the torch learner has max 1000 epochs, it is reduced to only 2 epochs when running `proj_test()`.
 
 ## New `save_learner()` method for model interpretation
 
