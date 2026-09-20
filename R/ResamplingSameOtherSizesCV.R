@@ -100,7 +100,9 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       strata.dt <- if(length(task$col_roles$stratum)){
         task$data(
           cols=task$col_roles$stratum
-        )[, stratum := .GRP-1L, by=c(task$col_roles$stratum)][]
+        )[, stratum := as.integer(factor(
+          .SD[[task$col_roles$stratum]]
+        ))-1L][]
       }else{
         data.table(stratum=rep(0L, task$nrow))
       }
@@ -134,6 +136,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
             neg_Wsum = NA_real_,
             g_ord = NA_real_
           )][, set_RSS_stats_interface(
+            ## group must be non-decreasing but does not need to start at 0.
             stratum, group, random_order, n.folds, rss, neg_nrow, neg_Wsum, g_ord
           )]
           setkey(fold.dt, rss, neg_nrow, neg_Wsum, g_ord)
