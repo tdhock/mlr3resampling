@@ -171,8 +171,8 @@ int stratified_group_cv_RSS
   }
   int N_strat=strat_max+1;
   arma::vec
-    strat_counts(N_strat, arma::fill::zeros),
     ideal_strat_counts_per_fold(N_strat),
+    strat_counts(N_strat, arma::fill::zeros),
     strat_counts_for_group(N_strat);
   arma::mat
     strat_per_fold_mat(N_strat, N_fold, arma::fill::zeros);
@@ -226,6 +226,78 @@ int stratified_group_cv_RSS
         fold_ptr[set_i] = best_fold;
       }
       strat_per_fold_mat.col(best_fold) += strat_counts_for_group;
+    }
+  }
+  return 0;
+}
+
+int set_RSS_stats
+(const int* strat_ptr, // in 0,…,strat_max
+ const int* group_ptr, // sorted, non-decreasing.
+ const int* random_order_ptr,
+ const int N_data,
+ const int N_fold,
+ // inputs above, outputs below.
+ double* rss_ptr,
+ double* neg_nrow_ptr,
+ double* neg_Wsum_ptr,
+ double* g_ord_ptr
+){
+  int strat_max = 0;
+  // begin by scanning all data, checking for errors and determining
+  // number of strata.
+  for(int data_i=0; data_i<N_data; data_i++){
+    if(0<data_i && group_ptr[data_i] < group_ptr[data_i-1])
+      return ERROR_GROUP_MUST_BE_NON_DECREASING;
+    int strat = strat_ptr[data_i];
+    if(strat<0)return ERROR_STRATA_MUST_BE_NON_NEGATIVE;
+    if(strat_max<strat)strat_max=strat;
+  }
+  int N_strat=strat_max+1;
+  arma::vec
+    ideal_strat_counts_per_fold(N_strat),
+    strat_counts(N_strat, arma::fill::zeros),
+    strat_counts_for_group(N_strat);
+  // count each stratum, error if any are zero.
+  for(int data_i=0; data_i<N_data; data_i++){
+    int strat = strat_ptr[data_i];
+    strat_counts(strat)++;
+  }
+  ideal_strat_counts_per_fold = strat_counts / N_fold;
+  for(int strat=0; strat<N_strat; strat++){
+    if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
+  }
+  // main fold assignment loop over data, already sorted by group.
+  int data_i_at_group_start;
+  double g_ord;
+  for(int data_i=0; data_i<N_data; data_i++){
+    int group = group_ptr[data_i];
+    if(data_i==0 || (data_i>0 && group_ptr[data_i-1] != group)){
+      // start of a group, so restart counts to zero.
+      data_i_at_group_start=data_i;
+      strat_counts_for_group.zeros();
+      g_ord=INFINITY;
+    }
+    // add to counts for this stratum.
+    int strat_i = strat_ptr[data_i];
+    if(random_order_ptr[data_i]<g_ord){
+      g_ord = random_order_ptr[data_i];
+    }
+    strat_counts_for_group(strat_i)++;
+    if(data_i==N_data-1 || (data_i+1<N_data && group_ptr[data_i+1] != group)){
+      // end of a group, so use counts to compute stats.
+      double rss=0, nrow=data_i-data_i_at_group_start+1, Wsum=0;
+      for(int strat=0; strat<N_strat; strat++){
+	double diff = strat_counts_per_fold(strat)-ideal_strat_counts_per_fold(strat);
+	rss += diff * diff;
+	Wsum += strat_counts_per_fold(strat) * ideal_strat_counts_per_fold(strat);
+      }
+      for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
+	rss_ptr[set_i] = rss;
+	neg_nrow_ptr[set_i] = -nrow;
+        neg_Wsum_ptr[set_i] = -Wsum;
+	g_ord_ptr[set_i] = g_ord;
+      }
     }
   }
   return 0;
