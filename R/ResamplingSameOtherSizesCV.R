@@ -124,8 +124,8 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           random_order = sample(.N)
         )]
         if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
-          fold.dt[, let(
-            neg_sd = -sd(table(stratum)),
+          fold.dt[, stratum_fac := factor(stratum)][, let(
+            neg_sd = -sd(table(stratum_fac)), # needs to be factor to include 0 counts.
             g_ord = min(random_order)
           ), by=group]
           setkey(fold.dt, neg_sd, g_ord)
