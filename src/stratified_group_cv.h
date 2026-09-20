@@ -27,3 +27,16 @@ int stratified_group_cv_RSS
  const int N_fold,
  // inputs above, outputs below.
  int* fold_ptr);
+
+int set_RSS_stats
+(const int* strat_ptr, // in 0,…,strat_max
+ const int* group_ptr, // sorted, non-decreasing.
+ const int* random_order_ptr,
+ const int N_data,
+ const int N_fold,
+ // inputs above, outputs below.
+ double* rss_ptr,
+ double* neg_nrow_ptr,
+ double* neg_Wsum_ptr,
+ double* g_ord_ptr
+    );

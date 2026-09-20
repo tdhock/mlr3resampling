@@ -288,9 +288,9 @@ int set_RSS_stats
       // end of a group, so use counts to compute stats.
       double rss=0, nrow=data_i-data_i_at_group_start+1, Wsum=0;
       for(int strat=0; strat<N_strat; strat++){
-	double diff = strat_counts_per_fold(strat)-ideal_strat_counts_per_fold(strat);
+	double diff = strat_counts_for_group(strat)-ideal_strat_counts_per_fold(strat);
 	rss += diff * diff;
-	Wsum += strat_counts_per_fold(strat) * ideal_strat_counts_per_fold(strat);
+	Wsum += strat_counts_for_group(strat) * ideal_strat_counts_per_fold(strat);
       }
       for(int set_i=data_i_at_group_start; set_i<=data_i; set_i++){
 	rss_ptr[set_i] = rss;

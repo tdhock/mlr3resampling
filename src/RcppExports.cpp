@@ -50,11 +50,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// set_RSS_stats_interface
+void set_RSS_stats_interface(const Rcpp::IntegerVector strat_vec, const Rcpp::IntegerVector group_vec, const Rcpp::IntegerVector random_order_vec, const int num_folds, Rcpp::NumericVector rss_vec, Rcpp::NumericVector neg_nrow_vec, Rcpp::NumericVector Wsum_vec, Rcpp::NumericVector g_ord_vec);
+RcppExport SEXP _mlr3resampling_set_RSS_stats_interface(SEXP strat_vecSEXP, SEXP group_vecSEXP, SEXP random_order_vecSEXP, SEXP num_foldsSEXP, SEXP rss_vecSEXP, SEXP neg_nrow_vecSEXP, SEXP Wsum_vecSEXP, SEXP g_ord_vecSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type strat_vec(strat_vecSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type group_vec(group_vecSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector >::type random_order_vec(random_order_vecSEXP);
+    Rcpp::traits::input_parameter< const int >::type num_folds(num_foldsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type rss_vec(rss_vecSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type neg_nrow_vec(neg_nrow_vecSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type Wsum_vec(Wsum_vecSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type g_ord_vec(g_ord_vecSEXP);
+    set_RSS_stats_interface(strat_vec, group_vec, random_order_vec, num_folds, rss_vec, neg_nrow_vec, Wsum_vec, g_ord_vec);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mlr3resampling_stratified_group_cv_Wasikowski_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_Wasikowski_interface, 3},
     {"_mlr3resampling_stratified_group_cv_WasikowskiLimitedMemory_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_WasikowskiLimitedMemory_interface, 3},
     {"_mlr3resampling_stratified_group_cv_RSS_interface", (DL_FUNC) &_mlr3resampling_stratified_group_cv_RSS_interface, 3},
+    {"_mlr3resampling_set_RSS_stats_interface", (DL_FUNC) &_mlr3resampling_set_RSS_stats_interface, 8},
     {NULL, NULL, 0}
 };
 

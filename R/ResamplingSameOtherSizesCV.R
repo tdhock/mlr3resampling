@@ -41,7 +41,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- random_order <- neg_sd <- neg_nrow <- freq <- g_ord <- rss <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- random_order <- neg_sd <- neg_nrow <- g_ord <- rss <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
@@ -77,7 +77,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       n.folds <- self$param_set$values$folds
       acol <- task$col_roles$group
       avec <- if(length(acol)==1){
-        task$data(cols=acol)[[acol]]
+        as.integer(as.factor(task$data(cols=acol)[[acol]]))
       }else{
         1:task$nrow
       }#mlr3 errors for group length>1.
@@ -131,12 +131,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           setkey(fold.dt, group)[, let(
             rss = NA_real_,
             neg_nrow = NA_real_,
-            Wsum = NA_real_,
+            neg_Wsum = NA_real_,
             g_ord = NA_real_
           )][, set_RSS_stats_interface(
-            stratum, group, random_order, n.folds, rss, neg_nrow, Wsum, g_ord
+            stratum, group, random_order, n.folds, rss, neg_nrow, neg_Wsum, g_ord
           )]
-          setkey(fold.dt, rss, neg_nrow, freq, g_ord)
+          setkey(fold.dt, rss, neg_nrow, neg_Wsum, g_ord)
         }
         fun <- get(paste0(
           "stratified_group_cv_",
