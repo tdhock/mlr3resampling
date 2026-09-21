@@ -13,3 +13,7 @@ stratified_group_cv_RSS_interface <- function(strat_vec, group_vec, num_folds) {
     .Call('_mlr3resampling_stratified_group_cv_RSS_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, num_folds)
 }
 
+set_RSS_stats_interface <- function(strat_vec, group_vec, random_order_vec, num_folds, rss_vec, neg_nrow_vec, Wsum_vec, g_ord_vec) {
+    invisible(.Call('_mlr3resampling_set_RSS_stats_interface', PACKAGE = 'mlr3resampling', strat_vec, group_vec, random_order_vec, num_folds, rss_vec, neg_nrow_vec, Wsum_vec, g_ord_vec))
+}
+

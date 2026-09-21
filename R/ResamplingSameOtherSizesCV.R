@@ -41,7 +41,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
   ),
   private = list(
     .get_instance = function(task) {
-      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_sd <- neg_nrow <- freq <- g_ord <- rss <- NULL
+      . <- train_groups <- test.subset <- same <- full <- other <- stratum <- group <- row_id <- fold <- groups <- prop <- iteration <- stratum_fac <- random_order <- neg_sd <- neg_nrow <- neg_Wsum <- g_ord <- rss <- NULL
       ## Above to avoid CRAN NOTEs.
       reserved.names <- c(
         "row_id", "fold",
@@ -77,7 +77,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       n.folds <- self$param_set$values$folds
       acol <- task$col_roles$group
       avec <- if(length(acol)==1){
-        task$data(cols=acol)[[acol]]
+        as.integer(as.factor(task$data(cols=acol)[[acol]]))
       }else{
         1:task$nrow
       }#mlr3 errors for group length>1.
@@ -100,9 +100,12 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       strata.dt <- if(length(task$col_roles$stratum)){
         task$data(
           cols=task$col_roles$stratum
-        )[, stratum := .GRP, by=c(task$col_roles$stratum)][]
+        )[
+        , stratum := .GRP-1L
+        , by=c(task$col_roles$stratum)#could be length>1.
+        ][]
       }else{
-        data.table(stratum=rep(1L, task$nrow))
+        data.table(stratum=rep(0L, task$nrow))
       }
       fold.dt <- data.table(
         ## test.subset, stratum, group, row_id.
@@ -119,24 +122,25 @@ ResamplingSameOtherSizesCV = R6::R6Class(
         set(fold.dt, j="fold", value=fold)
       }else if(length(fcol)==0){
         fold.dt[, let(
-          random_order = sample(.N),
-          stratum_fac = factor(stratum)
+          random_order = sample(.N)
         )]
         if(grepl("Wasikowski", self$param_set$values$group_stratum_algo)){
-          fold.dt[, let(
-            neg_sd = -sd(table(stratum_fac)),
+          fold.dt[, stratum_fac := factor(stratum)][, let(
+            neg_sd = -sd(table(stratum_fac)), # needs to be factor to include 0 counts.
             g_ord = min(random_order)
           ), by=group]
           setkey(fold.dt, neg_sd, g_ord)
         }else{
-          ideal.tab <- fold.dt[, table(stratum_fac)/n.folds]
-          fold.dt[, let(
-            rss = sum((table(stratum_fac)-ideal.tab)^2),
-            neg_nrow = -.N,
-            freq = mean(ideal.tab*table(stratum_fac)),
-            g_ord = min(random_order)
-          ), by=group]
-          setkey(fold.dt, rss, neg_nrow, freq, g_ord)
+          setkey(fold.dt, group)[, let(
+            rss = NA_real_,
+            neg_nrow = NA_real_,
+            neg_Wsum = NA_real_,
+            g_ord = NA_real_
+          )][, set_RSS_stats_interface(
+            ## group must be non-decreasing but does not need to start at 0.
+            stratum, group, random_order, n.folds, rss, neg_nrow, neg_Wsum, g_ord
+          )]
+          setkey(fold.dt, rss, neg_nrow, neg_Wsum, g_ord)
         }
         fun <- get(paste0(
           "stratified_group_cv_",
@@ -144,7 +148,7 @@ ResamplingSameOtherSizesCV = R6::R6Class(
           "_interface"))
         fold.dt[
         , fold := fun(
-          stratum-1L, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
+          stratum, cumsum(c(FALSE, diff(g_ord)!=0)), n.folds
         )+1L]
       }else{
         stop("fold role must have length 0 or 1")

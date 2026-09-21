@@ -1,3 +1,7 @@
+Changes in version 2026.9.20
+
+- new internal C++ function set_RSS_stats_interface() computes stats before sort for RSS algo in ResamplingSameOtherSizesCV$instantiate(), 10x faster than previous R code.
+
 Changes in version 2026.6.12
 
 - plot.score() works with ResamplingCV, thanks to Zina Randria for reporting the issue.
