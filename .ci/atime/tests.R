@@ -13,7 +13,7 @@ test.list <- atime::atime_test_list(
       train_task$col_roles$stratum <- "y"
       train_task$col_roles$group <- "groupID"
     },
-    seconds.limit=1,
+    seconds.limit=0.1,
     expr={
       cv <- mlr3resampling::ResamplingSameOtherSizesCV$new()
       cv$param_set$values$folds <- 2
