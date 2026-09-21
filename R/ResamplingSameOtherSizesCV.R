@@ -100,9 +100,10 @@ ResamplingSameOtherSizesCV = R6::R6Class(
       strata.dt <- if(length(task$col_roles$stratum)){
         task$data(
           cols=task$col_roles$stratum
-        )[, stratum := as.integer(factor(
-          .SD[[task$col_roles$stratum]]
-        ))-1L][]
+        )[
+        , stratum := .GRP-1L
+        , by=c(task$col_roles$stratum)#could be length>1.
+        ][]
       }else{
         data.table(stratum=rep(0L, task$nrow))
       }
