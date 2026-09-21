@@ -171,8 +171,8 @@ int stratified_group_cv_RSS
   }
   int N_strat=strat_max+1;
   arma::vec
-    ideal_strat_counts_per_fold(N_strat),
     strat_counts(N_strat, arma::fill::zeros),
+    ideal_strat_counts_per_fold(N_strat),
     strat_counts_for_group(N_strat);
   arma::mat
     strat_per_fold_mat(N_strat, N_fold, arma::fill::zeros);
@@ -255,8 +255,8 @@ int set_RSS_stats
   }
   int N_strat=strat_max+1;
   arma::vec
-    ideal_strat_counts_per_fold(N_strat),
     strat_counts(N_strat, arma::fill::zeros),
+    ideal_strat_counts_per_fold(N_strat),
     strat_counts_for_group(N_strat);
   // count each stratum, error if any are zero.
   for(int data_i=0; data_i<N_data; data_i++){
