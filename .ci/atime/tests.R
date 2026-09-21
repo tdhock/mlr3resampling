@@ -1,5 +1,7 @@
 library(data.table)
 test.list <- atime::atime_test_list(
+  ## Test case derived from https://github.com/tdhock/stratified-group-cv#20-sept-2026
+  ## https://github.com/tdhock/mlr3resampling/pull/105
   "Improved stats speed in #105"=atime::atime_test(
     N=2^seq(3, 20),
     setup={
@@ -18,7 +20,7 @@ test.list <- atime::atime_test_list(
       cv$param_set$values$group_stratum_algo <- "RSS"
       cv$instantiate(train_task)
     },
-    Fast="b5a1aa99eaaaa9f8d402ecbda1ac95b07921b96f",
-    Slow="38b0c2ab61f091a0506eccffa5abd8954621c8d6"
+    Fast="b5a1aa99eaaaa9f8d402ecbda1ac95b07921b96f", #merge commit of Fast PR.
+    Slow="38b0c2ab61f091a0506eccffa5abd8954621c8d6" #parent of first commit (https://github.com/tdhock/mlr3resampling/commit/a4d684612eeecfe2291b4ef01ef13ed194127c19) in Fast PR.
   )
 )
