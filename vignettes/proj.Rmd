@@ -290,7 +290,7 @@ Note for large benchmarks, you must use `fun` to avoid loading all models into m
 The code below does the full computation on SLURM using the proposed method.
 
 ```{r}
-if(slurm.available){
+if(requireNamespace("mlr3batchmark") && slurm.available){
   slurm_job_id <- mlr3resampling::proj_submit(
     proj_dir, tasks=2, hours=1, gigabytes=1)
 }
