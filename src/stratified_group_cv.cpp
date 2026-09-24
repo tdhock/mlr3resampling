@@ -267,7 +267,6 @@ int set_RSS_stats
   for(int strat=0; strat<N_strat; strat++){
     if(strat_counts(strat)==0)return ERROR_NEED_AT_LEAST_ONE_OF_EACH_STRATUM_FROM_ZERO_TO_MAX;
   }
-  // main fold assignment loop over data, already sorted by group.
   int data_i_at_group_start;
   double g_ord;
   for(int data_i=0; data_i<N_data; data_i++){
