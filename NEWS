@@ -1,3 +1,7 @@
+Changes in version 2026.9.24
+
+- CSS width 1000px in vignettes.
+
 Changes in version 2026.9.20
 
 - new internal C++ function set_RSS_stats_interface() computes stats before sort for RSS algo in ResamplingSameOtherSizesCV$instantiate(), 10x faster than previous R code.
