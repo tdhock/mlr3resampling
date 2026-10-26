@@ -23,9 +23,23 @@ data.table::setDTthreads(1)
 
 The goal of this vignette is explain how SOAKED (Same/Other/All K-fold cross-validation Extension Downsampling) can be used with `ResamplingSameOtherSizesCV` to determine why there is a difference between Same/Other/All models.
 
+# Problem setting
+
+We are doing supervised learning in data with natural subsets (also known as domains), such as:
+
+* time periods, for example each year is a different subset.
+* geographic regions, for example each country is a different subset.
+* demographic categories, for example men and women are two different subsets.
+
+We fix a test subset for which we would like good predictions, then ask the questions:
+
+* is training on other subsets (Other model) as good as training on the test subset? (Same model)
+* is training on all subsets (All model) as good as training on the test subset? (Same model)
+
 # Simulations
 
 We begin by simulating some regression data according to two different patterns.
+The parameters of this simulation were chosen to yield data with interesting results using SOAKED with the rpart learner.
 
 ```{r}
 library(data.table)
@@ -87,6 +101,9 @@ if(require(ggplot2)){
 
 Above we see the simulated data, which represent regression problems in 1D.
 There is a panel for each difficulty level, with a grey dot for each training data point, and a black curve that represents the ideal prediction function (same in both difficulty levels).
+We will create two data sets based on these simulated data.
+Each data set will have two subsets: large and small.
+The large subset will have more data than the small subset, to motivate the use of SOAKED.
 
 # mlr3 benchmark
 
@@ -145,8 +162,12 @@ gg_list
 The figures above show the two Tasks.
 Each Task has two subsets: large and small.
 
-* The two subsets in `different` have different noise levels, so we expect to see significant differences when training using either the same or different numbers of samples.
-* The two subsets in `iid_easy` have the same noise level, so we expect to see significant test error differences only when training using different numbers of samples.
+* The two subsets in `different` have different noise levels, so we always expect to see significant Same/Other differences:
+  * when training using the natural sample sizes (no down-sampling), Same and Other models are trained using different numbers of samples. Training on the large subset should be more accurate because of its smaller noise and larger number of samples.
+  * when training using down-sampling to a common number of samples, Same and Other models are trained using equal numbers of samples. Training on data from the large subset should be more accurate only because of its smaller noise.
+* The two subsets in `iid_easy` have equal noise, so we expect to see significant test error differences only when training using different numbers of samples.
+  * without down-sampling, training on data from the large subset should be more accurate only because of its larger number of samples.
+  * with down-sampling, training on the two subsets should be equally accurate (no difference in noise level, nor in sample size).
 
 Below we create the benchmark grid.
 
