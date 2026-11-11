@@ -930,27 +930,25 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   expect_identical(names(fold.tab), c("0","1"))
   files[, table(g, y)]
   files[, table(y)]
-  comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5))
+  comb.dt <- CJ(set_group=c(TRUE,FALSE), nfold=c(3,5), algo=c("RSS", "Wasikowski", "WasikowskiLimitedMemory"))
   fpg.dt.list <- list()
   set.seed(1)
   grdt <- list()
-  for(algo in c("RSS", "Wasikowski", "WasikowskiLimitedMemory")){
-    for(comb.i in 1:nrow(comb.dt)){
-      comb <- comb.dt[comb.i]
-      task_amr = mlr3::as_task_classif(files, target = "y")
-      if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
-      task_amr$set_col_roles("y", roles = c("target", "stratum"))
-      test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
-      test.validation.resampling$param_set$values$folds <- comb$nfold
-      test.validation.resampling$param_set$values$group_stratum_algo <- algo
-      test.validation.resampling$instantiate(task_amr)
-      fold.dt <- test.validation.resampling$instance$fold.dt
-      grdt[[comb.i]] <- fold.dt
-      fold.dt[, table(fold, stratum)]
-      fold.dt[, table(group, stratum)]
-      fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
-      fpg.dt.list[[paste(algo, comb.i)]] <- data.table(algo, comb, fpg)
-    }
+  for(comb.i in 1:nrow(comb.dt)){
+    comb <- comb.dt[comb.i]
+    task_amr = mlr3::as_task_classif(files, target = "y")
+    if(comb$set_group)task_amr$set_col_roles("g", roles = "group")
+    task_amr$set_col_roles("y", roles = c("target", "stratum"))
+    test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+    test.validation.resampling$param_set$values$folds <- comb$nfold
+    test.validation.resampling$param_set$values$group_stratum_algo <- comb$algo
+    test.validation.resampling$instantiate(task_amr)
+    fold.dt <- test.validation.resampling$instance$fold.dt
+    grdt[[comb.i]] <- fold.dt
+    fold.dt[, table(fold, stratum)]
+    fold.dt[, table(group, stratum)]
+    fpg <- fold.dt[, .(N=.N), by=.(fold, stratum)]
+    fpg.dt.list[[comb.i]] <- data.table(comb, fpg)
   }
   ## calculations to see why there are not same strata counts across folds.
   ##dcast(melt(dcast(grdt[[3]][, .(row=.I, fold, y, g_ord)][, r := min(row), by=g_ord], r ~ fold+y), id="r")[, cum := cumsum(value), by=variable], r ~ variable, value.var="cum")
@@ -964,6 +962,37 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   fpg.dt <- rbindlist(fpg.dt.list)
   expect_equal(fpg.dt[algo=="RSS" & nfold==3, sort(N)], rep(c(5,45),each=6))
   expect_equal(fpg.dt[algo=="RSS" & nfold==5, sort(N)], rep(c(3,27),each=10))
+})
+
+test_that("simpler files example with 45 data", {
+  files <- data.table(g=1:45)[
+  , if(g<=5)data.table(y=c("rare","rare"))
+    else if(g<=10)data.table(y=c("rare","common"))
+    else data.table(y=c("common","common"))
+  , by=g]
+  task_amr = mlr3::as_task_classif(files, target = "y")
+  task_amr$set_col_roles("g", roles = "group")
+  task_amr$set_col_roles("y", roles = c("target", "stratum"))
+  test.validation.resampling = mlr3resampling::ResamplingSameOtherSizesCV$new()
+  n.folds <- 3
+  test.validation.resampling$param_set$values$folds <- n.folds
+  test.validation.resampling$param_set$values$group_stratum_algo <- "RSS"
+  test.validation.resampling$instantiate(task_amr)
+  fold.dt <- test.validation.resampling$instance$fold.dt
+  ideal <- fold.dt[, table(stratum)/n.folds]
+  (actual <- t(fold.dt[, table(fold, stratum)]))
+  expect_equal(sum(abs(as.matrix(actual)-as.integer(ideal))), 0)
+  fold.ord <- setkey(fold.dt, rss, neg_nrow, neg_Wsum, g_ord)[, let(
+    iteration = as.integer(factor(group, unique(group))),
+    Stratum=paste0("s",stratum),
+    Fold=paste0("f",fold)
+  )]
+  fold.counts <- dcast(fold.ord, iteration ~ Stratum+Fold, length)
+  fold.long <- melt(fold.counts, id.vars="iteration")[, cum := cumsum(value), by=variable][]
+  fold.wide <- dcast(fold.long, iteration ~ variable, value.var="cum")
+  rss <- rowSums(t(t(as.matrix(fold.wide[,-1]))-rep(ideal, each=n.folds))^2)
+  data.table(fold.wide, rss)
+  expect_equal(min(rss), 0)
 })
 
 test_that("deterministic fold assignment for unique group sizes with multiple strata", {
