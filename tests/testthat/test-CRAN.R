@@ -964,8 +964,8 @@ test_that("prop sizes for regular sized groups with multiple strata", {
   expect_equal(fpg.dt[algo=="RSS" & nfold==5, sort(N)], rep(c(3,27),each=10))
 })
 
-test_that("simpler files example with 45 data", {
-  files <- data.table(g=1:45)[
+test_that("simpler files example with 30 groups", {
+  files <- data.table(g=1:30)[
   , if(g<=5)data.table(y=c("rare","rare"))
     else if(g<=10)data.table(y=c("rare","common"))
     else data.table(y=c("common","common"))
@@ -985,13 +985,15 @@ test_that("simpler files example with 45 data", {
   fold.ord <- setkey(fold.dt, rss, neg_nrow, neg_Wsum, g_ord)[, let(
     iteration = as.integer(factor(group, unique(group))),
     Stratum=paste0("s",stratum),
-    Fold=paste0("f",fold)
+    Fold=paste0("fold",fold)
   )]
   fold.counts <- dcast(fold.ord, iteration ~ Stratum+Fold, length)
   fold.long <- melt(fold.counts, id.vars="iteration")[, cum := cumsum(value), by=variable][]
   fold.wide <- dcast(fold.long, iteration ~ variable, value.var="cum")
   rss <- rowSums(t(t(as.matrix(fold.wide[,-1]))-rep(ideal, each=n.folds))^2)
-  data.table(fold.wide, rss)
+  fold.comma <- melt(fold.wide, measure.vars=measure(value.name, Fold))[, counts := sprintf("%2d,%2d",s0,s1)][]
+  fold.show <- dcast(fold.comma, iteration ~ Fold, value.var="counts")
+  data.table(fold.show, rss)[,-1]
   expect_equal(min(rss), 0)
 })
 
