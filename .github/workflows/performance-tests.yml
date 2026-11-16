@@ -30,21 +30,20 @@ jobs:
           fi
           git switch -C "$HEAD_BRANCH"
 
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
+      - name: Setup
+        uses: eddelbuettel/github-actions/r-ci@master
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          cache-version: ${{ hashFiles('.ci/atime/tests.R') }}
-          extra-packages: cran::mlr3resampling, any::atime, any::ggplot2, any::directlabels
+      - name: Dependencies
+        run: ./run.sh install_all
 
-      - name: Run atime
-        shell: bash
+      - name: Install and run atime
         run: |
-          echo "END_SETUP_START_TESTS_TIME=$(date +%s)" >> "$GITHUB_ENV"
-          Rscript -e 'atime::atime_pkg(Sys.getenv("GITHUB_WORKSPACE"), tests.dir = ".ci")'
-          echo "END_TESTS_TIME=$(date +%s)" >> "$GITHUB_ENV"
+          echo "options(repos = c(CRAN = 'https://cloud.r-project.org'))" >> .Rprofile
+          Rscript -e 'install.packages(c("atime", "ggplot2", "directlabels", "mlr3resampling"))'
+          echo "END_SETUP_START_TESTS_TIME=$(date +%s)" >> $GITHUB_ENV
+          Rscript -e 'atime::atime_pkg(Sys.getenv("GITHUB_WORKSPACE"), tests.dir = ".ci");'
+          echo "END_TESTS_TIME=$(date +%s)" >> $GITHUB_ENV
+        shell: bash
 
       - name: Upload artifact
         id: artifact-upload-step
